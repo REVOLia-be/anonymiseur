@@ -1,0 +1,16 @@
+# En-têtes Cloudflare Pages
+
+# Sécurité (toutes les pages)
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  X-Frame-Options: DENY
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+
+# Cache long pour les ressources versionnées (libs, polices, logo, wasm)
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Les pages HTML : toujours revalidées
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate

@@ -17,14 +17,20 @@ say "Runtime ONNX (Transformers.js)"
 get "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2/dist/ort-wasm-simd-threaded.jsep.wasm" \
     "vendor/transformers/ort-wasm-simd-threaded.jsep.wasm"
 
-say "Modèle de détection (NER, ~135 Mo)"
-M="vendor/models/Xenova/distilbert-base-multilingual-cased-ner-hrl"
-B="https://huggingface.co/Xenova/distilbert-base-multilingual-cased-ner-hrl/resolve/main"
-get "$B/config.json"               "$M/config.json"
-get "$B/tokenizer.json"            "$M/tokenizer.json"
-get "$B/tokenizer_config.json"     "$M/tokenizer_config.json"
-get "$B/special_tokens_map.json"   "$M/special_tokens_map.json"
-get "$B/onnx/model_quantized.onnx" "$M/onnx/model_quantized.onnx"
+# Le modèle (~135 Mo) dépasse la limite 25 Mo/fichier de Cloudflare Pages :
+# sur Pages, lancez avec SKIP_MODEL=1 (le modèle est servi depuis Cloudflare R2).
+if [ "${SKIP_MODEL:-0}" = "1" ]; then
+  say "Modèle NER : IGNORÉ (SKIP_MODEL=1 — à héberger sur R2, voir DEPLOY.md)"
+else
+  say "Modèle de détection (NER, ~135 Mo)"
+  M="vendor/models/Xenova/distilbert-base-multilingual-cased-ner-hrl"
+  B="https://huggingface.co/Xenova/distilbert-base-multilingual-cased-ner-hrl/resolve/main"
+  get "$B/config.json"               "$M/config.json"
+  get "$B/tokenizer.json"            "$M/tokenizer.json"
+  get "$B/tokenizer_config.json"     "$M/tokenizer_config.json"
+  get "$B/special_tokens_map.json"   "$M/special_tokens_map.json"
+  get "$B/onnx/model_quantized.onnx" "$M/onnx/model_quantized.onnx"
+fi
 
 say "Moteur OCR (Tesseract.js — cœurs WASM + français)"
 T="vendor/tesseract"; C="https://cdn.jsdelivr.net/npm/tesseract.js-core@5"

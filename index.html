@@ -80,6 +80,17 @@
   .status{font-size:13px;margin-top:8px;min-height:18px}
   .status.err{color:var(--danger)} .status.ok{color:var(--accent2)} .status.work{color:var(--warn)}
 </style>
+<script>
+  /* ── Configuration de déploiement ──────────────────────────────
+     En local (dev) : laisser vide → le modèle IA est chargé depuis vendor/models/.
+     En production (Cloudflare Pages) : le modèle (~135 Mo) ne tient pas sur Pages
+     (limite 25 Mo/fichier). Hébergez le dossier models/ sur Cloudflare R2 et indiquez
+     ici l'URL publique (avec / final), ex. :
+       window.ANON_MODEL_BASE = "https://assets.revolia.be/models/";
+     Le bucket R2 doit autoriser le CORS depuis https://anonymiseur.revolia.be.
+     (La détection par règles, l'OCR et les exports fonctionnent sans cette IA.) */
+  window.ANON_MODEL_BASE = "";
+</script>
 </head>
 <body>
 <header>
@@ -735,7 +746,10 @@ const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
 // Tout en local : pas de Hub distant, modèle et wasm servis depuis vendor/
 env.allowRemoteModels = false;
 env.allowLocalModels  = true;
-env.localModelPath    = BASE + 'vendor/models/';
+// Modèle : local (vendor/models/) en dev ; en prod, surcharger via window.ANON_MODEL_BASE
+// (ex. bucket Cloudflare R2) car le modèle ~135 Mo dépasse la limite 25 Mo/fichier de Pages.
+env.localModelPath    = (window.ANON_MODEL_BASE && window.ANON_MODEL_BASE.length)
+                          ? window.ANON_MODEL_BASE : (BASE + 'vendor/models/');
 env.backends.onnx.wasm.wasmPaths = BASE + 'vendor/transformers/';
 env.backends.onnx.wasm.proxy     = false;   // pas de proxy worker externe
 env.backends.onnx.wasm.numThreads = 1;      // pas de SharedArrayBuffer requis
