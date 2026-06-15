@@ -18,10 +18,10 @@ Cible : **`anonymiseur.revolia.be`** · hébergement **Cloudflare Pages** · DNS
 
 ## 1. Pousser le code sur GitHub
 
-Dépôt **public** sous l'organisation **REVOLia** : `github.com/REVOLia/anonymiseur`.
+Dépôt **public** (compte **REVOLia-be**) : `github.com/REVOLia-be/anonymiseur`.
 
 ```bash
-git remote add origin git@github.com:REVOLia/anonymiseur.git
+git remote add origin git@github.com:REVOLia-be/anonymiseur.git
 git push -u origin main
 ```
 
@@ -55,7 +55,7 @@ Sans cette étape, le mot-symbole « revolia » s'affiche en **Poppins** (repli)
 
 ## 4. Configurer Cloudflare Pages
 
-- **Connecte le dépôt GitHub** `REVOLia/anonymiseur`.
+- **Connecte le dépôt GitHub** `REVOLia-be/anonymiseur`.
 - Framework preset : **None**.
 - **Build command** :
   ```bash
