@@ -12,47 +12,85 @@
   /* iBrand — police de marque REVOLia (titres & logo), licence commerciale acquise */
   @font-face{font-family:'iBrand';font-weight:400;font-display:swap;src:url('vendor/fonts/ibrand.otf') format('opentype');}
   :root{
-    /* Palette REVOLia 2025 */
-    --bg:#131323; --panel:#1b1b2f; --panel2:#23233c; --txt:#eef2ee;
-    --muted:#9aa0b4; --accent:#00bf63; --accent-d:#00824d; --accent2:#80bf9e; --warn:#f0a020;
-    --line:#2d2d48; --danger:#e5484d;
+    /* Palette REVOLia 2025 — thème clair */
+    --bg:#ffffff; --soft:#f3f8f5; --panel:#ffffff; --panel2:#f1f6f3; --txt:#15231c;
+    --muted:#5d6f66; --accent:#00bf63; --accent-d:#00824d; --accent2:#00824d; --warn:#b26a00;
+    --line:#e3ece7; --danger:#d63a3f;
+    --shadow:0 1px 2px rgba(16,40,30,.04), 0 4px 18px rgba(16,40,30,.05);
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:'Poppins',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-       background:var(--bg);color:var(--txt);line-height:1.5}
-  header{padding:18px 28px;border-bottom:1px solid var(--line);background:var(--panel);
-         display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+       background:var(--bg);color:var(--txt);line-height:1.55}
+  a{color:var(--accent-d)}
+  /* ── En-tête ── */
+  header{padding:14px 28px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.85);
+         backdrop-filter:saturate(1.4) blur(8px);position:sticky;top:0;z-index:20;
+         display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .brand{display:flex;align-items:center;gap:9px}
-  .brand .logo-mark{height:34px;width:auto;display:block}
-  .brand .wm{font-family:'iBrand','Poppins',sans-serif;font-size:27px;color:#eef2ee;line-height:1;}
-  .htxt{flex:1;min-width:240px}
-  header h1{margin:0;font-size:17px;font-weight:600}
-  header p{margin:5px 0 0;color:var(--muted);font-size:12.5px;max-width:780px;font-weight:400}
-  .badge{display:inline-block;background:rgba(0,191,99,.14);color:var(--accent);
-         border:1px solid rgba(0,191,99,.4);padding:2px 9px;border-radius:99px;font-size:11px;margin-left:8px;vertical-align:middle;font-weight:500}
-  main{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:22px 28px;max-width:1400px;margin:0 auto}
+  .brand .logo-mark{height:32px;width:auto;display:block}
+  .brand .wm{font-family:'iBrand','Poppins',sans-serif;font-size:25px;color:var(--accent-d);line-height:1}
+  .nav{margin-left:auto;display:flex;gap:18px;align-items:center;font-size:14px}
+  .nav a{color:var(--muted);text-decoration:none;font-weight:500}
+  .nav a:hover{color:var(--accent-d)}
+  .nav .cta{background:var(--accent-d);color:#fff;padding:8px 15px;border-radius:9px}
+  .nav .cta:hover{background:#006b3f;color:#fff}
+  @media(max-width:680px){.nav .navlink{display:none}}
+  /* ── Héro ── */
+  .hero{background:linear-gradient(180deg,#eafaf1 0%,#f5fbf8 55%,#ffffff 100%);
+        padding:64px 24px 54px;text-align:center;border-bottom:1px solid var(--line)}
+  .hero .pill{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);
+        color:var(--accent-d);font-weight:600;font-size:13px;padding:6px 14px;border-radius:99px;box-shadow:var(--shadow)}
+  .hero h1{font-size:clamp(28px,5vw,46px);line-height:1.1;margin:20px auto 0;max-width:760px;font-weight:600;letter-spacing:-.02em}
+  .hero h1 .g{color:var(--accent-d)}
+  .hero .lead{font-size:clamp(15px,2.2vw,19px);color:var(--muted);max-width:620px;margin:16px auto 0}
+  .hero .actions{margin-top:28px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn-lg{font-size:16px;padding:13px 26px;border-radius:11px;border:0;cursor:pointer;font-weight:600;text-decoration:none;display:inline-block}
+  .btn-lg.primary{background:var(--accent-d);color:#fff;box-shadow:var(--shadow)}
+  .btn-lg.primary:hover{background:#006b3f}
+  .btn-lg.ghost2{background:#fff;color:var(--txt);border:1px solid var(--line)}
+  .trust{margin-top:26px;display:flex;gap:10px 22px;justify-content:center;flex-wrap:wrap;color:var(--muted);font-size:13.5px;font-weight:500}
+  .trust span{display:inline-flex;align-items:center;gap:6px}
+  .trust b{color:var(--accent-d)}
+  /* ── Sections génériques ── */
+  .section{max-width:1100px;margin:0 auto;padding:56px 24px}
+  .section h2.title{text-align:center;font-size:clamp(22px,3vw,30px);margin:0 0 6px;font-weight:600;letter-spacing:-.01em}
+  .section .subtitle{text-align:center;color:var(--muted);margin:0 auto 36px;max-width:600px}
+  /* ── Étapes ── */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:760px){.steps{grid-template-columns:1fr}}
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow)}
+  .step .n{width:34px;height:34px;border-radius:50%;background:#eafaf1;color:var(--accent-d);
+        font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .step h3{margin:14px 0 6px;font-size:17px;font-weight:600}
+  .step p{margin:0;color:var(--muted);font-size:14px}
+  /* ── Outil ── */
+  main{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:8px 24px 24px;max-width:1100px;margin:0 auto;scroll-margin-top:80px}
   @media(max-width:900px){main{grid-template-columns:1fr}}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-  .panel h2{margin:0;padding:13px 16px;font-size:13px;font-weight:600;color:var(--muted);
-            text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+  .panel h2{margin:0;padding:13px 16px;font-size:12.5px;font-weight:600;color:var(--accent-d);
+            text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line);background:var(--panel2)}
   .panel .body{padding:16px}
-  textarea{width:100%;min-height:280px;resize:vertical;background:var(--bg);color:var(--txt);
-           border:1px solid var(--line);border-radius:8px;padding:12px;font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  textarea{width:100%;min-height:280px;resize:vertical;background:var(--soft);color:var(--txt);
+           border:1px solid var(--line);border-radius:10px;padding:12px;font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  textarea:focus,input[type=text]:focus{outline:2px solid rgba(0,191,99,.35);border-color:var(--accent)}
   .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
-  button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer}
-  button:hover{filter:brightness(1.08)}
-  button.secondary{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+  button{background:var(--accent-d);color:#fff;border:0;border-radius:9px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer}
+  button:hover{background:#006b3f}
+  button.secondary{background:#fff;color:var(--txt);border:1px solid var(--line)}
+  button.secondary:hover{background:var(--panel2)}
   button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);padding:6px 12px;font-weight:500}
-  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  button.ghost:hover{background:var(--panel2)}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
   .seg button{background:transparent;color:var(--muted);border:0;border-right:1px solid var(--line);border-radius:0;padding:8px 14px;font-weight:500}
   .seg button:last-child{border-right:0}
-  .seg button.active{background:var(--accent);color:#fff}
-  label.opt{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);cursor:pointer}
-  input[type=text]{background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:13px}
-  .out{min-height:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;
+  .seg button:hover{background:var(--panel2)}
+  .seg button.active{background:var(--accent-d);color:#fff}
+  label.opt{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--txt);cursor:pointer}
+  input[type=text]{background:var(--soft);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px}
+  .out{min-height:280px;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:12px;
        font-size:14px;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   mark{border-radius:4px;padding:1px 4px;font-weight:600;font-family:inherit;cursor:help}
-  .tok{display:inline-block;background:var(--panel2);border:1px dashed var(--accent);color:var(--accent);
+  .tok{display:inline-block;background:#eafaf1;border:1px dashed var(--accent-d);color:var(--accent-d);
        border-radius:5px;padding:0 5px;font-weight:600}
   .redact{background:#000;color:#000;border-radius:3px;padding:0 2px;user-select:none}
   table{width:100%;border-collapse:collapse;font-size:13px}
@@ -61,24 +99,44 @@
   .cat{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;font-weight:600}
   .count{color:var(--muted);font-size:12px}
   .empty{color:var(--muted);font-size:13px;padding:20px;text-align:center}
-  .foot{padding:16px 28px 28px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;max-width:1400px;margin:0 auto}
+  /* ── Accordéon (ré-identification, replié) ── */
+  .adv{max-width:1100px;margin:0 auto;padding:0 24px 8px}
+  details.adv-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  details.adv-box>summary{list-style:none;cursor:pointer;padding:16px 18px;font-weight:600;color:var(--txt);
+        display:flex;align-items:center;gap:10px}
+  details.adv-box>summary::-webkit-details-marker{display:none}
+  details.adv-box>summary .chev{margin-left:auto;color:var(--muted);transition:.2s}
+  details.adv-box[open]>summary .chev{transform:rotate(90deg)}
+  details.adv-box>summary .tag{font-size:11px;font-weight:600;color:var(--accent-d);background:#eafaf1;border-radius:99px;padding:2px 9px}
+  details.adv-box .body{padding:0 18px 18px}
+  /* ── FAQ ── */
+  .faq{max-width:820px;margin:0 auto}
+  .faq details{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:var(--panel);overflow:hidden}
+  .faq summary{cursor:pointer;padding:15px 18px;font-weight:600;list-style:none}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:'+';float:right;color:var(--accent-d);font-weight:700}
+  .faq details[open] summary::after{content:'−'}
+  .faq .a{padding:0 18px 16px;color:var(--muted);font-size:14.5px}
+  /* ── Pied de page ── */
+  .foot{background:var(--panel2);border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+  .foot .inner{padding:26px 24px;max-width:1100px;margin:0 auto}
   .foot b{color:var(--warn)}
-  .footlinks{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
-  .footlinks a{color:var(--accent2);text-decoration:none}
-  .footlinks a:hover{color:var(--accent);text-decoration:underline}
+  .footlinks{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  .footlinks a{color:var(--accent-d);text-decoration:none;font-weight:500}
+  .footlinks a:hover{text-decoration:underline}
   .footbrand{margin-left:auto;color:var(--muted)}
   .stat{display:flex;gap:18px;margin-top:10px;flex-wrap:wrap}
   .stat div{font-size:13px;color:var(--muted)}
   .stat b{color:var(--txt);font-size:16px}
   .row{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
   .hint{color:var(--muted);font-size:12px;margin-top:6px}
-  .drop{border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted);
-        cursor:pointer;transition:.15s;margin-bottom:12px;background:var(--bg)}
-  .drop:hover,.drop.over{border-color:var(--accent);color:var(--txt);background:rgba(91,141,239,.07)}
-  .drop b{color:var(--accent2)}
+  .drop{border:2px dashed #c8ddd2;border-radius:12px;padding:22px;text-align:center;color:var(--muted);
+        cursor:pointer;transition:.15s;margin-bottom:12px;background:var(--soft)}
+  .drop:hover,.drop.over{border-color:var(--accent);color:var(--txt);background:#eafaf1}
+  .drop b{color:var(--accent-d)}
   .drop .small{font-size:12px;margin-top:4px}
   .status{font-size:13px;margin-top:8px;min-height:18px}
-  .status.err{color:var(--danger)} .status.ok{color:var(--accent2)} .status.work{color:var(--warn)}
+  .status.err{color:var(--danger)} .status.ok{color:var(--accent-d)} .status.work{color:var(--warn)}
 </style>
 <script>
   /* ── Configuration de déploiement ──────────────────────────────
@@ -98,18 +156,50 @@
 <body>
 <header>
   <div class="brand" title="REVOLia">
-    <img class="logo-mark" src="vendor/brand/revolia-mark.png" alt="REVOLia">
+    <img class="logo-mark" src="vendor/brand/revolia-mark-green.png" alt="REVOLia">
     <span class="wm">revolia</span>
   </div>
-  <div class="htxt">
-    <h1>Anonymiseur de documents <span class="badge">100 % local · hors-ligne · rien n'est envoyé</span></h1>
-    <p>Déposez un document (PDF, Word, image — même scanné), l'outil repère les informations identifiantes,
-       vous validez, puis vous exportez une version anonymisée à utiliser sans risque dans une IA.
-       Tout le traitement se fait dans votre navigateur — aucune donnée ne quitte votre appareil.</p>
-  </div>
+  <nav class="nav">
+    <a class="navlink" href="#comment">Comment ça marche</a>
+    <a class="navlink" href="#faq">Questions</a>
+    <a class="navlink" href="https://github.com/REVOLia-be/anonymiseur" rel="noopener">Code source</a>
+    <a class="cta" href="#outil">Anonymiser un document</a>
+  </nav>
 </header>
 
-<main>
+<section class="hero">
+  <span class="pill">🔒 100 % local · rien n'est envoyé</span>
+  <h1>Utilisez l'IA sur vos documents, <span class="g">sans exposer vos données</span></h1>
+  <p class="lead">Contrat, fiche de paie, courrier médical, rapport… l'Anonymiseur REVOLia repère et masque les
+     informations personnelles <b>directement dans votre navigateur</b>. Vous obtenez un document sûr à utiliser
+     dans ChatGPT, Claude ou Gemini.</p>
+  <div class="actions">
+    <a class="btn-lg primary" href="#outil">Anonymiser un document</a>
+    <a class="btn-lg ghost2" href="#comment">Comment ça marche&nbsp;?</a>
+  </div>
+  <div class="trust">
+    <span>🔒 <b>Aucune donnée envoyée</b></span>
+    <span>💸 <b>Gratuit</b></span>
+    <span>📂 PDF · Word · images</span>
+    <span>🧩 <b>Open source</b></span>
+    <span>✈️ Hors-ligne</span>
+  </div>
+</section>
+
+<section class="section" id="comment">
+  <h2 class="title">Comment ça marche</h2>
+  <p class="subtitle">Trois étapes, zéro envoi de données. Vous gardez le contrôle du début à la fin.</p>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><h3>Déposez votre document</h3>
+      <p>PDF (même scanné), Word ou image — ou collez simplement du texte. Tout reste sur votre appareil.</p></div>
+    <div class="step"><div class="n">2</div><h3>Vérifiez les détections</h3>
+      <p>L'outil surligne noms, adresses, e-mails, IBAN, n° national… Vous validez, corrigez, ajoutez ce qui manque.</p></div>
+    <div class="step"><div class="n">3</div><h3>Exportez &amp; utilisez</h3>
+      <p>Téléchargez la version anonymisée (txt, PDF, Word) et utilisez-la sans risque dans votre IA.</p></div>
+  </div>
+</section>
+
+<main id="outil">
   <!-- ENTRÉE -->
   <section class="panel">
     <h2>1 · Texte d'origine</h2>
@@ -176,37 +266,57 @@
     </div>
   </section>
 
-  <!-- RÉ-IDENTIFICATION -->
-  <section class="panel" style="grid-column:1/-1">
-    <h2>4 · Ré-identification <span class="count">(réinjecter les vraies données dans la réponse de l'IA)</span></h2>
+</main>
+
+<!-- RÉ-IDENTIFICATION (avancé, replié) -->
+<div class="adv">
+  <details class="adv-box">
+    <summary>🔄 Ré-identifier la réponse de l'IA <span class="tag">avancé · optionnel</span> <span class="chev">›</span></summary>
     <div class="body">
-      <div class="hint" style="margin-bottom:10px">Après avoir utilisé le texte anonymisé dans une IA, collez ici sa <b>réponse</b> (qui contient encore les jetons <span class="tok">[PERSONNE_1]</span>…). L'outil remplace les jetons par les vraies valeurs. Utilise la table de la session en cours, ou importez-en une.</div>
+      <div class="hint" style="margin-bottom:10px">Si vous avez anonymisé en mode « pseudonymisation », collez ici la <b>réponse</b> de l'IA
+        (elle contient encore les jetons <span class="tok">[PERSONNE_1]</span>…) : l'outil y réinjecte vos vraies données.
+        Pratique pour récupérer, par ex., une lettre personnalisée rédigée par l'IA. Utilise la table de la session, ou importez-en une.</div>
       <div class="row">
         <label class="opt"><b>Table :</b></label>
         <button id="importMapBtn" class="ghost">Importer une table (.json)</button>
         <input type="file" id="importMap" accept="application/json,.json" hidden>
         <span class="count" id="mapInfo">table de la session en cours</span>
       </div>
-      <textarea id="reidInput" placeholder="Collez ici la réponse de l'IA contenant les jetons…" style="min-height:140px;margin-top:10px"></textarea>
+      <textarea id="reidInput" placeholder="Collez ici la réponse de l'IA contenant les jetons…" style="min-height:120px;margin-top:10px"></textarea>
       <div class="controls">
         <button id="reidBtn">Ré-identifier</button>
         <button id="reidCopy" class="secondary">Copier le résultat</button>
       </div>
-      <div class="out" id="reidOut" style="min-height:140px;margin-top:6px"><div class="empty">Le texte ré-identifié apparaîtra ici.</div></div>
+      <div class="out" id="reidOut" style="min-height:120px;margin-top:6px"><div class="empty">Le texte ré-identifié apparaîtra ici.</div></div>
     </div>
-  </section>
-</main>
+  </details>
+</div>
+
+<section class="section" id="faq">
+  <h2 class="title">Questions fréquentes</h2>
+  <p class="subtitle">Tout ce qu'il faut savoir avant d'anonymiser votre premier document.</p>
+  <div class="faq">
+    <details><summary>Mes documents sont-ils envoyés quelque part&nbsp;?</summary><div class="a">Non. Tout le traitement (lecture, OCR, détection, anonymisation) se fait dans votre navigateur. Le contenu de vos documents ne quitte jamais votre appareil — vérifiable dans l'onglet « réseau » de votre navigateur. Voir la <a href="confidentialite.html">politique de confidentialité</a>.</div></details>
+    <details><summary>Quels types de documents puis-je traiter&nbsp;?</summary><div class="a">PDF (y compris scannés, grâce à la reconnaissance de texte OCR), Word (.docx), images JPG/PNG, ou simplement du texte collé.</div></details>
+    <details><summary>Qu'est-ce qui est détecté&nbsp;?</summary><div class="a">Par règles : e-mails, téléphones, IBAN, n° national belge, n° d'entreprise (TVA BE), cartes, dates, montants, codes postaux. Avec la détection IA locale (optionnelle) : noms, adresses, organisations — même sans format particulier.</div></details>
+    <details><summary>Pseudonymisation ou caviardage&nbsp;?</summary><div class="a">La <b>pseudonymisation</b> remplace par des jetons cohérents (<span class="tok">[PERSONNE_1]</span>) : le document reste lisible et exploitable par l'IA. Le <b>caviardage</b> supprime réellement l'information (barres noires) — rien n'est récupérable.</div></details>
+    <details><summary>Est-ce une anonymisation «&nbsp;garantie&nbsp;»&nbsp;?</summary><div class="a">Non, c'est une <b>aide</b>. Aucune détection automatique n'est parfaite, et les identifiants indirects (recoupements de contexte) lui échappent. <b>Relisez toujours</b> le résultat. La pseudonymisation n'est pas une anonymisation au sens du RGPD.</div></details>
+    <details><summary>C'est gratuit&nbsp;? Open source&nbsp;?</summary><div class="a">Oui — gratuit et <a href="https://github.com/REVOLia-be/anonymiseur" rel="noopener">open source (AGPL-3.0)</a>, pour que chacun puisse vérifier que rien ne sort.</div></details>
+  </div>
+</section>
 
 <div class="foot">
-  ⚠️ <b>Aide à l'anonymisation</b> — la détection (règles + IA locale optionnelle) n'est jamais parfaite&nbsp;: les
-  <b>identifiants indirects</b> (recoupements de contexte) échappent à toute détection automatique.
-  <b>Relisez toujours</b> le résultat avant de l'utiliser. Cet outil ne garantit pas une anonymisation conforme&nbsp;;
-  vous restez responsable du document produit.
-  <div class="footlinks">
-    <a href="confidentialite.html">Confidentialité</a>
-    <a href="mentions-legales.html">Mentions légales</a>
-    <a href="https://github.com/REVOLia-be/anonymiseur" rel="noopener">Code source (open source · AGPL-3.0)</a>
-    <span class="footbrand">© REVOLia · 100 % local, hors-ligne</span>
+  <div class="inner">
+    ⚠️ <b>Aide à l'anonymisation</b> — la détection (règles + IA locale optionnelle) n'est jamais parfaite&nbsp;: les
+    <b>identifiants indirects</b> (recoupements de contexte) échappent à toute détection automatique.
+    <b>Relisez toujours</b> le résultat avant de l'utiliser. Cet outil ne garantit pas une anonymisation conforme&nbsp;;
+    vous restez responsable du document produit.
+    <div class="footlinks">
+      <a href="confidentialite.html">Confidentialité</a>
+      <a href="mentions-legales.html">Mentions légales</a>
+      <a href="https://github.com/REVOLia-be/anonymiseur" rel="noopener">Code source (AGPL-3.0)</a>
+      <span class="footbrand">© REVOLia · 100 % local · hors-ligne</span>
+    </div>
   </div>
 </div>
 
@@ -358,17 +468,17 @@ function handleFile(f){
    =========================================================== */
 const CATS = [
   {key:'EMAIL',    label:'E-mail',        color:'#5b8def', re:/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g},
-  {key:'IBAN',     label:'IBAN',          color:'#3ddc97', re:/\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}\b/g},
+  {key:'IBAN',     label:'IBAN',          color:'#0b9d63', re:/\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}\b/g},
   {key:'NISS',     label:'N° national',   color:'#e5484d', re:/\b\d{2}[.\-]?\d{2}[.\-]?\d{2}[.\- ]?\d{3}[.\-]?\d{2}\b/g},
   {key:'TVA_BE',   label:'N° entreprise (BE)', color:'#f2c14e', re:/\bBE\s?0\d{3}[.\s]?\d{3}[.\s]?\d{3}\b|\b0\d{3}\.\d{3}\.\d{3}\b/gi},
   {key:'CARTE',    label:'Carte bancaire',color:'#e5484d', re:/\b(?:\d[ \-]?){13,16}\b/g},
   {key:'TEL',      label:'Téléphone',     color:'#f0a020', re:/(?:(?:\+|00)\d{1,3}[ .\-]?)?(?:\(?0\)?[ .\-]?)?(?:\d[ .\-]?){8,10}\d\b/g},
   {key:'DATE',     label:'Date',          color:'#b07cff', re:/\b\d{1,2}(?:er|ème|e)?[\/.\- ]+(?:\d{1,2}|janv(?:ier)?|f[ée]vr(?:ier)?|mars|avr(?:il)?|mai|juin|juil(?:let)?|ao[uû]t|sept(?:embre)?|oct(?:obre)?|nov(?:embre)?|d[ée]c(?:embre)?)[\/.\- ]+\d{2,4}\b/gi},
-  {key:'MONTANT',  label:'Montant',       color:'#3ddc97', re:/\b\d{1,3}(?:[ .]?\d{3})*(?:[,.]\d{1,2})?\s?(?:€|EUR|euros?)/gi},
-  {key:'CP_VILLE', label:'Code postal',   color:'#7dd3fc', re:/\b\d{4,5}[ ]+[A-ZÀ-Ÿ][a-zà-ÿ\-]+(?:[ \-][A-ZÀ-Ÿ][a-zà-ÿ\-]+)?\b/g},
+  {key:'MONTANT',  label:'Montant',       color:'#0b9d63', re:/\b\d{1,3}(?:[ .]?\d{3})*(?:[,.]\d{1,2})?\s?(?:€|EUR|euros?)/gi},
+  {key:'CP_VILLE', label:'Code postal',   color:'#2693ce', re:/\b\d{4,5}[ ]+[A-ZÀ-Ÿ][a-zà-ÿ\-]+(?:[ \-][A-ZÀ-Ÿ][a-zà-ÿ\-]+)?\b/g},
   {key:'PERSONNE', label:'Nom',          color:'#ff7eb6', re:/\b(?:M\.|Mme|Mlle|Mr|Monsieur|Madame|Mademoiselle|Dr|Me|Pr)\.?[ ]+[A-ZÀ-Ÿ][a-zà-ÿ'’\-]+(?:[ ]+[A-ZÀ-Ÿ][a-zà-ÿ'’\-]+){0,2}/g},
   // Catégories alimentées par le modèle IA local (pas de regex) :
-  {key:'LIEU',     label:'Lieu / Adresse',color:'#7dd3fc', re:null, ner:true},
+  {key:'LIEU',     label:'Lieu / Adresse',color:'#2693ce', re:null, ner:true},
   {key:'ORG',      label:'Organisation',  color:'#c4b5fd', re:null, ner:true},
 ];
 
