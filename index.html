@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anonymiseur — REVOLia</title>
+<style>
+  /* Police de marque REVOLia — Poppins, servie en local (hors-ligne) */
+  @font-face{font-family:'Poppins';font-weight:400;font-display:swap;src:url('vendor/fonts/poppins-400.woff2') format('woff2');}
+  @font-face{font-family:'Poppins';font-weight:500;font-display:swap;src:url('vendor/fonts/poppins-500.woff2') format('woff2');}
+  @font-face{font-family:'Poppins';font-weight:600;font-display:swap;src:url('vendor/fonts/poppins-600.woff2') format('woff2');}
+  /* iBrand — police de marque REVOLia (titres & logo), licence commerciale acquise */
+  @font-face{font-family:'iBrand';font-weight:400;font-display:swap;src:url('vendor/fonts/ibrand.otf') format('opentype');}
+  :root{
+    /* Palette REVOLia 2025 */
+    --bg:#131323; --panel:#1b1b2f; --panel2:#23233c; --txt:#eef2ee;
+    --muted:#9aa0b4; --accent:#00bf63; --accent-d:#00824d; --accent2:#80bf9e; --warn:#f0a020;
+    --line:#2d2d48; --danger:#e5484d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Poppins',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--txt);line-height:1.5}
+  header{padding:18px 28px;border-bottom:1px solid var(--line);background:var(--panel);
+         display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:9px}
+  .brand .logo-mark{height:34px;width:auto;display:block}
+  .brand .wm{font-family:'iBrand','Poppins',sans-serif;font-size:27px;color:#eef2ee;line-height:1;}
+  .htxt{flex:1;min-width:240px}
+  header h1{margin:0;font-size:17px;font-weight:600}
+  header p{margin:5px 0 0;color:var(--muted);font-size:12.5px;max-width:780px;font-weight:400}
+  .badge{display:inline-block;background:rgba(0,191,99,.14);color:var(--accent);
+         border:1px solid rgba(0,191,99,.4);padding:2px 9px;border-radius:99px;font-size:11px;margin-left:8px;vertical-align:middle;font-weight:500}
+  main{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:22px 28px;max-width:1400px;margin:0 auto}
+  @media(max-width:900px){main{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .panel h2{margin:0;padding:13px 16px;font-size:13px;font-weight:600;color:var(--muted);
+            text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .panel .body{padding:16px}
+  textarea{width:100%;min-height:280px;resize:vertical;background:var(--bg);color:var(--txt);
+           border:1px solid var(--line);border-radius:8px;padding:12px;font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+  button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer}
+  button:hover{filter:brightness(1.08)}
+  button.secondary{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+  button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);padding:6px 12px;font-weight:500}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{background:transparent;color:var(--muted);border:0;border-right:1px solid var(--line);border-radius:0;padding:8px 14px;font-weight:500}
+  .seg button:last-child{border-right:0}
+  .seg button.active{background:var(--accent);color:#fff}
+  label.opt{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);cursor:pointer}
+  input[type=text]{background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:13px}
+  .out{min-height:280px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;
+       font-size:14px;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  mark{border-radius:4px;padding:1px 4px;font-weight:600;font-family:inherit;cursor:help}
+  .tok{display:inline-block;background:var(--panel2);border:1px dashed var(--accent);color:var(--accent);
+       border-radius:5px;padding:0 5px;font-weight:600}
+  .redact{background:#000;color:#000;border-radius:3px;padding:0 2px;user-select:none}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+  .cat{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;font-weight:600}
+  .count{color:var(--muted);font-size:12px}
+  .empty{color:var(--muted);font-size:13px;padding:20px;text-align:center}
+  .foot{padding:16px 28px 28px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;max-width:1400px;margin:0 auto}
+  .foot b{color:var(--warn)}
+  .footlinks{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  .footlinks a{color:var(--accent2);text-decoration:none}
+  .footlinks a:hover{color:var(--accent);text-decoration:underline}
+  .footbrand{margin-left:auto;color:var(--muted)}
+  .stat{display:flex;gap:18px;margin-top:10px;flex-wrap:wrap}
+  .stat div{font-size:13px;color:var(--muted)}
+  .stat b{color:var(--txt);font-size:16px}
+  .row{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .hint{color:var(--muted);font-size:12px;margin-top:6px}
+  .drop{border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted);
+        cursor:pointer;transition:.15s;margin-bottom:12px;background:var(--bg)}
+  .drop:hover,.drop.over{border-color:var(--accent);color:var(--txt);background:rgba(91,141,239,.07)}
+  .drop b{color:var(--accent2)}
+  .drop .small{font-size:12px;margin-top:4px}
+  .status{font-size:13px;margin-top:8px;min-height:18px}
+  .status.err{color:var(--danger)} .status.ok{color:var(--accent2)} .status.work{color:var(--warn)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand" title="REVOLia">
+    <img class="logo-mark" src="vendor/brand/revolia-mark.png" alt="REVOLia">
+    <span class="wm">revolia</span>
+  </div>
+  <div class="htxt">
+    <h1>Anonymiseur de documents <span class="badge">100 % local · hors-ligne · rien n'est envoyé</span></h1>
+    <p>Déposez un document (PDF, Word, image — même scanné), l'outil repère les informations identifiantes,
+       vous validez, puis vous exportez une version anonymisée à utiliser sans risque dans une IA.
+       Tout le traitement se fait dans votre navigateur — aucune donnée ne quitte votre appareil.</p>
+  </div>
+</header>
+
+<main>
+  <!-- ENTRÉE -->
+  <section class="panel">
+    <h2>1 · Texte d'origine</h2>
+    <div class="body">
+      <div class="drop" id="drop">
+        📄 <b>Glissez un PDF, un Word ou une image ici</b> ou cliquez pour choisir un fichier
+        <div class="small">PDF (texte ou scanné) · Word (.docx) · images JPG/PNG. Tout est lu dans votre navigateur — rien n'est envoyé. Les scans sont reconnus par OCR local.</div>
+        <input type="file" id="file" accept="application/pdf,image/*,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+      </div>
+      <div class="status" id="status"></div>
+      <textarea id="input" placeholder="…ou collez directement le texte à anonymiser ici."></textarea>
+      <div class="controls">
+        <button id="analyze">Analyser &amp; anonymiser</button>
+        <button class="secondary" id="sample">Charger un exemple</button>
+        <button class="ghost" id="clear">Vider</button>
+      </div>
+      <div class="row">
+        <span class="count">Mode&nbsp;:</span>
+        <div class="seg" id="mode">
+          <button data-mode="pseudo" class="active">Pseudonymisation [TYPE_n]</button>
+          <button data-mode="redact">Caviardage ████</button>
+        </div>
+      </div>
+      <div class="row" id="cats"></div>
+      <div class="row">
+        <input type="text" id="custom" placeholder="Mots/termes à masquer en plus (séparés par des virgules)" style="flex:1;min-width:240px">
+      </div>
+      <div class="hint">Astuce&nbsp;: ajoutez ici les noms propres, raisons sociales ou identifiants internes que la détection automatique pourrait rater.</div>
+      <div class="row" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+        <label class="opt" style="font-size:14px">
+          <input type="checkbox" id="nerToggle">
+          <b style="color:var(--accent2)">🧠 Détection IA locale</b>&nbsp;— noms, lieux/adresses, organisations
+        </label>
+      </div>
+      <div class="status" id="nerStatus"></div>
+      <div class="hint">Le modèle IA est servi <b>localement</b> (aucun téléchargement externe, fonctionne hors-ligne). <b>Votre document ne sort jamais.</b> 1ᵉʳ chargement un peu plus lent (mise en cache du modèle).</div>
+    </div>
+  </section>
+
+  <!-- SORTIE -->
+  <section class="panel">
+    <h2>2 · Aperçu détecté</h2>
+    <div class="body">
+      <div class="out" id="preview"><div class="empty">L'aperçu surligné apparaîtra ici après analyse.</div></div>
+      <div class="stat" id="stats"></div>
+      <div class="controls">
+        <button id="copy" class="secondary">Copier le texte</button>
+        <button id="download" class="secondary">Télécharger .txt</button>
+        <button id="downloadDocx" class="secondary">Télécharger .docx</button>
+        <button id="downloadPdf">Télécharger .pdf</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- TABLEAU DE CORRESPONDANCES -->
+  <section class="panel" style="grid-column:1/-1">
+    <h2>3 · Détections &amp; tableau de correspondances <span class="count">(décochez ce qui ne doit pas être anonymisé)</span></h2>
+    <div class="body">
+      <div id="table-wrap"><div class="empty">Aucune détection pour l'instant.</div></div>
+      <div class="controls">
+        <button id="exportMap" class="secondary">⬇ Exporter la table de correspondances (.json)</button>
+      </div>
+      <div class="hint">⚠️ Ce fichier contient les <b>vraies données</b> (en clair) associées à chaque jeton. Conservez-le en lieu sûr — il sert uniquement à la ré-identification ci-dessous et reste sur votre machine.</div>
+    </div>
+  </section>
+
+  <!-- RÉ-IDENTIFICATION -->
+  <section class="panel" style="grid-column:1/-1">
+    <h2>4 · Ré-identification <span class="count">(réinjecter les vraies données dans la réponse de l'IA)</span></h2>
+    <div class="body">
+      <div class="hint" style="margin-bottom:10px">Après avoir utilisé le texte anonymisé dans une IA, collez ici sa <b>réponse</b> (qui contient encore les jetons <span class="tok">[PERSONNE_1]</span>…). L'outil remplace les jetons par les vraies valeurs. Utilise la table de la session en cours, ou importez-en une.</div>
+      <div class="row">
+        <label class="opt"><b>Table :</b></label>
+        <button id="importMapBtn" class="ghost">Importer une table (.json)</button>
+        <input type="file" id="importMap" accept="application/json,.json" hidden>
+        <span class="count" id="mapInfo">table de la session en cours</span>
+      </div>
+      <textarea id="reidInput" placeholder="Collez ici la réponse de l'IA contenant les jetons…" style="min-height:140px;margin-top:10px"></textarea>
+      <div class="controls">
+        <button id="reidBtn">Ré-identifier</button>
+        <button id="reidCopy" class="secondary">Copier le résultat</button>
+      </div>
+      <div class="out" id="reidOut" style="min-height:140px;margin-top:6px"><div class="empty">Le texte ré-identifié apparaîtra ici.</div></div>
+    </div>
+  </section>
+</main>
+
+<div class="foot">
+  ⚠️ <b>Aide à l'anonymisation</b> — la détection (règles + IA locale optionnelle) n'est jamais parfaite&nbsp;: les
+  <b>identifiants indirects</b> (recoupements de contexte) échappent à toute détection automatique.
+  <b>Relisez toujours</b> le résultat avant de l'utiliser. Cet outil ne garantit pas une anonymisation conforme&nbsp;;
+  vous restez responsable du document produit.
+  <div class="footlinks">
+    <a href="confidentialite.html">Confidentialité</a>
+    <a href="mentions-legales.html">Mentions légales</a>
+    <a href="https://github.com/REVOLia/anonymiseur" rel="noopener">Code source (open source · AGPL-3.0)</a>
+    <span class="footbrand">© REVOLia · 100 % local, hors-ligne</span>
+  </div>
+</div>
+
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="vendor/tesseract/tesseract.min.js"></script>
+<script src="vendor/mammoth.browser.min.js"></script>
+<script src="vendor/docx.umd.js"></script>
+<script>
+/* ===========================================================
+   Lecture de PDF — 100% local via PDF.js.
+   Le fichier n'est jamais envoyé : on lit l'ArrayBuffer en mémoire.
+   =========================================================== */
+if(window.pdfjsLib){ pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js'; }
+
+function setStatus(msg,type){
+  const el=document.getElementById('status');
+  el.textContent=msg||''; el.className='status'+(type?' '+type:'');
+}
+
+async function readPdf(file){
+  if(!window.pdfjsLib){ setStatus("PDF.js non chargé (ouvrez la page via le serveur local).",'err'); return; }
+  setStatus('Lecture de « '+file.name+' »…','work');
+  try{
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    let out='';
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p);
+      const tc=await page.getTextContent();
+      // reconstitue les lignes en regardant la position verticale
+      let lastY=null, line='';
+      tc.items.forEach(it=>{
+        const y=it.transform[5];
+        if(lastY!==null && Math.abs(y-lastY)>2){ out+=line.trimEnd()+'\n'; line=''; }
+        line+=it.str+(it.hasEOL?'\n':' ');
+        lastY=y;
+      });
+      out+=line+'\n\n';
+    }
+    out=out.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+    if(out.length<15){
+      // PDF scanné (image) sans texte → bascule en OCR local sur les pages rendues
+      setStatus('PDF scanné détecté — reconnaissance de texte (OCR) en cours…','work');
+      out = await ocrPdfPages(pdf);
+      if(out.trim().length<5){ setStatus('Aucun texte reconnu dans ce PDF scanné.','err'); return; }
+      document.getElementById('input').value=out;
+      setStatus('✓ OCR : '+out.length+' caractères reconnus sur '+pdf.numPages+' page(s). Analyse en cours…','ok');
+      resetBuild(); run(out);
+      return;
+    }
+    document.getElementById('input').value=out;
+    setStatus('✓ '+pdf.numPages+' page(s) lue(s) — '+out.length+' caractères extraits. Analyse en cours…','ok');
+    resetBuild(); run(out);
+  }catch(e){
+    setStatus('Erreur de lecture : '+e.message,'err');
+  }
+}
+
+/* ===========================================================
+   OCR local — Tesseract.js (français). L'image ne sort jamais
+   du navigateur ; seule la librairie/le modèle sont chargés.
+   =========================================================== */
+let ocrWorker=null, ocrLoading=null;
+async function getOcrWorker(){
+  if(ocrWorker) return ocrWorker;
+  if(!ocrLoading){
+    // URL absolue (les workers blob ne résolvent pas les chemins relatifs)
+    const base = location.origin + location.pathname.replace(/[^/]*$/, '') + 'vendor/tesseract/';
+    ocrLoading = Tesseract.createWorker('fra', 1, {
+      workerPath: base + 'worker.min.js',
+      corePath: base,
+      langPath: base,
+      logger: m => { if(m.status==='recognizing text') setStatus('OCR en cours… '+Math.round(m.progress*100)+'%','work'); }
+    }).then(w=>{ ocrWorker=w; return w; });
+  }
+  return ocrLoading;
+}
+
+// Rend chaque page PDF dans un canvas puis l'OCR
+async function ocrPdfPages(pdf){
+  const worker=await getOcrWorker();
+  let out='';
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const viewport=page.getViewport({scale:2});
+    const canvas=document.createElement('canvas');
+    canvas.width=viewport.width; canvas.height=viewport.height;
+    await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+    const { data:{ text } } = await worker.recognize(canvas);
+    out += text + '\n\n';
+  }
+  return out.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+
+// OCR d'un fichier image (JPG/PNG)
+async function ocrImageFile(file){
+  if(!window.Tesseract){ setStatus("Moteur OCR non chargé.",'err'); return; }
+  setStatus('Image « '+file.name+' » — reconnaissance de texte (OCR) en cours… (1ᵉʳ usage : initialisation du moteur local)','work');
+  try{
+    const worker=await getOcrWorker();
+    const { data:{ text } } = await worker.recognize(file);
+    const out=text.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+    if(out.length<2){ setStatus('Aucun texte reconnu dans cette image.','err'); return; }
+    document.getElementById('input').value=out;
+    setStatus('✓ OCR : '+out.length+' caractères reconnus. Analyse en cours…','ok');
+    resetBuild(); run(out);
+  }catch(e){ setStatus('Erreur OCR : '+(e.message||e),'err'); }
+}
+
+// Lecture d'un Word (.docx) via mammoth — extraction du texte, 100% local
+async function readDocx(file){
+  if(!window.mammoth){ setStatus("Lecteur Word non chargé.",'err'); return; }
+  setStatus('Lecture de « '+file.name+' »…','work');
+  try{
+    const buf=await file.arrayBuffer();
+    const { value } = await mammoth.extractRawText({ arrayBuffer: buf });
+    const out=(value||'').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+    if(out.length<2){ setStatus('Aucun texte trouvé dans ce document Word.','err'); return; }
+    document.getElementById('input').value=out;
+    setStatus('✓ Word lu — '+out.length+' caractères extraits. Analyse en cours…','ok');
+    resetBuild(); run(out);
+  }catch(e){ setStatus('Erreur de lecture Word : '+(e.message||e),'err'); }
+}
+
+// Routage selon le type de fichier
+function handleFile(f){
+  if(!f) return;
+  const isDocx = f.type==='application/vnd.openxmlformats-officedocument.wordprocessingml.document' || /\.docx$/i.test(f.name);
+  if(f.type==='application/pdf') readPdf(f);
+  else if(isDocx) readDocx(f);
+  else if(f.type && f.type.startsWith('image/')) ocrImageFile(f);
+  else setStatus('Format non géré : déposez un PDF, un Word (.docx) ou une image (JPG/PNG).','err');
+}
+
+(function(){
+  const drop=document.getElementById('drop'), input=document.getElementById('file');
+  drop.addEventListener('click',()=>input.click());
+  input.addEventListener('change',e=>handleFile(e.target.files[0]));
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+  drop.addEventListener('drop',e=>handleFile(e.dataTransfer.files[0]));
+})();
+
+/* ===========================================================
+   Détecteurs par règles (regex). Chaque catégorie a :
+   - label affiché, couleur, et un motif.
+   Ordre = priorité de détection (les plus spécifiques d'abord).
+   =========================================================== */
+const CATS = [
+  {key:'EMAIL',    label:'E-mail',        color:'#5b8def', re:/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g},
+  {key:'IBAN',     label:'IBAN',          color:'#3ddc97', re:/\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}\b/g},
+  {key:'NISS',     label:'N° national',   color:'#e5484d', re:/\b\d{2}[.\-]?\d{2}[.\-]?\d{2}[.\- ]?\d{3}[.\-]?\d{2}\b/g},
+  {key:'TVA_BE',   label:'N° entreprise (BE)', color:'#f2c14e', re:/\bBE\s?0\d{3}[.\s]?\d{3}[.\s]?\d{3}\b|\b0\d{3}\.\d{3}\.\d{3}\b/gi},
+  {key:'CARTE',    label:'Carte bancaire',color:'#e5484d', re:/\b(?:\d[ \-]?){13,16}\b/g},
+  {key:'TEL',      label:'Téléphone',     color:'#f0a020', re:/(?:(?:\+|00)\d{1,3}[ .\-]?)?(?:\(?0\)?[ .\-]?)?(?:\d[ .\-]?){8,10}\d\b/g},
+  {key:'DATE',     label:'Date',          color:'#b07cff', re:/\b\d{1,2}(?:er|ème|e)?[\/.\- ]+(?:\d{1,2}|janv(?:ier)?|f[ée]vr(?:ier)?|mars|avr(?:il)?|mai|juin|juil(?:let)?|ao[uû]t|sept(?:embre)?|oct(?:obre)?|nov(?:embre)?|d[ée]c(?:embre)?)[\/.\- ]+\d{2,4}\b/gi},
+  {key:'MONTANT',  label:'Montant',       color:'#3ddc97', re:/\b\d{1,3}(?:[ .]?\d{3})*(?:[,.]\d{1,2})?\s?(?:€|EUR|euros?)/gi},
+  {key:'CP_VILLE', label:'Code postal',   color:'#7dd3fc', re:/\b\d{4,5}[ ]+[A-ZÀ-Ÿ][a-zà-ÿ\-]+(?:[ \-][A-ZÀ-Ÿ][a-zà-ÿ\-]+)?\b/g},
+  {key:'PERSONNE', label:'Nom',          color:'#ff7eb6', re:/\b(?:M\.|Mme|Mlle|Mr|Monsieur|Madame|Mademoiselle|Dr|Me|Pr)\.?[ ]+[A-ZÀ-Ÿ][a-zà-ÿ'’\-]+(?:[ ]+[A-ZÀ-Ÿ][a-zà-ÿ'’\-]+){0,2}/g},
+  // Catégories alimentées par le modèle IA local (pas de regex) :
+  {key:'LIEU',     label:'Lieu / Adresse',color:'#7dd3fc', re:null, ner:true},
+  {key:'ORG',      label:'Organisation',  color:'#c4b5fd', re:null, ner:true},
+];
+
+const SAMPLE = `CONTRAT DE TRAVAIL
+
+Entre la société BelgaTech SPRL, dont le siège est situé 14 rue de la Loi, 1000 Bruxelles,
+représentée par Madame Sophie Vandenberghe, Directrice RH,
+
+Et Monsieur Karim El Amrani, né le 03/07/1989, domicilié 27 avenue Louise, 1050 Ixelles,
+numéro national 89.07.03-145.62, joignable au +32 478 12 34 56 ou karim.elamrani@gmail.com.
+
+Rémunération mensuelle brute : 3 250,00 €, versée sur le compte BE71 0961 2345 6769.
+Le présent contrat prend effet le 1er septembre 2024.`;
+
+let activeMode = 'pseudo';
+let enabled = {}; CATS.forEach(c=>enabled[c.key]=true);
+
+/* ---------- UI : cases catégories ---------- */
+const catsEl = document.getElementById('cats');
+catsEl.innerHTML = '<span class="count">Catégories&nbsp;:</span>' ;
+CATS.forEach(c=>{
+  const l=document.createElement('label'); l.className='opt';
+  l.innerHTML=`<input type="checkbox" checked data-cat="${c.key}">
+    <span class="cat" style="background:${c.color}22;color:${c.color};border:1px solid ${c.color}55">${c.label}</span>`;
+  catsEl.appendChild(l);
+});
+catsEl.addEventListener('change',e=>{
+  if(e.target.dataset.cat){enabled[e.target.dataset.cat]=e.target.checked; if(lastText) run(lastText);}
+});
+
+/* ---------- mode ---------- */
+document.getElementById('mode').addEventListener('click',e=>{
+  if(!e.target.dataset.mode) return;
+  activeMode=e.target.dataset.mode;
+  [...document.querySelectorAll('#mode button')].forEach(b=>b.classList.toggle('active',b===e.target));
+  if(lastText) run(lastText);
+});
+
+/* ---------- détection ---------- */
+function escapeRe(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+
+function detect(text){
+  const hits=[]; // {start,end,cat,value}
+  CATS.forEach(c=>{
+    if(!c.re || !enabled[c.key]) return;
+    let m; c.re.lastIndex=0;
+    while((m=c.re.exec(text))!==null){
+      const val=m[0];
+      if(val.trim().length<2){c.re.lastIndex=m.index+1;continue;}
+      hits.push({start:m.index,end:m.index+val.length,cat:c.key,value:val,prio:2});
+      if(m.index===c.re.lastIndex)c.re.lastIndex++;
+    }
+  });
+  // termes personnalisés
+  const custom=document.getElementById('custom').value.split(',').map(s=>s.trim()).filter(Boolean);
+  custom.forEach(term=>{
+    const re=new RegExp(escapeRe(term),'gi'); let m;
+    while((m=re.exec(text))!==null){
+      hits.push({start:m.index,end:m.index+m[0].length,cat:'PERSONNE',value:m[0],custom:true,prio:3});
+      if(m.index===re.lastIndex)re.lastIndex++;
+    }
+  });
+  // tri + suppression des chevauchements (on garde le plus long / premier)
+  hits.sort((a,b)=> a.start-b.start || (b.end-b.start)-(a.end-a.start));
+  const clean=[]; let lastEnd=-1;
+  hits.forEach(h=>{ if(h.start>=lastEnd){clean.push(h);lastEnd=h.end;} });
+  return clean;
+}
+
+/* ---------- correspondances cohérentes ---------- */
+function buildMapping(hits){
+  const counters={}, map=new Map(); // value(normalisée)->token
+  hits.forEach(h=>{
+    const k=h.cat+'::'+h.value.toLowerCase().replace(/\s+/g,' ').trim();
+    if(!map.has(k)){
+      counters[h.cat]=(counters[h.cat]||0)+1;
+      map.set(k, `[${h.cat}_${counters[h.cat]}]`);
+    }
+    h.token=map.get(k);
+  });
+  return map;
+}
+
+/* ---------- rendu ---------- */
+let lastText='', lastHits=[], lastAnon='', lastMapping={}, importedMap=null;
+function catColor(key){return (CATS.find(c=>c.key===key)||{}).color||'#888';}
+function catLabel(key){return (CATS.find(c=>c.key===key)||{}).label||key;}
+
+// fusionne et supprime les chevauchements ; priorité : terme perso > regex > IA
+function dedup(hits){
+  hits.sort((a,b)=> a.start-b.start || (b.prio||1)-(a.prio||1) || (b.end-b.start)-(a.end-a.start));
+  const clean=[]; let lastEnd=-1;
+  hits.forEach(h=>{ if(h.start>=lastEnd){clean.push(h);lastEnd=h.end;} });
+  return clean.sort((a,b)=>a.start-b.start);
+}
+
+// Mots à NE JAMAIS anonymiser (faux positifs fréquents : formes juridiques, sigles, fonctions)
+const EXCLUDE = new Set(['rh','sa','sprl','srl','scrl','scs','snc','asbl','gie','sc','sca',
+  'tva','iban','bce','direction','directrice','directeur','service','département','contrat']);
+
+// Rattache un numéro de voirie au nom de rue (« 27 avenue Louise » et non « avenue Louise »)
+const VOIES = /^(rue|avenue|av\.?|boulevard|bd\.?|chauss[ée]e|place|chemin|quai|impasse|all[ée]e|route|rte|dr[èe]ve|clos|square|sentier|venelle|galerie|parvis|cour)\b/i;
+function extendAddresses(text, hits){
+  hits.forEach(h=>{
+    if(h.cat!=='LIEU' || !VOIES.test(h.value)) return;
+    const before=text.slice(Math.max(0,h.start-10), h.start);
+    const m=before.match(/(\d{1,4}(?:\s?(?:bis|ter))?)[ ,]+$/i);
+    if(m){ h.start -= m[0].length; h.value=text.slice(h.start, h.end); }
+  });
+}
+
+function run(text){
+  lastText=text;
+  let hits=detect(text);                                   // regex + termes perso
+  if(nerEnabled && nerText===text)                          // ajoute le NER en cache
+    hits=hits.concat(nerHits.filter(h=>enabled[h.cat]));
+  extendAddresses(text, hits);                              // numéro de rue rattaché
+  hits=dedup(hits);
+  hits=hits.filter(h=>!EXCLUDE.has(h.value.trim().toLowerCase())); // retire les faux positifs
+  buildMapping(hits);
+  lastHits=hits;
+  // table de correspondances de la session : jeton -> vraie valeur
+  lastMapping={};
+  hits.forEach(h=>{ if(h.token && !(h.token in lastMapping)) lastMapping[h.token]=h.value; });
+  renderAll(text,hits);
+  if(nerEnabled && nerText!==text) scheduleNER(text);       // lance l'IA si texte nouveau
+}
+
+function renderAll(text,hits){
+  let prev='', anon='', i=0;
+  hits.forEach(h=>{
+    prev+=escapeHtml(text.slice(i,h.start));
+    const col=catColor(h.cat);
+    const tag = h.prio===1 ? ' · IA' : '';
+    prev+=`<mark style="background:${col}33;color:${col};border:1px solid ${col}77" title="${catLabel(h.cat)}${tag} → ${h.token}">${escapeHtml(text.slice(h.start,h.end))}</mark>`;
+    anon+=text.slice(i,h.start);
+    anon+= activeMode==='pseudo' ? h.token : '█'.repeat(Math.max(3,Math.min(h.end-h.start,12)));
+    i=h.end;
+  });
+  prev+=escapeHtml(text.slice(i));
+  anon+=text.slice(i);
+  document.getElementById('preview').innerHTML = hits.length? prev : '<div class="empty">Aucune information identifiante détectée.</div>';
+  lastAnon=anon;
+  const byCat={}; hits.forEach(h=>byCat[h.cat]=(byCat[h.cat]||0)+1);
+  const uniq=new Set(hits.map(h=>h.token)).size;
+  document.getElementById('stats').innerHTML =
+    `<div><b>${hits.length}</b> occurrence(s)</div>
+     <div><b>${uniq}</b> entité(s) unique(s)</div>
+     <div><b>${Object.keys(byCat).length}</b> catégorie(s)</div>`;
+  renderTable(hits);
+}
+
+function resetBuild(){}  // conservé pour compatibilité (l'anonymisation est désormais locale au rendu)
+
+/* ---------- contrôleur de la détection IA (NER local) ---------- */
+let nerEnabled=false, nerText=null, nerHits=[];
+function setNerStatus(msg,type){const el=document.getElementById('nerStatus');el.textContent=msg||'';el.className='status'+(type?' '+type:'');}
+
+async function scheduleNER(text){
+  if(!window.__nerRun){ setNerStatus('Module IA non disponible.','err'); return; }
+  setNerStatus('🧠 Initialisation du modèle local / analyse en cours… (1ᵉʳ chargement un peu plus long)','work');
+  try{
+    const ents=await window.__nerRun(text);
+    nerText=text; nerHits=ents;
+    setNerStatus('✓ IA : '+ents.length+' entité(s) contextuelle(s) détectée(s).','ok');
+    if(lastText===text) run(text);
+  }catch(e){ setNerStatus('Erreur IA : '+(e.message||e),'err'); }
+}
+
+document.getElementById('nerToggle').addEventListener('change',e=>{
+  nerEnabled=e.target.checked;
+  if(nerEnabled){
+    if(lastText){ nerText===lastText ? run(lastText) : scheduleNER(lastText); }
+    else setNerStatus('Activé — chargez ou collez un document pour lancer l\'analyse IA.','ok');
+  }else{
+    nerText=null; nerHits=[]; setNerStatus('');
+    if(lastText) run(lastText);
+  }
+});
+
+function renderTable(hits){
+  const wrap=document.getElementById('table-wrap');
+  if(!hits.length){wrap.innerHTML='<div class="empty">Aucune détection.</div>';return;}
+  // regrouper par token
+  const groups=new Map();
+  hits.forEach(h=>{
+    if(!groups.has(h.token)) groups.set(h.token,{cat:h.cat,value:h.value,count:0,token:h.token});
+    groups.get(h.token).count++;
+  });
+  let rows='';
+  [...groups.values()].forEach(g=>{
+    const col=catColor(g.cat);
+    rows+=`<tr>
+      <td><span class="cat" style="background:${col}22;color:${col};border:1px solid ${col}55">${catLabel(g.cat)}</span></td>
+      <td style="font-family:ui-monospace,monospace">${escapeHtml(g.value)}</td>
+      <td>${activeMode==='pseudo'?`<span class="tok">${g.token}</span>`:'<span class="redact">████████</span>'}</td>
+      <td class="count">${g.count}×</td>
+    </tr>`;
+  });
+  wrap.innerHTML=`<table>
+    <thead><tr><th>Catégorie</th><th>Valeur détectée</th><th>Remplacée par</th><th>Occur.</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+/* ---------- actions ---------- */
+function analyze(){ resetBuild(); run(document.getElementById('input').value); }
+document.getElementById('analyze').addEventListener('click',analyze);
+document.getElementById('custom').addEventListener('input',()=>{ if(lastText){resetBuild();run(document.getElementById('input').value);} });
+document.getElementById('sample').addEventListener('click',()=>{
+  document.getElementById('input').value=SAMPLE; resetBuild(); analyze();
+});
+document.getElementById('clear').addEventListener('click',()=>{
+  document.getElementById('input').value=''; document.getElementById('preview').innerHTML='<div class="empty">L\'aperçu surligné apparaîtra ici après analyse.</div>';
+  document.getElementById('table-wrap').innerHTML='<div class="empty">Aucune détection pour l\'instant.</div>';
+  document.getElementById('stats').innerHTML=''; lastText=''; lastAnon='';
+  nerText=null; nerHits=[]; setNerStatus('');
+  // efface aussi la ré-identification (les vraies données ne doivent pas persister)
+  lastMapping={}; importedMap=null; reidLast='';
+  document.getElementById('reidInput').value='';
+  document.getElementById('reidOut').innerHTML='<div class="empty">Le texte ré-identifié apparaîtra ici.</div>';
+  document.getElementById('mapInfo').textContent='table de la session en cours';
+});
+document.getElementById('copy').addEventListener('click',()=>{
+  if(!lastAnon){alert('Analysez d\'abord un texte.');return;}
+  navigator.clipboard.writeText(lastAnon).then(()=>{
+    const b=document.getElementById('copy'); const t=b.textContent; b.textContent='✓ Copié'; setTimeout(()=>b.textContent=t,1400);
+  });
+});
+document.getElementById('download').addEventListener('click',()=>{
+  if(!lastAnon){alert('Analysez d\'abord un texte.');return;}
+  const blob=new Blob([lastAnon],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='document-anonymise.txt'; a.click();
+});
+
+/* ---------- export PDF (100% local, via jsPDF) ----------
+   Pseudonymisation : on écrit les jetons [TYPE_n].
+   Caviardage : on DESSINE des rectangles noirs (le texte sensible n'est jamais
+   écrit dans le PDF → impossible à récupérer, contrairement à un simple masque visuel). */
+function buildSegments(){
+  const text=lastText, hits=lastHits, segs=[]; let i=0;
+  hits.forEach(h=>{
+    if(h.start>i) segs.push({t:'txt', s:text.slice(i,h.start)});
+    segs.push({t:'red', token:h.token, value:text.slice(h.start,h.end)});
+    i=h.end;
+  });
+  if(i<text.length) segs.push({t:'txt', s:text.slice(i)});
+  return segs;
+}
+
+document.getElementById('downloadPdf').addEventListener('click',()=>{
+  if(!lastText){alert('Analysez d\'abord un texte.');return;}
+  if(!window.jspdf){alert('jsPDF non chargé (ouvrez la page via le serveur local).');return;}
+  const { jsPDF }=window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'a4'});
+  const margin=50, fs=11, lh=15.5;
+  const pageW=doc.internal.pageSize.getWidth(), pageH=doc.internal.pageSize.getHeight();
+  const maxX=pageW-margin;
+  doc.setFont('helvetica','normal'); doc.setFontSize(fs);
+  let x=margin, y=margin+10;
+  const spaceW=doc.getTextWidth(' ');
+  function footer(){
+    doc.setFontSize(8); doc.setTextColor(150);
+    doc.text('Document anonymisé localement — vérifier avant diffusion', margin, pageH-24);
+    doc.setFontSize(fs); doc.setTextColor(0);
+  }
+  function brk(){ x=margin; y+=lh; if(y>pageH-margin){ footer(); doc.addPage(); y=margin+10; } }
+  function word(w){ const ww=doc.getTextWidth(w); if(x+ww>maxX && x>margin) brk(); doc.text(w,x,y); x+=ww; }
+  function space(){ x+=spaceW; if(x>maxX) brk(); }
+  function box(w){ if(x+w>maxX && x>margin) brk(); doc.setFillColor(0,0,0); doc.rect(x, y-fs+2.5, w, fs+1, 'F'); x+=w; }
+
+  buildSegments().forEach(seg=>{
+    if(seg.t==='txt'){
+      seg.s.split('\n').forEach((para,pi)=>{
+        if(pi>0) brk();
+        para.split(/(\s+)/).forEach(tok=>{
+          if(tok==='') return;
+          /^\s+$/.test(tok) ? space() : word(tok);
+        });
+      });
+    } else if(activeMode==='pseudo'){
+      doc.setTextColor(60,110,210); word(seg.token); doc.setTextColor(0);
+    } else {
+      box(Math.min(maxX-margin, Math.max(20, doc.getTextWidth(seg.value)+2)));
+    }
+  });
+  footer();
+  doc.save('document-anonymise.pdf');
+});
+
+/* ---------- export Word (.docx, 100% local via docx) ----------
+   Pseudo : jetons en texte. Caviardage : barres noires (block chars sur fond noir)
+   SANS le texte sensible → rien à récupérer. */
+document.getElementById('downloadDocx').addEventListener('click', async ()=>{
+  if(!lastText){alert('Analysez d\'abord un texte.');return;}
+  if(!window.docx){alert('Générateur Word non chargé.');return;}
+  const { Document, Packer, Paragraph, TextRun, ShadingType }=window.docx;
+  const paras=[]; let runs=[];
+  const flush=()=>{ paras.push(new Paragraph({children:runs})); runs=[]; };
+  buildSegments().forEach(seg=>{
+    if(seg.t==='txt'){
+      seg.s.split('\n').forEach((p,i)=>{ if(i>0) flush(); if(p) runs.push(new TextRun(p)); });
+    } else if(activeMode==='pseudo'){
+      runs.push(new TextRun({ text: seg.token, color:'2F6ED2', bold:true }));
+    } else {
+      const blocks='█'.repeat(Math.max(3, Math.min(seg.value.length,16)));
+      runs.push(new TextRun({ text: blocks, color:'000000',
+        shading:{ type: ShadingType.SOLID, color:'000000', fill:'000000' } }));
+    }
+  });
+  flush();
+  const docu=new Document({ sections:[{ children: paras }] });
+  const blob=await Packer.toBlob(docu);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='document-anonymise.docx'; a.click();
+});
+
+/* ---------- ré-identification (réinjecter les vraies données) ---------- */
+function activeMap(){ return importedMap || lastMapping; }
+
+document.getElementById('exportMap').addEventListener('click',()=>{
+  if(!Object.keys(lastMapping).length){ alert('Analysez d\'abord un document pour générer la table.'); return; }
+  const payload={
+    _avertissement:'Ce fichier contient des données personnelles en clair. À conserver en lieu sûr.',
+    correspondances:lastMapping
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='table-correspondances.json'; a.click();
+});
+
+document.getElementById('importMapBtn').addEventListener('click',()=>document.getElementById('importMap').click());
+document.getElementById('importMap').addEventListener('change', async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    const data=JSON.parse(await f.text());
+    const map=data.correspondances||data;
+    if(typeof map!=='object'||Array.isArray(map)) throw new Error('format inattendu');
+    importedMap=map;
+    document.getElementById('mapInfo').textContent='table importée ('+Object.keys(map).length+' entrées)';
+  }catch(err){ alert('Fichier de table invalide : '+(err.message||err)); }
+});
+
+function reidentify(){
+  const map=activeMap();
+  const src=document.getElementById('reidInput').value;
+  if(!src.trim()){ document.getElementById('reidOut').innerHTML='<div class="empty">Collez d\'abord la réponse de l\'IA.</div>'; return; }
+  if(!Object.keys(map).length){ alert('Aucune table de correspondances disponible (analysez un document ou importez une table).'); return; }
+  let count=0;
+  // remplace chaque jeton [TYPE_n] par sa vraie valeur (jetons longs d'abord)
+  const tokens=Object.keys(map).sort((a,b)=>b.length-a.length);
+  let out=src;
+  tokens.forEach(tok=>{
+    const re=new RegExp(escapeRe(tok),'g');
+    out=out.replace(re,()=>{ count++; return map[tok]; });
+  });
+  document.getElementById('reidOut').textContent=out;
+  reidLast=out;
+  document.getElementById('reidOut').setAttribute('data-n',count);
+}
+let reidLast='';
+document.getElementById('reidBtn').addEventListener('click',reidentify);
+document.getElementById('reidCopy').addEventListener('click',()=>{
+  if(!reidLast){alert('Ré-identifiez d\'abord un texte.');return;}
+  navigator.clipboard.writeText(reidLast).then(()=>{
+    const b=document.getElementById('reidCopy'); const t=b.textContent; b.textContent='✓ Copié'; setTimeout(()=>b.textContent=t,1400);
+  });
+});
+</script>
+
+<!-- ===========================================================
+     Module NER local — Transformers.js (Hugging Face), 100% HORS-LIGNE.
+     Bibliothèque, runtime ONNX (wasm) et modèle sont servis LOCALEMENT
+     depuis vendor/. Rien n'est chargé depuis Internet — le texte non plus.
+     =========================================================== -->
+<script type="module">
+import { pipeline, env } from './vendor/transformers/transformers.min.js';
+const BASE = location.origin + location.pathname.replace(/[^/]*$/, '');
+// Tout en local : pas de Hub distant, modèle et wasm servis depuis vendor/
+env.allowRemoteModels = false;
+env.allowLocalModels  = true;
+env.localModelPath    = BASE + 'vendor/models/';
+env.backends.onnx.wasm.wasmPaths = BASE + 'vendor/transformers/';
+env.backends.onnx.wasm.proxy     = false;   // pas de proxy worker externe
+env.backends.onnx.wasm.numThreads = 1;      // pas de SharedArrayBuffer requis
+const MODEL = 'Xenova/distilbert-base-multilingual-cased-ner-hrl'; // PER/ORG/LOC, multilingue (FR)
+const MAP = {PER:'PERSONNE', ORG:'ORG', LOC:'LIEU'};
+
+let pipe=null, loading=null;
+window.__nerLoad = function(){
+  if(pipe) return Promise.resolve(pipe);
+  if(!loading) loading = pipeline('token-classification', MODEL, { dtype:'q8' }).then(p=>{pipe=p;return p;});
+  return loading;
+};
+
+// Découpe le texte en morceaux (limite ~512 tokens du modèle), sur les sauts de ligne.
+function chunk(text, max=1000){
+  const parts=[]; let buf='', base=0, off=0;
+  for(const seg of text.split(/(\n)/)){
+    if(buf.length && buf.length+seg.length>max){ parts.push({text:buf, base}); base=off; buf=''; }
+    buf+=seg; off+=seg.length;
+  }
+  if(buf.length) parts.push({text:buf, base});
+  return parts;
+}
+
+window.__nerRun = async function(text){
+  const ner = await window.__nerLoad();
+  const groups=[];
+  for(const {text:ct, base} of chunk(text)){
+    const out = await ner(ct);
+    // Cette version ne fournit pas d'offsets : on relocalise chaque sous-mot
+    // dans le texte du chunk via un curseur progressif (les tokens sont dans l'ordre).
+    let cursor=0, cur=null;
+    const locate=(w)=>{
+      const p=w.replace(/^##/,''); if(!p) return null;
+      const i=ct.indexOf(p,cursor); if(i<0) return null;
+      cursor=i+p.length; return {s:i, e:i+p.length};
+    };
+    for(const e of out){
+      const lbl=e.entity||'O';
+      const type=lbl.replace(/^[BI]-/,'').toUpperCase();
+      const cat=MAP[type];
+      const loc=locate(e.word);
+      if(!cat || !loc){ if(cur){groups.push(cur);cur=null;} continue; }
+      const isB=/^B-/.test(lbl);
+      if(cur && cur.cat===cat && !isB){ cur.end=loc.e+base; cur.score=Math.min(cur.score,e.score); }
+      else { if(cur) groups.push(cur); cur={cat, start:loc.s+base, end:loc.e+base, score:e.score, prio:1}; }
+    }
+    if(cur) groups.push(cur);
+  }
+  // nettoyage : seuil de confiance + valeur de surface
+  const hits=[];
+  for(const h of groups){
+    if(h.end<=h.start) continue;
+    if(h.score!=null && h.score<0.5) continue;
+    h.value = text.slice(h.start, h.end).trim();
+    if(h.value.length>=2) hits.push(h);
+  }
+  return hits;
+};
+
+// Signale que le module est prêt (au cas où l'utilisateur a déjà coché la case)
+window.dispatchEvent(new Event('ner-ready'));
+</script>
+</body>
+</html>

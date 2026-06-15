@@ -1,0 +1,24 @@
+# ─── Gros binaires re-téléchargeables (voir fetch-assets.sh) ───
+# Modèle IA (~135 Mo, dépasse la limite GitHub de 100 Mo/fichier)
+vendor/models/
+# Cœurs WASM + loaders + données OCR Tesseract (volumineux, ~40 Mo)
+vendor/tesseract/*.wasm
+vendor/tesseract/*.wasm.js
+vendor/tesseract/*.traineddata.gz
+# Runtime ONNX (wasm, ~21 Mo)
+vendor/transformers/*.wasm
+
+# ─── Police sous licence commerciale — NE PAS redistribuer ───
+# iBrand est sous licence détenue par REVOLia ; chaque déploiement doit
+# fournir son propre fichier licencié (voir README).
+vendor/fonts/ibrand.otf
+
+# ─── Documents internes REVOLia (ne pas publier) ───
+cahier-des-charges.md
+cahier-des-charges.pdf
+etude-concurrentielle.md
+
+# ─── Divers ───
+.DS_Store
+.claude/
+*.log
