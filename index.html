@@ -89,7 +89,10 @@
        window.ANON_MODEL_BASE = "https://assets.revolia.be/models/";
      Le bucket R2 doit autoriser le CORS depuis https://anonymiseur.revolia.be.
      (La détection par règles, l'OCR et les exports fonctionnent sans cette IA.) */
-  window.ANON_MODEL_BASE = "";
+  window.ANON_MODEL_BASE =
+    (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+      ? ""  // dev local : modèle depuis vendor/models/
+      : "https://pub-e266f6665a8741d0b3ce5ad0b1ac2f22.r2.dev/models/";  // prod : Cloudflare R2 (REVOLia)
 </script>
 </head>
 <body>
