@@ -484,13 +484,33 @@ function handleFile(f){
    - label affiché, couleur, et un motif.
    Ordre = priorité de détection (les plus spécifiques d'abord).
    =========================================================== */
+/* Validateurs : réduisent les faux positifs sur les documents remplis de
+   chiffres (comptes annuels, factures…). Une règle n'accepte un match que
+   si son éventuelle fonction `valid` renvoie true. */
+function luhn(v){                                   // vraie carte bancaire : checksum de Luhn
+  const d=v.replace(/\D/g,'');
+  if(d.length<13||d.length>19) return false;
+  let s=0, alt=false;
+  for(let i=d.length-1;i>=0;i--){ let n=+d[i]; if(alt){n*=2; if(n>9)n-=9;} s+=n; alt=!alt; }
+  return s%10===0;
+}
+function validTel(v){                               // format téléphone belge plausible
+  if(/\.\d{3}/.test(v)) return false;              // « .744 » = séparateur de milliers, pas un n°
+  let d=v.replace(/\D/g,'');
+  if(d.startsWith('0032')) d='0'+d.slice(4);
+  else if(d.startsWith('32') && v.trim().startsWith('+')) d='0'+d.slice(2);
+  if(d[0]!=='0') return false;
+  if(d.length===10) return d[1]==='4';             // mobile BE : 04xx xx xx xx
+  return d.length===9;                              // fixe BE : 0x xxx xx xx
+}
+
 const CATS = [
   {key:'EMAIL',    label:'E-mail',        color:'#5b8def', re:/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g},
   {key:'IBAN',     label:'IBAN',          color:'#0b9d63', re:/\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}\b/g},
   {key:'NISS',     label:'N° national',   color:'#e5484d', re:/\b\d{2}[.\-]?\d{2}[.\-]?\d{2}[.\- ]?\d{3}[.\-]?\d{2}\b/g},
   {key:'TVA_BE',   label:'N° entreprise (BE)', color:'#f2c14e', re:/\bBE\s?0\d{3}[.\s]?\d{3}[.\s]?\d{3}\b|\b0\d{3}\.\d{3}\.\d{3}\b/gi},
-  {key:'CARTE',    label:'Carte bancaire',color:'#e5484d', re:/\b(?:\d[ \-]?){13,16}\b/g},
-  {key:'TEL',      label:'Téléphone',     color:'#f0a020', re:/(?:(?:\+|00)\d{1,3}[ .\-]?)?(?:\(?0\)?[ .\-]?)?(?:\d[ .\-]?){8,10}\d\b/g},
+  {key:'CARTE',    label:'Carte bancaire',color:'#e5484d', re:/\b\d{4}[ \-]\d{4}[ \-]\d{4}[ \-]\d{2,7}\b|\b\d{13,19}\b/g, valid:luhn},
+  {key:'TEL',      label:'Téléphone',     color:'#f0a020', re:/(?:\+|00)\s?\d{1,3}(?:[ .\-/]?\d){7,11}|\b0(?:[ .\-/]?\d){8,9}\b/g, valid:validTel},
   {key:'DATE',     label:'Date',          color:'#b07cff', re:/\b\d{1,2}(?:er|ème|e)?[\/.\- ]+(?:\d{1,2}|janv(?:ier)?|f[ée]vr(?:ier)?|mars|avr(?:il)?|mai|juin|juil(?:let)?|ao[uû]t|sept(?:embre)?|oct(?:obre)?|nov(?:embre)?|d[ée]c(?:embre)?)[\/.\- ]+\d{2,4}\b/gi},
   {key:'MONTANT',  label:'Montant',       color:'#0b9d63', re:/\b\d{1,3}(?:[ .]?\d{3})*(?:[,.]\d{1,2})?\s?(?:€|EUR|euros?)/gi},
   {key:'CP_VILLE', label:'Code postal',   color:'#2693ce', re:/\b\d{4,5}[ ]+[A-ZÀ-Ÿ][a-zà-ÿ\-]+(?:[ \-][A-ZÀ-Ÿ][a-zà-ÿ\-]+)?\b/g},
@@ -545,7 +565,7 @@ function detect(text){
     let m; c.re.lastIndex=0;
     while((m=c.re.exec(text))!==null){
       const val=m[0];
-      if(val.trim().length<2){c.re.lastIndex=m.index+1;continue;}
+      if(val.trim().length<2 || (c.valid && !c.valid(val))){c.re.lastIndex=m.index+1;continue;}
       hits.push({start:m.index,end:m.index+val.length,cat:c.key,value:val,prio:2});
       if(m.index===c.re.lastIndex)c.re.lastIndex++;
     }
