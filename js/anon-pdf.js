@@ -29,15 +29,19 @@ const SAUVEGARDE = "compress,garbage=compact,sanitize=yes";
    fragment et hache le texte en caractères isolés. */
 function indexerPage(page) {
   let texte = "";
-  const quads = [], origines = [], tailles = [], sauts = [];
+  const quads = [], origines = [], tailles = [], sauts = [], couleurs = [];
   const stext = page.toStructuredText("preserve-whitespace");
   try {
     stext.walk({
-      onChar(c, origine, _police, corps, quad) {
+      // `couleur` : la teinte du texte d'origine. Le jeton la reprendra, pour
+      // rester lisible sur un fond sombre comme sur un fond clair.
+      onChar(c, origine, _police, corps, quad, couleur) {
+        const [r, v, b] = couleur || [0, 0, 0];
         for (const _ of c) {               // un caractère hors BMP = 2 unités JS
           quads.push(quad[0], quad[1], quad[2], quad[3], quad[4], quad[5], quad[6], quad[7]);
           origines.push(origine[0], origine[1]);
           tailles.push(corps);
+          couleurs.push(r, v, b);
           sauts.push(0);
         }
         texte += c;
@@ -45,13 +49,14 @@ function indexerPage(page) {
       endLine() {
         texte += "\n";
         quads.push(0, 0, 0, 0, 0, 0, 0, 0);
-        origines.push(0, 0); tailles.push(0); sauts.push(1);
+        origines.push(0, 0); tailles.push(0); couleurs.push(0, 0, 0); sauts.push(1);
       },
     });
   } finally { stext.destroy(); }
   return { texte,
     quads: new Float32Array(quads), origines: new Float32Array(origines),
-    tailles: new Float32Array(tailles), sauts: new Uint8Array(sauts) };
+    tailles: new Float32Array(tailles), couleurs: new Float32Array(couleurs),
+    sauts: new Uint8Array(sauts) };
 }
 
 export function indexer(doc) {
@@ -109,14 +114,17 @@ function largeurTexte(police, s, corps) {
 
 function ecrireJetons(doc, page, police, poses, hauteurPage) {
   let flux = "";
-  for (const { rect, token, corps, origine } of poses) {
+  for (const { rect, token, corps, origine, couleur } of poses) {
     const dispo = rect[2] - rect[0];
     let taille = corps || 10;
     // le jeton doit tenir dans l'espace libéré : on réduit le corps au besoin
     while (taille > 3 && largeurTexte(police, token, taille) > dispo) taille -= 0.25;
     const x = origine[0];
     const y = hauteurPage - origine[1];    // index : y vers le bas ; PDF : y vers le haut
-    flux += `q BT /AnonTok ${taille.toFixed(2)} Tf 0.18 0.43 0.82 rg ` +
+    // Couleur du texte remplacé : un jeton bleu sur un bandeau vert foncé
+    // était illisible.
+    const [r, v, b] = couleur || [0.18, 0.43, 0.82];
+    flux += `q BT /AnonTok ${taille.toFixed(2)} Tf ${r.toFixed(3)} ${v.toFixed(3)} ${b.toFixed(3)} rg ` +
             `1 0 0 1 ${x.toFixed(2)} ${y.toFixed(2)} Tm (${echapper(token)}) Tj ET Q\n`;
   }
   const extra = doc.addStream(flux, {});
@@ -227,7 +235,8 @@ export function anonymiser(octetsOrigine, consignes, opts = {}) {
             annot.update();
           }
           if (mode === "pseudo" && c.rects.length && c.origine)
-            poses.push({ rect: c.rects[0], token: c.token, corps: c.corps, origine: c.origine });
+            poses.push({ rect: c.rects[0], token: c.token, corps: c.corps,
+                         origine: c.origine, couleur: c.couleur });
         }
         // Options choisies pour PRÉSERVER la mise en page :
         // - REDACT_IMAGE_PIXELS : ne remplace que les pixels couverts,

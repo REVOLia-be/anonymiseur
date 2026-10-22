@@ -22,6 +22,9 @@
     --shadow:0 1px 2px rgba(16,40,30,.04), 0 4px 18px rgba(16,40,30,.05);
   }
   *{box-sizing:border-box}
+  /* L'attribut `hidden` doit l'emporter : une règle d'auteur comme
+     `display:flex` écrase sinon le `display:none` du navigateur. */
+  [hidden]{display:none!important}
   body{margin:0;font-family:'Poppins',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
        background:var(--bg);color:var(--txt);line-height:1.55}
   a{color:var(--accent-d)}
@@ -140,6 +143,27 @@
   .drop .small{font-size:12px;margin-top:4px}
   .status{font-size:13px;margin-top:8px;min-height:18px}
   .status.err{color:var(--danger)} .status.ok{color:var(--accent-d)} .status.work{color:var(--warn)}
+  /* ── Visualiseur de pages ── */
+  .visu{max-height:620px;overflow:auto;background:var(--panel2);border:1px solid var(--line);
+        border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:10px}
+  .page{position:relative;line-height:0;align-self:center;max-width:100%;
+        box-shadow:0 1px 3px rgba(16,40,30,.12)}
+  .page img{width:100%;height:auto;display:block;border-radius:3px;background:#fff}
+  .page .attente{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        color:var(--muted);font-size:12px;font-family:'Poppins',sans-serif;background:#fff;border-radius:3px}
+  .pagenum{font-size:10.5px;color:var(--muted);text-align:center;font-family:'Poppins',sans-serif;line-height:1.4}
+  /* Zone détectée, posée sur la page d'après les positions relevées dans le PDF */
+  .zone{position:absolute;border-radius:2px;cursor:pointer;transition:background .12s}
+  .zone:hover{outline:2px solid var(--accent-d);outline-offset:1px}
+  .zone.off{background:transparent!important;border:1px dashed var(--muted)!important;opacity:.65}
+  .visu-vide{color:var(--muted);font-size:13px;padding:26px;text-align:center;font-family:'Poppins',sans-serif}
+  .bascule{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+  .verif{font-size:12.5px;padding:9px 12px;border-radius:9px;margin-top:10px;line-height:1.45}
+  .verif.ok{background:#eafaf1;color:var(--accent-d);border:1px solid #bde8d0}
+  .verif.ko{background:#fdeaea;color:var(--danger);border:1px solid #f3c2c3}
+  .verif.work{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+  .verif b{font-weight:600}
+  .pertes{font-size:11.5px;color:var(--muted);margin-top:7px;line-height:1.5}
 </style>
 <script>
   /* ── Configuration de déploiement ──────────────────────────────
@@ -205,7 +229,7 @@
 <main id="outil">
   <!-- ENTRÉE -->
   <section class="panel">
-    <h2>1 · Texte d'origine</h2>
+    <h2 id="titreOrigine">1 · Texte d'origine</h2>
     <div class="body">
       <div class="drop" id="drop">
         📄 <b>Glissez un PDF, un Word ou une image ici</b> ou cliquez pour choisir un fichier
@@ -213,6 +237,13 @@
         <input type="file" id="file" accept="application/pdf,image/*,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
       </div>
       <div class="status" id="status"></div>
+      <!-- Visualiseur : le document d'origine, avec les zones détectées à leur
+           place réelle. Affiché seulement quand l'entrée est un PDF. -->
+      <div class="bascule" id="basculeOrigine" hidden>
+        <button class="ghost" id="voirTexte">Voir le texte extrait</button>
+        <span class="count" id="infoZones"></span>
+      </div>
+      <div class="visu" id="visuOrigine" hidden></div>
       <textarea id="input" placeholder="…ou collez directement le texte à anonymiser ici."></textarea>
       <div class="controls">
         <button id="analyze">Analyser &amp; anonymiser</button>
@@ -244,9 +275,13 @@
 
   <!-- SORTIE -->
   <section class="panel">
-    <h2>2 · Aperçu détecté</h2>
+    <h2 id="titreResultat">2 · Aperçu détecté</h2>
     <div class="body">
+      <!-- Résultat : le VRAI document anonymisé, produit par le moteur PDF,
+           pas une simulation. Ce qui s'affiche ici est ce qui sera téléchargé. -->
+      <div class="visu" id="visuResultat" hidden></div>
       <div class="out" id="preview"><div class="empty">L'aperçu surligné apparaîtra ici après analyse.</div></div>
+      <div class="verif" id="verif" hidden></div>
       <div class="stat" id="stats"></div>
       <div class="controls">
         <button id="copy" class="secondary">Copier le texte</button>
@@ -376,7 +411,10 @@ const PdfLocal = (function(){
     // Le tampon est TRANSFÉRÉ au worker : le thread principal n'en garde pas
     // de copie, c'est le worker qui détient le document.
     charger: (octets)=>appel('charger', {octets}, [octets]),
-    rendre:  (page, echelle)=>appel('rendre', {page, echelle}),
+    rendre:  (page, echelle, source)=>appel('rendre', {page, echelle, source}),
+    anonymiser: (consignes, mode, valeurs)=>appel('anonymiser', {consignes, mode, valeurs}),
+    verifier: (valeurs)=>appel('verifier', {valeurs}),
+    recupererResultat: ()=>appel('recupererResultat', {}),
     fermer:  ()=>appel('fermer', {}),
   };
 })();
@@ -386,7 +424,196 @@ const PdfLocal = (function(){
    que l'utilisateur modifie le texte à la main : les offsets ne correspondent
    alors plus au document, et l'export fidèle doit être désactivé. */
 let pdfIndex=null, indexValide=false;
-function oublierIndex(){ pdfIndex=null; indexValide=false; }
+function oublierIndex(){ pdfIndex=null; indexValide=false; Visu.fermer(); }
+
+/* ===========================================================
+   Visualiseur — le document à l'écran, les détections à leur
+   place réelle, et le résultat anonymisé en vis-à-vis.
+
+   Le panneau « résultat » affiche le VRAI document produit par le
+   moteur PDF, pas une simulation : ce qui est montré est ce qui
+   sera téléchargé.
+   =========================================================== */
+const Visu = (function(){
+  const ECHELLE = 1.6;                      // qualité de rendu des pages
+  let generation = 0;                       // annule les rendus devenus obsolètes
+  let urls = [];                            // object URLs à libérer
+  let pagesOrigine = [], pagesResultat = [];
+  let minuterie = null;
+
+  const el = (id)=>document.getElementById(id);
+  const cle = (h)=> h.cat+'::'+String(h.value).toLowerCase().replace(/\s+/g,' ').trim();
+
+  function libererUrls(){ urls.forEach(u=>URL.revokeObjectURL(u)); urls=[]; }
+
+  function fermer(){
+    generation++;
+    clearTimeout(minuterie); minuterie=null;
+    libererUrls();
+    pagesOrigine=[]; pagesResultat=[];
+    for(const id of ['visuOrigine','visuResultat']){ const d=el(id); d.innerHTML=''; d.hidden=true; }
+    el('basculeOrigine').hidden=true;
+    el('input').hidden=false;
+    el('preview').hidden=false;
+    el('verif').hidden=true;
+    el('titreResultat').textContent='2 · Aperçu détecté';
+    el('titreOrigine').textContent="1 · Texte d'origine";
+  }
+
+  /* Enveloppes de page : créées tout de suite (la mise en page ne saute pas),
+     remplies au fur et à mesure que le worker rend les images. */
+  function creerEnveloppes(conteneur, idx){
+    conteneur.innerHTML='';
+    const pages=[];
+    for(let p=0;p<idx.nPages;p++){
+      const info=idx.pages[p];
+      const bloc=document.createElement('div');
+      const cadre=document.createElement('div');
+      cadre.className='page';
+      // réserve le bon ratio avant même d'avoir l'image
+      cadre.style.aspectRatio = (info.largeur/info.hauteur).toFixed(4);
+      cadre.style.width='100%';
+      cadre.innerHTML='<div class="attente">page '+(p+1)+'…</div>';
+      const num=document.createElement('div');
+      num.className='pagenum'; num.textContent='page '+(p+1)+' / '+idx.nPages;
+      bloc.appendChild(cadre); bloc.appendChild(num);
+      conteneur.appendChild(bloc);
+      pages.push({cadre, largeur:info.largeur, hauteur:info.hauteur});
+    }
+    return pages;
+  }
+
+  async function rendreDans(pages, source, gen){
+    for(let p=0;p<pages.length;p++){
+      if(gen!==generation) return;                  // document changé entre-temps
+      try{
+        const { png } = await PdfLocal.rendre(p, ECHELLE, source);
+        if(gen!==generation) return;
+        const url=URL.createObjectURL(new Blob([png],{type:'image/png'}));
+        urls.push(url);
+        const img=new Image(); img.src=url; img.alt='page '+(p+1);
+        const att=pages[p].cadre.querySelector('.attente');
+        if(att) att.remove();
+        pages[p].cadre.insertBefore(img, pages[p].cadre.firstChild);
+      }catch(e){ /* page illisible : on laisse l'enveloppe en place */ }
+    }
+  }
+
+  function ouvrirPdf(idx){
+    generation++; libererUrls();
+    const gen=generation;
+    el('input').hidden=true;                       // le texte reste accessible via le bouton
+    el('preview').hidden=true;
+    el('basculeOrigine').hidden=false;
+    el('voirTexte').textContent='Voir le texte extrait';
+    const vo=el('visuOrigine'); vo.hidden=false;
+    const vr=el('visuResultat'); vr.hidden=false;
+    el('titreResultat').textContent='2 · Résultat anonymisé';
+    el('titreOrigine').textContent="1 · Document d'origine";
+    vr.innerHTML='<div class="visu-vide">Le document anonymisé apparaîtra ici.</div>';
+    pagesOrigine=creerEnveloppes(vo, idx);
+    rendreDans(pagesOrigine, 'origine', gen);
+  }
+
+  /* Zones : positionnées en POURCENTAGE de la page, donc indépendantes de
+     l'échelle de rendu et de la largeur d'affichage. */
+  function majZones(hits){
+    if(!indexValide || !pagesOrigine.length) return;
+    for(const pg of pagesOrigine) pg.cadre.querySelectorAll('.zone').forEach(z=>z.remove());
+    let n=0;
+    for(const h of hits){
+      const couleur=catColor(h.cat);
+      for(const g of AnonGeom.rectsGlobaux(pdfIndex, h.start, h.end)){
+        const pg=pagesOrigine[g.page]; if(!pg) continue;
+        for(const r of g.rects){
+          const z=document.createElement('div');
+          z.className='zone'+(h.exclu?' off':'');
+          z.style.background=couleur+'3d';
+          z.style.border='1px solid '+couleur+'99';
+          z.style.left  =(r[0]/pg.largeur*100)+'%';
+          z.style.top   =(r[1]/pg.hauteur*100)+'%';
+          z.style.width =((r[2]-r[0])/pg.largeur*100)+'%';
+          z.style.height=((r[3]-r[1])/pg.hauteur*100)+'%';
+          z.title=(h.exclu?'IGNORÉ — ':'')+catLabel(h.cat)+' → '+h.token+'\n'+h.value+
+                  '\n(cliquer pour '+(h.exclu?'anonymiser':'ne pas anonymiser')+' cette valeur)';
+          z.dataset.cle=cle(h);
+          pg.cadre.appendChild(z);
+          n++;
+        }
+      }
+    }
+    el('infoZones').textContent=n?(n+' zone(s) sur le document — cliquez une zone pour l\'activer ou la désactiver'):'';
+  }
+
+  /* Recalcule le document anonymisé. Débrayé : l'utilisateur peut cliquer
+     plusieurs zones de suite sans relancer un calcul à chaque clic. */
+  function planifierResultat(){
+    if(!indexValide) return;
+    clearTimeout(minuterie);
+    const v=el('verif'); v.hidden=false; v.className='verif work';
+    v.textContent='Préparation du document anonymisé…';
+    minuterie=setTimeout(rafraichirResultat, 350);
+  }
+
+  async function rafraichirResultat(){
+    if(!indexValide) return;
+    const gen=generation;
+    const v=el('verif');
+    try{
+      const consignes=[], valeurs=[];
+      for(const h of lastHits){
+        const anc=AnonGeom.ancrage(pdfIndex, h.start);
+        for(const g of AnonGeom.rectsGlobaux(pdfIndex, h.start, h.end))
+          consignes.push({ page:g.page, rects:g.rects, token:h.token,
+                           corps:anc&&anc.corps, origine:anc&&anc.origine,
+                           couleur:anc&&anc.couleur });
+        valeurs.push(h.value);
+      }
+      if(!consignes.length){
+        el('visuResultat').innerHTML='<div class="visu-vide">Aucune détection à appliquer pour l\'instant.</div>';
+        v.className='verif work'; v.textContent='Rien à anonymiser : aucune détection active.';
+        return;
+      }
+      const r=await PdfLocal.anonymiser(consignes, activeMode, valeurs);
+      if(gen!==generation) return;
+      const ver=await PdfLocal.verifier(valeurs);
+      if(gen!==generation) return;
+
+      pagesResultat=creerEnveloppes(el('visuResultat'), pdfIndex);
+      rendreDans(pagesResultat, 'resultat', gen);
+
+      const rapport=(r.tailleOrigine/1024).toFixed(0)+' Ko → '+(r.taille/1024).toFixed(0)+' Ko';
+      if(ver.fuites.length){
+        v.className='verif ko';
+        v.innerHTML='❌ <b>Vérification échouée</b> — '+ver.fuites.length+
+          ' valeur(s) encore présente(s) dans le fichier produit : '+
+          ver.fuites.map(escapeHtml).join(', ')+'. <b>Le téléchargement est bloqué.</b>';
+      }else{
+        v.className='verif ok';
+        v.innerHTML='✅ <b>Vérifié</b> : aucune des '+ver.nVerifiees+
+          ' valeur(s) anonymisée(s) n\'est récupérable dans le fichier produit '+
+          '<span class="count">(texte extrait et octets bruts du document décompressé)</span>. '+
+          '<span class="count">'+rapport+'</span>'+
+          '<div class="pertes">Mise en page préservée. En revanche, le ré-encodage retire '+
+          'liens, formulaires, signets et signatures'+
+          (r.liensRetires?' ('+r.liensRetires+' lien(s) exposant une donnée ont été neutralisés)':'')+
+          ', ainsi que les métadonnées du fichier. <b>Relisez toujours le résultat.</b></div>';
+      }
+      derniereVerif=ver;
+    }catch(e){
+      if(gen!==generation) return;
+      v.className='verif ko'; v.textContent='Erreur lors de l\'anonymisation : '+(e.message||e);
+      derniereVerif=null;
+    }
+  }
+
+  return { fermer, ouvrirPdf, majZones, planifierResultat, rafraichirResultat, cle };
+})();
+
+let derniereVerif=null;
+/* Valeurs que l'utilisateur a choisi de NE PAS anonymiser, en cliquant une
+   zone. Indexées par catégorie + valeur : toutes les occurrences suivent. */
+const exclusionsValeurs=new Set();
 
 function setStatus(msg,type){
   const el=document.getElementById('status');
@@ -423,7 +650,9 @@ async function readPdf(file){
     }
 
     pdfIndex=idx; indexValide=true;
+    exclusionsValeurs.clear();
     document.getElementById('input').value=out;
+    Visu.ouvrirPdf(idx);
     setStatus('✓ '+idx.nPages+' page(s) lue(s) — '+out.length+' caractères extraits. Analyse en cours…','ok');
     resetBuild(); run(out);
   }catch(e){
@@ -640,7 +869,7 @@ function buildMapping(hits){
 }
 
 /* ---------- rendu ---------- */
-let lastText='', lastHits=[], lastAnon='', lastMapping={}, importedMap=null;
+let lastText='', lastHits=[], lastHitsTous=[], lastAnon='', lastMapping={}, importedMap=null;
 function catColor(key){return (CATS.find(c=>c.key===key)||{}).color||'#888';}
 function catLabel(key){return (CATS.find(c=>c.key===key)||{}).label||key;}
 
@@ -675,12 +904,21 @@ function run(text){
   extendAddresses(text, hits);                              // numéro de rue rattaché
   hits=dedup(hits);
   hits=hits.filter(h=>!EXCLUDE.has(h.value.trim().toLowerCase())); // retire les faux positifs
+  // Valeurs écartées à la main (clic sur une zone) : on les GARDE dans la
+  // liste, marquées, pour qu'elles restent visibles et re-cliquables.
+  hits.forEach(h=>{ h.exclu = exclusionsValeurs.has(Visu.cle(h)); });
+  lastHitsTous=hits;
+  hits=hits.filter(h=>!h.exclu);
   buildMapping(hits);
   lastHits=hits;
   // table de correspondances de la session : jeton -> vraie valeur
   lastMapping={};
   hits.forEach(h=>{ if(h.token && !(h.token in lastMapping)) lastMapping[h.token]=h.value; });
   renderAll(text,hits);
+  if(indexValide){                       // document avec mise en page : visualiseur
+    Visu.majZones(lastHitsTous);
+    Visu.planifierResultat();
+  }
   if(nerEnabled && nerText!==text) scheduleNER(text);       // lance l'IA si texte nouveau
 }
 
@@ -762,6 +1000,22 @@ function renderTable(hits){
 
 function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 
+/* ---------- interactions du visualiseur ---------- */
+// Clic sur une zone : on bascule TOUTES les occurrences de cette valeur.
+document.getElementById('visuOrigine').addEventListener('click', e=>{
+  const z=e.target.closest('.zone'); if(!z) return;
+  const k=z.dataset.cle;
+  exclusionsValeurs.has(k) ? exclusionsValeurs.delete(k) : exclusionsValeurs.add(k);
+  if(lastText) run(lastText);
+});
+
+// Le texte extrait reste consultable : utile pour vérifier ce que l'outil a lu.
+document.getElementById('voirTexte').addEventListener('click', ()=>{
+  const ta=document.getElementById('input'), b=document.getElementById('voirTexte');
+  ta.hidden=!ta.hidden;
+  b.textContent = ta.hidden ? 'Voir le texte extrait' : 'Masquer le texte extrait';
+});
+
 /* ---------- actions ---------- */
 function analyze(){ resetBuild(); run(document.getElementById('input').value); }
 document.getElementById('analyze').addEventListener('click',analyze);
@@ -809,7 +1063,44 @@ function buildSegments(){
   return segs;
 }
 
-document.getElementById('downloadPdf').addEventListener('click',()=>{
+/* Téléchargement du PDF.
+   · Document avec mise en page → on livre le VRAI document anonymisé produit
+     par le moteur, après avoir vérifié qu'il ne contient plus les données.
+     Une vérification en échec BLOQUE le téléchargement : mieux vaut pas de
+     fichier qu'un fichier qui fuit.
+   · Texte collé, Word, image → ancien rendu reconstruit (sans mise en page). */
+document.getElementById('downloadPdf').addEventListener('click', async ()=>{
+  if(indexValide) return telechargerPdfFidele();
+  rendreTxtEnPdf();
+});
+
+async function telechargerPdfFidele(){
+  const b=document.getElementById('downloadPdf'), libelle=b.textContent;
+  try{
+    if(!lastHits.length){ alert('Aucune détection active : il n\'y a rien à anonymiser.'); return; }
+    b.disabled=true; b.textContent='Vérification…';
+    // On s'assure que le document affiché est à jour, puis on le re-vérifie.
+    await Visu.rafraichirResultat();
+    const valeurs=lastHits.map(h=>h.value);
+    const ver=await PdfLocal.verifier(valeurs);
+    if(ver.fuites.length){
+      alert('Téléchargement bloqué.\n\n'+ver.fuites.length+' valeur(s) sont encore présentes '+
+            'dans le fichier produit :\n'+ver.fuites.join('\n')+
+            '\n\nMerci de signaler ce document : c\'est un cas que l\'outil ne sait pas encore traiter.');
+      return;
+    }
+    const { octets }=await PdfLocal.recupererResultat();
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([octets],{type:'application/pdf'}));
+    a.download='document-anonymise.pdf';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 30000);
+  }catch(e){
+    alert('Erreur pendant la préparation du PDF : '+(e.message||e));
+  }finally{ b.disabled=false; b.textContent=libelle; }
+}
+
+function rendreTxtEnPdf(){
   if(!lastText){alert('Analysez d\'abord un texte.');return;}
   if(!window.jspdf){alert('jsPDF non chargé (ouvrez la page via le serveur local).');return;}
   const { jsPDF }=window.jspdf;
@@ -847,7 +1138,7 @@ document.getElementById('downloadPdf').addEventListener('click',()=>{
   });
   footer();
   doc.save('document-anonymise.pdf');
-});
+}
 
 /* ---------- export Word (.docx, 100% local via docx) ----------
    Pseudo : jetons en texte. Caviardage : barres noires (block chars sur fond noir)

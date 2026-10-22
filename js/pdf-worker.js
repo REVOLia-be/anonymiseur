@@ -36,7 +36,8 @@ const ACTIONS = {
     const idx = indexer(docOrigine);
     const transferts = [];
     for (const pg of idx.pages)
-      transferts.push(pg.quads.buffer, pg.origines.buffer, pg.tailles.buffer, pg.sauts.buffer);
+      transferts.push(pg.quads.buffer, pg.origines.buffer, pg.tailles.buffer,
+                      pg.couleurs.buffer, pg.sauts.buffer);
     return { valeur: idx, transferts };
   },
 

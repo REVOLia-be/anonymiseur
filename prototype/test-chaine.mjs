@@ -51,7 +51,8 @@ for (const h of propres) {
   const anc = AnonGeom.ancrage(index, h.debut);
   for (const g of groupes)
     consignes.push({ page: g.page, rects: g.rects, token: h.token,
-                     corps: anc && anc.corps, origine: anc && anc.origine });
+                     corps: anc && anc.corps, origine: anc && anc.origine,
+                     couleur: anc && anc.couleur });
 }
 console.log(`${propres.length} détection(s), ${consignes.length} consigne(s), ${sansZone} sans zone`);
 

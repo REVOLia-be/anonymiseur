@@ -65,7 +65,10 @@
     const i = offset - index.bornes[p].debut;
     if (page.sauts[i]) return null;
     return { page: p, corps: page.tailles[i],
-             origine: [page.origines[i * 2], page.origines[i * 2 + 1]] };
+             origine: [page.origines[i * 2], page.origines[i * 2 + 1]],
+             couleur: page.couleurs
+               ? [page.couleurs[i * 3], page.couleurs[i * 3 + 1], page.couleurs[i * 3 + 2]]
+               : null };
   }
 
   global.AnonGeom = { pageDe, rectsDansPage, rectsGlobaux, ancrage };
