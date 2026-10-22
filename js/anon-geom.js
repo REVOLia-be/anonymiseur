@@ -69,4 +69,4 @@
   }
 
   global.AnonGeom = { pageDe, rectsDansPage, rectsGlobaux, ancrage };
-})(typeof window !== "undefined" ? window : self);
+})(globalThis);
