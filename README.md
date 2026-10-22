@@ -56,7 +56,7 @@ Pensez à exécuter `fetch-assets.sh` à l'étape de build (les binaires ne sont
 
 | Besoin | Bibliothèque |
 |---|---|
-| Lecture PDF | [PDF.js](https://github.com/mozilla/pdf.js) |
+| Lecture PDF, positions, rendu | [MuPDF.js](https://github.com/ArtifexSoftware/mupdf.js) (AGPL-3.0 ou licence commerciale) |
 | OCR | [Tesseract.js](https://github.com/naptha/tesseract.js) |
 | Lecture Word | [mammoth.js](https://github.com/mwilliamson/mammoth.js) |
 | Détection IA (NER) | [Transformers.js](https://github.com/huggingface/transformers.js) + `Xenova/distilbert-base-multilingual-cased-ner-hrl` |

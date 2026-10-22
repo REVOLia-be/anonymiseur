@@ -323,74 +323,112 @@
   </div>
 </div>
 
-<script src="vendor/pdf.min.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/tesseract/tesseract.min.js"></script>
 <script src="vendor/mammoth.browser.min.js"></script>
 <script src="vendor/docx.umd.js"></script>
+<script src="js/anon-geom.js"></script>
 <script>
 /* ===========================================================
-   Lecture de PDF — 100% local via PDF.js.
-   Le fichier n'est jamais envoyé : on lit l'ArrayBuffer en mémoire.
+   Lecture de PDF — 100% local via MuPDF (WebAssembly), dans un
+   Web Worker. Le fichier n'est jamais envoyé : il est lu en mémoire.
+
+   MuPDF remplace PDF.js car il fournit, en plus du rendu, la POSITION
+   de chaque caractère — ce qui permet de montrer les détections à leur
+   place réelle sur la page, puis d'anonymiser le document d'origine
+   sans refaire sa mise en page.
    =========================================================== */
-if(window.pdfjsLib){ pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js'; }
+const PdfLocal = (function(){
+  let w=null, pret=null, n=0;
+  const enAttente=new Map();
+
+  function demarrer(){
+    if(pret) return pret;
+    w = new Worker('js/pdf-worker.js', { type:'module' });
+    pret = new Promise((ok,ko)=>{
+      w.onmessage = (e)=>{
+        const d=e.data;
+        // Le worker signale sa disponibilité quand son WASM est évalué :
+        // tout message envoyé avant serait perdu sans erreur.
+        if(d.pret){ ok(); return; }
+        const att=enAttente.get(d.id); if(!att) return;
+        enAttente.delete(d.id);
+        d.ok ? att.ok(d.valeur) : att.ko(new Error(d.erreur));
+      };
+      w.onerror = (ev)=>{
+        const err=new Error(ev.message||'moteur PDF indisponible');
+        ko(err); enAttente.forEach(a=>a.ko(err)); enAttente.clear();
+      };
+    });
+    return pret;
+  }
+
+  async function appel(action, args, transferts){
+    await demarrer();
+    const id = ++n;
+    return new Promise((ok,ko)=>{
+      enAttente.set(id,{ok,ko});
+      w.postMessage(Object.assign({id,action}, args), transferts||[]);
+    });
+  }
+
+  return {
+    // Le tampon est TRANSFÉRÉ au worker : le thread principal n'en garde pas
+    // de copie, c'est le worker qui détient le document.
+    charger: (octets)=>appel('charger', {octets}, [octets]),
+    rendre:  (page, echelle)=>appel('rendre', {page, echelle}),
+    fermer:  ()=>appel('fermer', {}),
+  };
+})();
+
+/* Index texte ↔ positions du PDF en cours (null si l'entrée n'a pas de mise
+   en page : texte collé, Word, image, ou OCR). `indexValide` passe à faux dès
+   que l'utilisateur modifie le texte à la main : les offsets ne correspondent
+   alors plus au document, et l'export fidèle doit être désactivé. */
+let pdfIndex=null, indexValide=false;
+function oublierIndex(){ pdfIndex=null; indexValide=false; }
 
 function setStatus(msg,type){
   const el=document.getElementById('status');
   el.textContent=msg||''; el.className='status'+(type?' '+type:'');
 }
 
-/* Certains PDF composent les titres avec un fort interlettrage : PDF.js
-   insère alors un espace entre chaque glyphe et renvoie « C E R T I F I C A T ».
-   On recolle ces lettres, à deux niveaux, sans abîmer le vrai texte :
-   - par item, quand l'item n'est QUE des caractères isolés (« D E », « C E R T » → « DE », « CERT ») ;
-   - par ligne, en filet de sécurité, sur les suites d'au moins 4 lettres
-     isolées (un mot français d'une lettre — « à », « y », « a » — est ainsi préservé). */
-function collapseSpacedLetters(str){
-  const toks=str.split(' ');
-  if(toks.length>=2 && toks.every(t=>[...t].length===1)) return toks.join('');
-  return str;
-}
-function despaceLine(line){
-  return line.replace(/(^|\s)(\p{L}(?: \p{L}){3,})(?=\s|$)/gu, (m,pre,run)=>pre+run.replace(/ /g,''));
-}
+/* Note : les anciennes rustines « collapseSpacedLetters » et « despaceLine »
+   ont disparu. Elles recollaient les lettres que l'aplatissement en texte
+   séparait sur les titres très interlettrés. MuPDF rend les spans tels qu'ils
+   sont composés : il n'y a plus rien à recoller.
 
+   Autre changement important : le texte n'est PLUS normalisé (espaces
+   multiples, lignes vides). Chaque caractère doit garder sa position exacte
+   dans la chaîne, sinon l'index texte ↔ page ne correspond plus. */
 async function readPdf(file){
-  if(!window.pdfjsLib){ setStatus("PDF.js non chargé (ouvrez la page via le serveur local).",'err'); return; }
   setStatus('Lecture de « '+file.name+' »…','work');
+  oublierIndex();
   try{
     const buf=await file.arrayBuffer();
-    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
-    let out='';
-    for(let p=1;p<=pdf.numPages;p++){
-      const page=await pdf.getPage(p);
-      const tc=await page.getTextContent();
-      // reconstitue les lignes en regardant la position verticale
-      let lastY=null, line='';
-      tc.items.forEach(it=>{
-        const y=it.transform[5];
-        if(lastY!==null && Math.abs(y-lastY)>2){ out+=despaceLine(line.trimEnd())+'\n'; line=''; }
-        line+=collapseSpacedLetters(it.str)+(it.hasEOL?'\n':' ');
-        lastY=y;
-      });
-      out+=despaceLine(line)+'\n\n';
-    }
-    out=out.replace(/[ \t]{2,}/g,' ').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
-    if(out.length<15){
-      // PDF scanné (image) sans texte → bascule en OCR local sur les pages rendues
+    const idx=await PdfLocal.charger(buf);
+    let out=idx.texte;
+
+    if(out.trim().length<15){
+      // PDF scanné (pages images, sans texte) → OCR local sur les pages rendues.
+      // L'OCR ne fournit pas encore de positions : pas d'index, donc pas
+      // d'export fidèle pour ce chemin (prévu dans un lot ultérieur).
       setStatus('PDF scanné détecté — reconnaissance de texte (OCR) en cours…','work');
-      out = await ocrPdfPages(pdf);
+      out = await ocrPdfPages(idx.nPages);
       if(out.trim().length<5){ setStatus('Aucun texte reconnu dans ce PDF scanné.','err'); return; }
       document.getElementById('input').value=out;
-      setStatus('✓ OCR : '+out.length+' caractères reconnus sur '+pdf.numPages+' page(s). Analyse en cours…','ok');
+      setStatus('✓ OCR : '+out.length+' caractères reconnus sur '+idx.nPages+' page(s). Analyse en cours…','ok');
       resetBuild(); run(out);
       return;
     }
+
+    pdfIndex=idx; indexValide=true;
     document.getElementById('input').value=out;
-    setStatus('✓ '+pdf.numPages+' page(s) lue(s) — '+out.length+' caractères extraits. Analyse en cours…','ok');
+    setStatus('✓ '+idx.nPages+' page(s) lue(s) — '+out.length+' caractères extraits. Analyse en cours…','ok');
     resetBuild(); run(out);
   }catch(e){
-    setStatus('Erreur de lecture : '+e.message,'err');
+    oublierIndex();
+    setStatus('Erreur de lecture : '+(e.message||e),'err');
   }
 }
 
@@ -414,17 +452,13 @@ async function getOcrWorker(){
   return ocrLoading;
 }
 
-// Rend chaque page PDF dans un canvas puis l'OCR
-async function ocrPdfPages(pdf){
+// Fait rendre chaque page par le worker PDF, puis l'OCR
+async function ocrPdfPages(nPages){
   const worker=await getOcrWorker();
   let out='';
-  for(let p=1;p<=pdf.numPages;p++){
-    const page=await pdf.getPage(p);
-    const viewport=page.getViewport({scale:2});
-    const canvas=document.createElement('canvas');
-    canvas.width=viewport.width; canvas.height=viewport.height;
-    await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
-    const { data:{ text } } = await worker.recognize(canvas);
+  for(let p=0;p<nPages;p++){
+    const { png } = await PdfLocal.rendre(p, 2);
+    const { data:{ text } } = await worker.recognize(new Blob([png],{type:'image/png'}));
     out += text + '\n\n';
   }
   return out.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
@@ -464,9 +498,11 @@ async function readDocx(file){
 function handleFile(f){
   if(!f) return;
   const isDocx = f.type==='application/vnd.openxmlformats-officedocument.wordprocessingml.document' || /\.docx$/i.test(f.name);
+  // Word, images et texte collé n'ont pas de mise en page à préserver :
+  // ils suivent le chemin « texte » et n'ont donc pas d'index.
   if(f.type==='application/pdf') readPdf(f);
-  else if(isDocx) readDocx(f);
-  else if(f.type && f.type.startsWith('image/')) ocrImageFile(f);
+  else if(isDocx){ oublierIndex(); readDocx(f); }
+  else if(f.type && f.type.startsWith('image/')){ oublierIndex(); ocrImageFile(f); }
   else setStatus('Format non géré : déposez un PDF, un Word (.docx) ou une image (JPG/PNG).','err');
 }
 
@@ -474,6 +510,9 @@ function handleFile(f){
   const drop=document.getElementById('drop'), input=document.getElementById('file');
   drop.addEventListener('click',()=>input.click());
   input.addEventListener('change',e=>handleFile(e.target.files[0]));
+  // Dès que le texte est modifié à la main, les offsets ne correspondent plus
+  // aux positions relevées dans le PDF : l'index devient inutilisable.
+  document.getElementById('input').addEventListener('input',()=>{ indexValide=false; });
   ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
   ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
   drop.addEventListener('drop',e=>handleFile(e.dataTransfer.files[0]));
@@ -728,9 +767,11 @@ function analyze(){ resetBuild(); run(document.getElementById('input').value); }
 document.getElementById('analyze').addEventListener('click',analyze);
 document.getElementById('custom').addEventListener('input',()=>{ if(lastText){resetBuild();run(document.getElementById('input').value);} });
 document.getElementById('sample').addEventListener('click',()=>{
+  oublierIndex();
   document.getElementById('input').value=SAMPLE; resetBuild(); analyze();
 });
 document.getElementById('clear').addEventListener('click',()=>{
+  oublierIndex(); PdfLocal.fermer().catch(()=>{});   // libère le document côté worker
   document.getElementById('input').value=''; document.getElementById('preview').innerHTML='<div class="empty">L\'aperçu surligné apparaîtra ici après analyse.</div>';
   document.getElementById('table-wrap').innerHTML='<div class="empty">Aucune détection pour l\'instant.</div>';
   document.getElementById('stats').innerHTML=''; lastText=''; lastAnon='';
