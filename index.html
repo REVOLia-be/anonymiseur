@@ -207,7 +207,7 @@
   <div class="trust">
     <span>🔒 <b>Aucune donnée envoyée</b></span>
     <span>💸 <b>Gratuit</b></span>
-    <span>📂 PDF · Word · images</span>
+    <span>📄 <b>PDF : mise en page préservée</b></span>
     <span>🧩 <b>Open source</b></span>
     <span>✈️ Hors-ligne</span>
   </div>
@@ -219,10 +219,10 @@
   <div class="steps">
     <div class="step"><div class="n">1</div><h3>Déposez votre document</h3>
       <p>PDF (même scanné), Word ou image — ou collez simplement du texte. Tout reste sur votre appareil.</p></div>
-    <div class="step"><div class="n">2</div><h3>Vérifiez les détections</h3>
-      <p>L'outil surligne noms, adresses, e-mails, IBAN, n° national… Vous validez, corrigez, ajoutez ce qui manque.</p></div>
-    <div class="step"><div class="n">3</div><h3>Exportez &amp; utilisez</h3>
-      <p>Téléchargez la version anonymisée (txt, PDF, Word) et utilisez-la sans risque dans votre IA.</p></div>
+    <div class="step"><div class="n">2</div><h3>Vérifiez sur le document</h3>
+      <p>Les détections sont surlignées <b>à leur place réelle</b> sur vos pages. Un clic écarte ou remet une valeur ; vous voyez le résultat en vis-à-vis.</p></div>
+    <div class="step"><div class="n">3</div><h3>Téléchargez</h3>
+      <p>Un PDF à la <b>mise en page identique</b>, avec les données en moins. L'outil relit le fichier produit et bloque le téléchargement s'il y trouve encore quelque chose.</p></div>
   </div>
 </section>
 
@@ -335,7 +335,9 @@
   <p class="subtitle">Tout ce qu'il faut savoir avant d'anonymiser votre premier document.</p>
   <div class="faq">
     <details><summary>Mes documents sont-ils envoyés quelque part&nbsp;?</summary><div class="a">Non. Tout le traitement (lecture, OCR, détection, anonymisation) se fait dans votre navigateur. Le contenu de vos documents ne quitte jamais votre appareil — vérifiable dans l'onglet « réseau » de votre navigateur. Voir la <a href="confidentialite.html">politique de confidentialité</a>.</div></details>
-    <details><summary>Quels types de documents puis-je traiter&nbsp;?</summary><div class="a">PDF (y compris scannés, grâce à la reconnaissance de texte OCR), Word (.docx), images JPG/PNG, ou simplement du texte collé.</div></details>
+    <details><summary>Quels types de documents puis-je traiter&nbsp;?</summary><div class="a">PDF (y compris scannés, grâce à la reconnaissance de texte OCR), Word (.docx), images JPG/PNG, ou simplement du texte collé. Seul le <b>PDF</b> conserve sa mise en page&nbsp;; les autres formats passent par un rendu texte.</div></details>
+    <details><summary>Mon PDF garde-t-il sa mise en page&nbsp;?</summary><div class="a">Oui. Le document n'est pas reconstruit ni transformé en images&nbsp;: c'est votre PDF, avec ses polices, ses tableaux, son logo et son poids d'origine — les données en moins. En contrepartie, le ré-encodage retire <b>liens, formulaires, signets et signatures</b> en tant qu'éléments interactifs, ainsi que les métadonnées du fichier. L'outil vous le rappelle avant le téléchargement.</div></details>
+    <details><summary>Comment savoir que le fichier produit ne contient vraiment plus rien&nbsp;?</summary><div class="a">L'outil <b>relit le fichier qu'il vient de produire</b> et y cherche chaque valeur anonymisée — dans le texte extrait <i>et</i> dans les octets bruts du document décompressé. Le résultat s'affiche, et si quelque chose subsiste, <b>le téléchargement est bloqué</b>. C'est important&nbsp;: dans un PDF, poser un rectangle noir ne supprime pas le texte en dessous, qui reste copiable. Ici, les données sont réellement retirées du fichier.</div></details>
     <details><summary>Qu'est-ce qui est détecté&nbsp;?</summary><div class="a">Par règles : e-mails, téléphones, IBAN, n° national belge, n° d'entreprise (TVA BE), cartes, dates, montants, codes postaux. Avec la détection IA locale (optionnelle) : noms, adresses, organisations — même sans format particulier.</div></details>
     <details><summary>Pseudonymisation ou caviardage&nbsp;?</summary><div class="a">La <b>pseudonymisation</b> remplace par des jetons cohérents (<span class="tok">[PERSONNE_1]</span>) : le document reste lisible et exploitable par l'IA. Le <b>caviardage</b> supprime réellement l'information (barres noires) — rien n'est récupérable.</div></details>
     <details><summary>Est-ce une anonymisation «&nbsp;garantie&nbsp;»&nbsp;?</summary><div class="a">Non, c'est une <b>aide</b>. Aucune détection automatique n'est parfaite, et les identifiants indirects (recoupements de contexte) lui échappent. <b>Relisez toujours</b> le résultat. La pseudonymisation n'est pas une anonymisation au sens du RGPD.</div></details>

@@ -1,8 +1,0 @@
-node_modules/
-*-anonymise-*.pdf
-*.png
-srv.log
-
-# Documents de test apportés par l'utilisateur — JAMAIS dans le dépôt public
-devis*.pdf
-*-anon-*.pdf

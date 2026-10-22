@@ -116,9 +116,13 @@ function ecrireJetons(doc, page, police, poses, hauteurPage) {
   let flux = "";
   for (const { rect, token, corps, origine, couleur } of poses) {
     const dispo = rect[2] - rect[0];
-    let taille = corps || 10;
-    // le jeton doit tenir dans l'espace libéré : on réduit le corps au besoin
-    while (taille > 3 && largeurTexte(police, token, taille) > dispo) taille -= 0.25;
+    const depart = corps || 10;
+    let taille = depart;
+    // Le jeton doit tenir dans l'espace libéré : on réduit le corps au besoin,
+    // mais jamais en dessous d'un plancher. Un jeton de 3 pt « tient » et ne
+    // se lit pas ; mieux vaut un léger débord qu'un texte microscopique.
+    const plancher = Math.max(5, depart * 0.55);
+    while (taille > plancher && largeurTexte(police, token, taille) > dispo) taille -= 0.25;
     const x = origine[0];
     const y = hauteurPage - origine[1];    // index : y vers le bas ; PDF : y vers le haut
     // Couleur du texte remplacé : un jeton bleu sur un bandeau vert foncé

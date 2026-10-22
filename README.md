@@ -15,11 +15,16 @@ Un outil web gratuit qui repère les informations identifiantes d'un document (c
 - **Détection** combinée :
   - règles (e-mail, téléphone, IBAN, **n° national belge**, **n° d'entreprise/TVA BE**, carte, dates, montants, code postal…) ;
   - **IA locale** optionnelle (noms, lieux/adresses, organisations) via un modèle de reconnaissance d'entités tournant dans le navigateur.
-- **Validation humaine** : aperçu surligné, activation par catégorie, termes personnalisés, liste d'exclusion.
-- **Deux modes** : pseudonymisation cohérente (`[PERSONNE_1]`) ou **caviardage réel** (les données sont supprimées, pas seulement masquées).
+- **PDF : mise en page préservée.** Le document s'affiche page par page, les détections sont surlignées **à leur place réelle**, et le PDF produit est le document d'origine — mêmes polices, même mise en page, même poids — avec les données en moins. Pas de rasterisation.
+- **Validation humaine** : clic sur une zone pour l'écarter ou la remettre (toutes ses occurrences suivent), activation par catégorie, termes personnalisés, liste d'exclusion.
+- **Deux modes** : pseudonymisation cohérente (`[PERSONNE_1]`, écrite dans la couleur du texte remplacé) ou **caviardage réel** (les données sont supprimées, pas seulement masquées).
+- **Vérification avant téléchargement** : l'outil relit le fichier qu'il vient de produire et cherche chaque valeur anonymisée dans le texte extrait **et** dans les octets bruts du document décompressé. Une vérification en échec **bloque** le téléchargement.
 - **Exports** : `.txt`, `.pdf`, `.docx`.
 - **Ré-identification** : réinjectez les vraies données dans la réponse de l'IA, en local.
 - **100 % hors-ligne** : aucune ressource tierce chargée au runtime.
+
+> Le ré-encodage d'un PDF retire **liens, formulaires, signets et signatures** en tant qu'éléments interactifs,
+> ainsi que les métadonnées. C'est annoncé dans l'outil avant le téléchargement.
 
 ## 🔒 Confidentialité
 
@@ -33,7 +38,7 @@ navigateur ne montre aucune transmission de contenu.
 ## 🚀 Démarrage local
 
 ```bash
-# 1. Récupérer les gros fichiers (modèle IA, OCR, runtime) exclus du dépôt
+# 1. Récupérer les gros fichiers (moteur PDF, modèle IA, OCR, runtime) exclus du dépôt
 bash fetch-assets.sh
 
 # 2. Servir le site (n'importe quel serveur statique)
@@ -41,6 +46,20 @@ python3 -m http.server 4599
 
 # 3. Ouvrir http://localhost:4599
 ```
+
+Un serveur est indispensable : le moteur PDF tourne dans un **Web Worker** et charge son WebAssembly,
+ce qu'un fichier ouvert en `file://` ne permet pas.
+
+## 🧪 Tests
+
+```bash
+cd tests && node chaine.mjs fiche-reelle.pdf pseudo
+```
+
+Éprouve la chaîne complète (positions → caviardage → vérification) hors navigateur, contre les modules
+de production et le moteur vendoré — **sans `npm install`**. Le code de sortie vaut 1 en cas de fuite.
+[`tests/README.md`](tests/README.md) documente les **pièges connus** et pourquoi le code est écrit ainsi :
+plusieurs échouent en silence, et chacun a été constaté sur un document réel.
 
 > La police de marque **iBrand** (`vendor/fonts/ibrand.otf`) est sous licence commerciale et n'est **pas** incluse.
 > Sans elle, le mot-symbole « revolia » s'affiche en Poppins. Placez votre fichier licencié à cet emplacement pour
@@ -56,15 +75,18 @@ Pensez à exécuter `fetch-assets.sh` à l'étape de build (les binaires ne sont
 
 | Besoin | Bibliothèque |
 |---|---|
-| Lecture PDF, positions, rendu | [MuPDF.js](https://github.com/ArtifexSoftware/mupdf.js) (AGPL-3.0 ou licence commerciale) |
+| Lecture PDF, positions, rendu **et caviardage réel** | [MuPDF.js](https://github.com/ArtifexSoftware/mupdf.js) (AGPL-3.0 ou licence commerciale) |
 | OCR | [Tesseract.js](https://github.com/naptha/tesseract.js) |
 | Lecture Word | [mammoth.js](https://github.com/mwilliamson/mammoth.js) |
 | Détection IA (NER) | [Transformers.js](https://github.com/huggingface/transformers.js) + `Xenova/distilbert-base-multilingual-cased-ner-hrl` |
-| Export PDF | [jsPDF](https://github.com/parallax/jsPDF) |
+| Export PDF du texte collé (sans mise en page) | [jsPDF](https://github.com/parallax/jsPDF) |
 | Export Word | [docx](https://github.com/dolanmiu/docx) |
 | Police texte | [Poppins](https://fonts.google.com/specimen/Poppins) (OFL) |
 
 Chaque dépendance reste sous sa propre licence.
+
+> **MuPDF.js est en AGPL-3.0 ou licence commerciale.** Ce dépôt étant en AGPL-3.0, c'est compatible sans coût.
+> Une version fermée, ou un SaaS dont le code ne serait pas publié, exigerait une licence commerciale auprès d'Artifex.
 
 ## 📄 Licence
 

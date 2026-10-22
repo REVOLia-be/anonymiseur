@@ -3,7 +3,7 @@
    chaîne index → géométrie → caviardage → vérification, pas la qualité des
    règles de détection.
 
-   Usage : node test-chaine.mjs <fichier.pdf> [pseudo|redact] */
+   Usage : node chaine.mjs <fichier.pdf> [pseudo|redact] */
 import { ouvrir, indexer, anonymiser, verifier } from "../js/anon-pdf.js";
 import "../js/anon-geom.js";                    // installe globalThis.AnonGeom
 import { readFileSync, writeFileSync } from "node:fs";
@@ -19,7 +19,7 @@ const REGLES = [
 
 const fichier = process.argv[2];
 const mode = process.argv[3] || "pseudo";
-if (!fichier) { console.error("usage : node test-chaine.mjs <fichier.pdf> [pseudo|redact]"); process.exit(2); }
+if (!fichier) { console.error("usage : node chaine.mjs <fichier.pdf> [pseudo|redact]"); process.exit(2); }
 
 const octets = new Uint8Array(readFileSync(fichier));
 const doc = ouvrir(octets);

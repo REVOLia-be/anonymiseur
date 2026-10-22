@@ -1,7 +1,0 @@
-{
-  "name": "anonymiseur-prototype",
-  "private": true,
-  "type": "module",
-  "description": "Prototype jetable : anonymisation PDF à mise en page préservée (MuPDF.js)",
-  "dependencies": { "mupdf": "1.28.1" }
-}
