@@ -179,6 +179,53 @@ function nettoyerAnnotations(page, rects) {
   return aSupprimer.length;
 }
 
+/* Un PDF balisé porte une COUCHE DE TEXTE PARALLÈLE, destinée aux lecteurs
+   d'écran : texte alternatif d'une image (/Alt), texte réel d'un élément
+   (/ActualText), développement d'une abréviation (/E), infobulle d'un champ
+   (/TU). Rien de tout cela n'est
+   dessiné sur la page : le caviardage ne les touche pas, et pourtant un
+   extracteur les lit.
+   Constaté en vrai : le logo d'un devis portait Alt(REVOLia) ; l'alt d'une
+   photo peut tout aussi bien être le nom de la personne. */
+const CLES_TEXTE_CACHE = ["Alt", "ActualText", "E", "TU"];
+
+/* On descend l'ARBRE DE STRUCTURE, et lui seul. Un balayage de tous les
+   objets du document paraît plus sûr ; il ne l'est pas : résoudre puis
+   modifier des objets au hasard a fait perdre un mégaoctet d'images au
+   fichier produit (2 204 774 → 1 210 665 octets) et l'a rendu illisible par
+   endroits. On ne touche donc qu'aux nœuds de structure. */
+function nettoyerTexteCache(doc, valeurs) {
+  const utiles = valeurs.filter(v => v && v.length >= 3);
+  if (!utiles.length) return 0;
+  let n = 0;
+  const vus = new Set();                       // l'arbre peut contenir des cycles
+
+  const visiter = (ref, profondeur) => {
+    if (!ref || ref.isNull() || profondeur > 64) return;
+    if (ref.isIndirect()) {
+      const num = ref.asIndirect();
+      if (vus.has(num)) return;
+      vus.add(num);
+    }
+    const obj = ref.resolve();
+    if (obj.isArray()) { obj.forEach(v => visiter(v, profondeur + 1)); return; }
+    if (!obj.isDictionary()) return;
+    for (const k of CLES_TEXTE_CACHE) {
+      const val = obj.get(k);
+      if (val.isNull() || !val.isString()) continue;
+      let s;
+      try { s = val.asString(); } catch { continue; }
+      if (s && utiles.some(v => s.includes(v))) { obj.delete(k); n++; }
+    }
+    visiter(obj.get("K"), profondeur + 1);
+    visiter(obj.get("Kids"), profondeur + 1);
+  };
+
+  try { visiter(doc.getTrailer().get("Root").get("StructTreeRoot"), 0); }
+  catch { /* document non balisé : rien à nettoyer */ }
+  return n;
+}
+
 /* Métadonnées : titre, auteur, logiciel et machine d'origine. Elles ne
    s'affichent pas mais voyagent avec le fichier. */
 function nettoyerMetadonnees(doc) {
@@ -254,11 +301,12 @@ export function anonymiser(octetsOrigine, consignes, opts = {}) {
       } finally { page.destroy(); }
     }
 
+    const textesCaches = nettoyerTexteCache(doc, valeurs);
     if (nettoyerMeta) nettoyerMetadonnees(doc);
 
     return {
       octets: doc.saveToBuffer(SAUVEGARDE).asUint8Array().slice(),  // règles nº1 et nº2
-      liensRetires, annotationsRetirees,
+      liensRetires, annotationsRetirees, textesCaches,
     };
   } finally { doc.destroy(); }
 }

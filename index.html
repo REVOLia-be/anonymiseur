@@ -896,6 +896,40 @@ function extendAddresses(text, hits){
   });
 }
 
+/* Une valeur qu'on décide d'anonymiser doit l'être PARTOUT dans le document.
+   Les règles trouvent déjà chaque occurrence (expressions régulières
+   globales), mais l'IA, elle, en rate : sur un devis réel elle a reconnu
+   « Adminova » à certains endroits et pas à d'autres. On ne masquait alors
+   qu'une partie des occurrences, et la valeur restait lisible ailleurs.
+
+   La recherche tolère les sauts de ligne : un PDF coupe volontiers
+   « Claire\nHanssen » en fin de ligne. */
+function completerOccurrences(text, hits){
+  const parValeur=new Map();
+  for(const h of hits){
+    if(h.exclu) continue;
+    const k=Visu.cle(h);
+    if(!parValeur.has(k)) parValeur.set(k,h);
+  }
+  const ajouts=[];
+  for(const modele of parValeur.values()){
+    const v=modele.value.trim();
+    if(v.length<3) continue;                    // trop court : trop de faux positifs
+    const motif=v.split(/\s+/).map(escapeRe).join('\\s+');
+    const re=new RegExp(motif,'g');
+    let m;
+    while((m=re.exec(text))!==null){
+      const debut=m.index, fin=debut+m[0].length;
+      // on n'ajoute que ce qui n'est pas déjà couvert par une détection
+      if(!hits.some(h=>h.start<fin && debut<h.end))
+        ajouts.push({cat:modele.cat, start:debut, end:fin, value:m[0],
+                     prio:modele.prio, exclu:false, complete:true});
+      if(m.index===re.lastIndex) re.lastIndex++;
+    }
+  }
+  return ajouts.length ? dedup(hits.concat(ajouts)) : hits;
+}
+
 function run(text){
   lastText=text;
   let hits=detect(text);                                   // regex + termes perso
@@ -907,6 +941,7 @@ function run(text){
   // Valeurs écartées à la main (clic sur une zone) : on les GARDE dans la
   // liste, marquées, pour qu'elles restent visibles et re-cliquables.
   hits.forEach(h=>{ h.exclu = exclusionsValeurs.has(Visu.cle(h)); });
+  if(indexValide) hits=completerOccurrences(text, hits);
   lastHitsTous=hits;
   hits=hits.filter(h=>!h.exclu);
   buildMapping(hits);
@@ -1257,30 +1292,89 @@ function chunk(text, max=1000){
   return parts;
 }
 
+/* Reconstruit des entités à partir de la sortie du modèle.
+
+   Trois contraintes, constatées sur un document réel :
+   · le modèle ne donne PAS d'offsets — on relocalise chaque morceau dans le
+     texte avec un curseur progressif (les morceaux arrivent dans l'ordre) ;
+   · il découpe en sous-mots : « Adminova » → « Ad » + « ##mino » + « ##va ».
+     Un sous-mot appartient toujours au mot en cours ;
+   · les étiquettes vacillent À L'INTÉRIEUR d'un mot : dans « REVOLia »,
+     « ##VO » ressort en I-PER au milieu d'un ORG. On ne peut donc pas se
+     fier à l'étiquette pour découper — la catégorie est décidée à la fin,
+     par vote pondéré par les scores.
+
+   Enfin, la pipeline ÉCARTE les jetons « O » : rien ne sépare plus deux
+   entités éloignées dans le texte. C'est l'écart entre les positions qui
+   fait foi — sans cela, deux organisations distantes fusionnaient en une
+   seule entité de cinquante caractères. */
+function reconstruireEntites(ct, out, base){
+  // 1. relocaliser chaque morceau
+  const morceaux=[]; let curseur=0;
+  for(const e of out){
+    const brut=e.word||'';
+    const sousMot=brut.startsWith('##');
+    const surface=brut.replace(/^##/,'');
+    if(!surface) continue;
+    const i=ct.indexOf(surface, curseur);
+    if(i<0) continue;                       // introuvable : on n'invente pas de position
+    curseur=i+surface.length;
+    const lbl=e.entity||'O';
+    morceaux.push({ s:i, e:curseur, sousMot,
+                    cat: MAP[lbl.replace(/^[BI]-/,'').toUpperCase()]||null,
+                    suite: /^I-/.test(lbl),
+                    score: (e.score==null?1:e.score) });
+  }
+
+  // 2. regrouper
+  const groupes=[]; let cur=null;
+  const clore=()=>{ if(cur) groupes.push(cur); cur=null; };
+  for(const m of morceaux){
+    if(!m.cat){ clore(); continue; }
+    let colle=false;
+    if(cur){
+      const entre=ct.slice(cur.fin, m.s);
+      // Un sous-mot colle toujours ; un mot entier seulement s'il suit
+      // immédiatement — UN seul séparateur — et prolonge l'entité.
+      // Le saut de ligne compte : un PDF coupe volontiers « Claire\nHanssen »
+      // ou « Digital\nWallonia » en fin de ligne.
+      colle = m.sousMot ? entre.length===0
+                        : (/^[\s'’\-]?$/.test(entre) && m.suite);
+    }
+    if(colle){ cur.fin=m.e; cur.votes.push(m); }
+    else if(m.sousMot){
+      // Sous-mot sans mot en cours : son début n'était pas une entité.
+      // Démarrer là donnerait une zone au MILIEU d'un mot (« REVOLia » → « VOL »).
+      clore();
+    }
+    else { clore(); cur={ debut:m.s, fin:m.e, votes:[m] }; }
+  }
+  clore();
+
+  // 3. catégorie par vote pondéré, score moyen des votes gagnants
+  const sortie=[];
+  for(const g of groupes){
+    const parCat=new Map();
+    for(const v of g.votes){
+      const e=parCat.get(v.cat)||{poids:0, scores:[]};
+      e.poids+=v.score; e.scores.push(v.score);
+      parCat.set(v.cat, e);
+    }
+    let gagnante=null, meilleur=-1;
+    for(const [cat,e] of parCat) if(e.poids>meilleur){ meilleur=e.poids; gagnante=cat; }
+    const scores=parCat.get(gagnante).scores;
+    sortie.push({ cat:gagnante, start:g.debut+base, end:g.fin+base, prio:1,
+                  score: scores.reduce((a,b)=>a+b,0)/scores.length });
+  }
+  return sortie;
+}
+
 window.__nerRun = async function(text){
   const ner = await window.__nerLoad();
   const groups=[];
   for(const {text:ct, base} of chunk(text)){
     const out = await ner(ct);
-    // Cette version ne fournit pas d'offsets : on relocalise chaque sous-mot
-    // dans le texte du chunk via un curseur progressif (les tokens sont dans l'ordre).
-    let cursor=0, cur=null;
-    const locate=(w)=>{
-      const p=w.replace(/^##/,''); if(!p) return null;
-      const i=ct.indexOf(p,cursor); if(i<0) return null;
-      cursor=i+p.length; return {s:i, e:i+p.length};
-    };
-    for(const e of out){
-      const lbl=e.entity||'O';
-      const type=lbl.replace(/^[BI]-/,'').toUpperCase();
-      const cat=MAP[type];
-      const loc=locate(e.word);
-      if(!cat || !loc){ if(cur){groups.push(cur);cur=null;} continue; }
-      const isB=/^B-/.test(lbl);
-      if(cur && cur.cat===cat && !isB){ cur.end=loc.e+base; cur.score=Math.min(cur.score,e.score); }
-      else { if(cur) groups.push(cur); cur={cat, start:loc.s+base, end:loc.e+base, score:e.score, prio:1}; }
-    }
-    if(cur) groups.push(cur);
+    groups.push(...reconstruireEntites(ct, out, base));
   }
   // nettoyage : seuil de confiance + valeur de surface
   const hits=[];
@@ -1288,7 +1382,11 @@ window.__nerRun = async function(text){
     if(h.end<=h.start) continue;
     if(h.score!=null && h.score<0.5) continue;
     h.value = text.slice(h.start, h.end).trim();
-    if(h.value.length>=2) hits.push(h);
+    // Au moins 3 caractères : en deçà, ce sont presque toujours des éclats de
+    // découpage en sous-mots (« Ad » pour Adminova) ou des sigles sans valeur
+    // identifiante (« IA »). Un nom propre de deux lettres est très rare, et
+    // le masquer de travers abîme le document sans rien protéger.
+    if(h.value.length>=3) hits.push(h);
   }
   return hits;
 };

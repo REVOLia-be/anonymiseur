@@ -56,7 +56,8 @@ const ACTIONS = {
     return { valeur: { taille: octetsResultat.length, tailleOrigine: octetsOrigine.length,
                        nPages: docResultat.countPages(),
                        liensRetires: r.liensRetires,
-                       annotationsRetirees: r.annotationsRetirees } };
+                       annotationsRetirees: r.annotationsRetirees,
+                       textesCaches: r.textesCaches } };
   },
 
   verifier(a) {
