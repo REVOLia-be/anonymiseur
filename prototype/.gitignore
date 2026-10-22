@@ -1,0 +1,4 @@
+node_modules/
+*-anonymise-*.pdf
+*.png
+srv.log
