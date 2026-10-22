@@ -43,7 +43,7 @@ function indexerPage(page) {
   let texte = "";
   const quads = [], origines = [], tailles = [], sauts = [];
 
-  const stext = page.toStructuredText("preserve-whitespace,preserve-spans");
+  const stext = page.toStructuredText("preserve-whitespace");
   try {
     stext.walk({
       onChar(c, origine, _police, corps, quad) {

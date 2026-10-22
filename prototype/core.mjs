@@ -5,7 +5,7 @@ import * as mupdf from "./mupdf-bridge.mjs";
 export function buildIndex(page) {
   let text = "";
   const quads = [], origins = [], sizes = [];
-  page.toStructuredText("preserve-whitespace,preserve-spans").walk({
+  page.toStructuredText("preserve-whitespace").walk({
     onChar(c, origin, font, size, quad) {
       for (const _ of c) { quads.push(quad); origins.push(origin); sizes.push(size); }
       text += c;
