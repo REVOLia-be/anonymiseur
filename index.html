@@ -71,6 +71,8 @@
   .step p{margin:0;color:var(--muted);font-size:14px}
   /* ── Outil ── */
   main{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:8px 24px 24px;max-width:1100px;margin:0 auto;scroll-margin-top:80px}
+  main.avec-doc{max-width:1280px}
+  main.avec-doc #pAtelier{grid-column:1/-1;order:-1}
   @media(max-width:900px){main{grid-template-columns:1fr}}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
   .panel h2{margin:0;padding:13px 16px;font-size:12.5px;font-weight:600;color:var(--accent-d);
@@ -143,21 +145,76 @@
   .drop .small{font-size:12px;margin-top:4px}
   .status{font-size:13px;margin-top:8px;min-height:18px}
   .status.err{color:var(--danger)} .status.ok{color:var(--accent-d)} .status.work{color:var(--warn)}
-  /* ── Visualiseur de pages ── */
-  .visu{max-height:620px;overflow:auto;background:var(--panel2);border:1px solid var(--line);
-        border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:10px}
-  .page{position:relative;line-height:0;align-self:center;max-width:100%;
-        box-shadow:0 1px 3px rgba(16,40,30,.12)}
-  .page img{width:100%;height:auto;display:block;border-radius:3px;background:#fff}
-  .page .attente{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  /* ── Atelier : le document à l'écran ──────────────────────────────
+     Une seule scène, une page à la fois, aussi grande que la place le
+     permet. Deux cadres qui défilent séparément dans une demi-colonne
+     rendaient le document illisible, donc invérifiable. */
+  .atelier .body{padding:0}
+  .barre{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+        padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .barre .pousse{flex:1 1 auto}
+  .pager{display:inline-flex;align-items:center;background:#fff;border:1px solid var(--line);
+        border-radius:9px;padding:2px}
+  .pager button{background:transparent;color:var(--txt);border:0;padding:5px 10px;
+        border-radius:7px;font-size:15px;font-weight:600;line-height:1}
+  .pager button:hover:not(:disabled){background:var(--panel2)}
+  .pager button:disabled{color:#c6d5ce;cursor:default}
+  .pager .pos{font-size:13px;color:var(--muted);padding:0 9px;font-variant-numeric:tabular-nums;
+        white-space:nowrap}
+  .scene{background:#eaf1ed;padding:20px;display:flex;gap:20px;overflow:auto;
+        height:min(78vh,920px);scroll-behavior:smooth}
+  /* margin auto plutôt que justify-content : au zoom, « center » rognerait
+     le bord gauche de la page au lieu de la laisser défiler. */
+  .scene>*{margin:auto}
+  .feuille{position:relative;flex:0 0 auto;background:#fff;border-radius:3px;line-height:0;
+        box-shadow:0 1px 3px rgba(16,40,30,.12),0 12px 34px rgba(16,40,30,.10)}
+  .feuille img{display:block;border-radius:3px}
+  .feuille .etiquette{position:absolute;top:-10px;left:12px;z-index:2;font-size:10px;
+        font-weight:600;letter-spacing:.05em;text-transform:uppercase;line-height:1;
+        background:var(--accent-d);color:#fff;padding:4px 9px;border-radius:99px;
+        font-family:'Poppins',sans-serif}
+  .feuille.resultat .etiquette{background:var(--txt)}
+  .feuille .attente{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
         color:var(--muted);font-size:12px;font-family:'Poppins',sans-serif;background:#fff;border-radius:3px}
-  .pagenum{font-size:10.5px;color:var(--muted);text-align:center;font-family:'Poppins',sans-serif;line-height:1.4}
-  /* Zone détectée, posée sur la page d'après les positions relevées dans le PDF */
+  /* Zone détectée, posée d'après les positions relevées dans le PDF */
   .zone{position:absolute;border-radius:2px;cursor:pointer;transition:background .12s}
   .zone:hover{outline:2px solid var(--accent-d);outline-offset:1px}
-  .zone.off{background:transparent!important;border:1px dashed var(--muted)!important;opacity:.65}
-  .visu-vide{color:var(--muted);font-size:13px;padding:26px;text-align:center;font-family:'Poppins',sans-serif}
-  .bascule{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+  .zone.off{background:transparent!important;border:1px dashed var(--muted)!important;opacity:.7}
+  /* Rail : les détections de la page affichée, à portée de clic */
+  .corps-atelier{display:grid;grid-template-columns:minmax(0,1fr) 290px}
+  .rail{border-left:1px solid var(--line);height:min(78vh,920px);overflow:auto;background:var(--panel)}
+  .rail h3{margin:0;padding:12px 14px 8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+        color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--panel);
+        border-bottom:1px solid var(--line);z-index:1}
+  .rail ul{list-style:none;margin:0;padding:6px}
+  .rail li{display:flex;gap:9px;align-items:flex-start;padding:8px 9px;border-radius:9px;cursor:pointer;
+        font-size:12.5px;line-height:1.35}
+  .rail li:hover{background:var(--panel2)}
+  .rail li.off{opacity:.5}
+  .rail li.off .val{text-decoration:line-through}
+  .rail .puce{width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:4px}
+  .rail .val{font-weight:600;word-break:break-word}
+  .rail .det{color:var(--muted);font-size:11.5px;margin-top:1px}
+  .rail .vide{color:var(--muted);font-size:12.5px;padding:18px 14px;line-height:1.5}
+  @media(max-width:900px){.corps-atelier{grid-template-columns:1fr}
+    .rail{border-left:0;border-top:1px solid var(--line);height:auto;max-height:260px}}
+  .scene-vide{margin:auto;color:var(--muted);font-size:13.5px;padding:50px 20px;text-align:center;
+        font-family:'Poppins',sans-serif;line-height:1.6}
+  /* Bandeau du document chargé, en remplacement de la grande zone de dépôt */
+  .docinfo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--soft);
+        border:1px solid var(--line);border-radius:12px;padding:11px 14px;margin-bottom:12px}
+  .docinfo .nom{font-weight:600;font-size:14px;word-break:break-all}
+  .docinfo .meta{color:var(--muted);font-size:12.5px}
+  .docinfo .pousse{flex:1 1 auto}
+  /* Réglages repliés : ils ne doivent pas concurrencer le document */
+  details.reglages{border:1px solid var(--line);border-radius:12px;margin-top:14px;background:var(--panel)}
+  details.reglages>summary{cursor:pointer;padding:11px 14px;font-weight:600;font-size:13.5px;list-style:none;
+        display:flex;align-items:center;gap:8px}
+  details.reglages>summary::-webkit-details-marker{display:none}
+  details.reglages>summary::after{content:'+';margin-left:auto;color:var(--accent-d);font-weight:700}
+  details.reglages[open]>summary::after{content:'−'}
+  details.reglages .contenu{padding:0 14px 14px;border-top:1px solid var(--line)}
+  @media(max-width:900px){.scene{padding:12px;height:68vh}}
   .verif{font-size:12.5px;padding:9px 12px;border-radius:9px;margin-top:10px;line-height:1.45}
   .verif.ok{background:#eafaf1;color:var(--accent-d);border:1px solid #bde8d0}
   .verif.ko{background:#fdeaea;color:var(--danger);border:1px solid #f3c2c3}
@@ -228,73 +285,112 @@
 
 <main id="outil">
   <!-- ENTRÉE -->
-  <section class="panel">
-    <h2 id="titreOrigine">1 · Texte d'origine</h2>
+  <section class="panel" id="pDepot">
+    <h2 id="titreOrigine">1 · Votre document</h2>
     <div class="body">
       <div class="drop" id="drop">
         📄 <b>Glissez un PDF, un Word ou une image ici</b> ou cliquez pour choisir un fichier
         <div class="small">PDF (texte ou scanné) · Word (.docx) · images JPG/PNG. Tout est lu dans votre navigateur — rien n'est envoyé. Les scans sont reconnus par OCR local.</div>
         <input type="file" id="file" accept="application/pdf,image/*,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
       </div>
-      <div class="status" id="status"></div>
-      <!-- Visualiseur : le document d'origine, avec les zones détectées à leur
-           place réelle. Affiché seulement quand l'entrée est un PDF. -->
-      <div class="bascule" id="basculeOrigine" hidden>
-        <button class="ghost" id="voirTexte">Voir le texte extrait</button>
-        <span class="count" id="infoZones"></span>
+      <!-- Une fois un document chargé, ce bandeau remplace la grande zone de dépôt -->
+      <div class="docinfo" id="docinfo" hidden>
+        <div>
+          <div class="nom" id="docnom"></div>
+          <div class="meta" id="docmeta"></div>
+        </div>
+        <span class="pousse"></span>
+        <button class="ghost" id="changerDoc">Changer de document</button>
       </div>
-      <div class="visu" id="visuOrigine" hidden></div>
+      <div class="status" id="status"></div>
       <textarea id="input" placeholder="…ou collez directement le texte à anonymiser ici."></textarea>
       <div class="controls">
         <button id="analyze">Analyser &amp; anonymiser</button>
         <button class="secondary" id="sample">Charger un exemple</button>
         <button class="ghost" id="clear">Vider</button>
       </div>
-      <div class="row">
-        <span class="count">Mode&nbsp;:</span>
-        <div class="seg" id="mode">
-          <button data-mode="pseudo" class="active">Pseudonymisation [TYPE_n]</button>
-          <button data-mode="redact">Caviardage ████</button>
+    </div>
+  </section>
+
+  <!-- ATELIER : le document à l'écran, une page à la fois -->
+  <section class="panel atelier" id="pAtelier" hidden>
+    <h2>2 · Vérifiez sur votre document</h2>
+    <div class="body">
+      <div class="barre">
+        <div class="seg" id="vue">
+          <button data-vue="origine" class="active">Original</button>
+          <button data-vue="resultat">Anonymisé</button>
+          <button data-vue="cote">Côte à côte</button>
         </div>
+        <div class="pager">
+          <button id="pagePrec" title="Page précédente (flèche gauche)">‹</button>
+          <span class="pos" id="pagePos">— / —</span>
+          <button id="pageSuiv" title="Page suivante (flèche droite)">›</button>
+        </div>
+        <div class="seg" id="zoom">
+          <button id="zoomMoins" title="Réduire">−</button>
+          <button id="zoomNiv" title="Ajuster à la largeur">100 %</button>
+          <button id="zoomPlus" title="Agrandir">+</button>
+        </div>
+        <span class="pousse"></span>
+        <span class="count" id="infoZones"></span>
+        <button class="ghost" id="voirTexte">Voir le texte extrait</button>
       </div>
-      <div class="row" id="cats"></div>
-      <div class="row">
-        <input type="text" id="custom" placeholder="Mots/termes à masquer en plus (séparés par des virgules)" style="flex:1;min-width:240px">
+      <div class="corps-atelier">
+        <div class="scene" id="scene"></div>
+        <aside class="rail" id="rail">
+          <h3>Détections sur cette page</h3>
+          <div class="vide">Analyse en cours…</div>
+        </aside>
       </div>
-      <div class="hint">Astuce&nbsp;: ajoutez ici les noms propres, raisons sociales ou identifiants internes que la détection automatique pourrait rater.</div>
-      <div class="row" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
-        <label class="opt" style="font-size:14px">
-          <input type="checkbox" id="nerToggle">
-          <b style="color:var(--accent2)">🧠 Détection IA locale</b>&nbsp;— noms, lieux/adresses, organisations
-        </label>
-      </div>
-      <div class="status" id="nerStatus"></div>
-      <div class="hint">Le modèle IA est servi <b>localement</b> (aucun téléchargement externe, fonctionne hors-ligne). <b>Votre document ne sort jamais.</b> 1ᵉʳ chargement un peu plus lent (mise en cache du modèle).</div>
     </div>
   </section>
 
   <!-- SORTIE -->
-  <section class="panel">
-    <h2 id="titreResultat">2 · Aperçu détecté</h2>
+  <section class="panel" id="pSortie">
+    <h2 id="titreResultat">3 · Résultat</h2>
     <div class="body">
-      <!-- Résultat : le VRAI document anonymisé, produit par le moteur PDF,
-           pas une simulation. Ce qui s'affiche ici est ce qui sera téléchargé. -->
-      <div class="visu" id="visuResultat" hidden></div>
-      <div class="out" id="preview"><div class="empty">L'aperçu surligné apparaîtra ici après analyse.</div></div>
       <div class="verif" id="verif" hidden></div>
+      <div class="out" id="preview"><div class="empty">L'aperçu surligné apparaîtra ici après analyse.</div></div>
       <div class="stat" id="stats"></div>
       <div class="controls">
-        <button id="copy" class="secondary">Copier le texte</button>
+        <button id="downloadPdf">Télécharger .pdf</button>
         <button id="download" class="secondary">Télécharger .txt</button>
         <button id="downloadDocx" class="secondary">Télécharger .docx</button>
-        <button id="downloadPdf">Télécharger .pdf</button>
+        <button id="copy" class="secondary">Copier le texte</button>
       </div>
+
+      <details class="reglages">
+        <summary>⚙️ Réglages de détection</summary>
+        <div class="contenu">
+          <div class="row">
+            <span class="count">Mode&nbsp;:</span>
+            <div class="seg" id="mode">
+              <button data-mode="pseudo" class="active">Pseudonymisation [TYPE_n]</button>
+              <button data-mode="redact">Caviardage ████</button>
+            </div>
+          </div>
+          <div class="row" id="cats"></div>
+          <div class="row">
+            <input type="text" id="custom" placeholder="Mots/termes à masquer en plus (séparés par des virgules)" style="flex:1;min-width:220px">
+          </div>
+          <div class="hint">Astuce&nbsp;: ajoutez ici les noms propres, raisons sociales ou identifiants internes que la détection automatique pourrait rater.</div>
+          <div class="row" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+            <label class="opt" style="font-size:14px">
+              <input type="checkbox" id="nerToggle">
+              <b style="color:var(--accent2)">🧠 Détection IA locale</b>&nbsp;— noms, lieux/adresses, organisations
+            </label>
+          </div>
+          <div class="status" id="nerStatus"></div>
+          <div class="hint">Le modèle IA est servi <b>localement</b> (aucun téléchargement externe, fonctionne hors-ligne). <b>Votre document ne sort jamais.</b> 1ᵉʳ chargement un peu plus lent (mise en cache du modèle).</div>
+        </div>
+      </details>
     </div>
   </section>
 
   <!-- TABLEAU DE CORRESPONDANCES -->
   <section class="panel" style="grid-column:1/-1">
-    <h2>3 · Détections &amp; tableau de correspondances <span class="count">(décochez ce qui ne doit pas être anonymisé)</span></h2>
+    <h2>4 · Détections &amp; tableau de correspondances <span class="count">(cliquez une zone sur le document pour l'écarter)</span></h2>
     <div class="body">
       <div id="table-wrap"><div class="empty">Aucune détection pour l'instant.</div></div>
       <div class="controls">
@@ -437,118 +533,253 @@ function oublierIndex(){ pdfIndex=null; indexValide=false; Visu.fermer(); }
    sera téléchargé.
    =========================================================== */
 const Visu = (function(){
-  const ECHELLE = 1.6;                      // qualité de rendu des pages
-  let generation = 0;                       // annule les rendus devenus obsolètes
-  let urls = [];                            // object URLs à libérer
-  let pagesOrigine = [], pagesResultat = [];
-  let minuterie = null;
+  /* Une seule scène, une page à la fois, aussi grande que la place le permet.
+     Les pages sont rendues à la demande, à la résolution réellement affichée :
+     rendre huit pages d'avance en double exemplaire coûtait cher et donnait
+     des vignettes illisibles. */
+  const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+  let generation = 0;          // annule les rendus devenus obsolètes
+  let cache = new Map();       // "source|page|largeurCible" -> URL d'objet
+  let page = 0, vue = 'origine', izoom = 2;   // izoom : index dans ZOOMS
+  let resultatPret = false, minuterie = null, calcul = 0;
 
   const el = (id)=>document.getElementById(id);
   const cle = (h)=> h.cat+'::'+String(h.value).toLowerCase().replace(/\s+/g,' ').trim();
+  const nPages = ()=> pdfIndex ? pdfIndex.nPages : 0;
 
-  function libererUrls(){ urls.forEach(u=>URL.revokeObjectURL(u)); urls=[]; }
+  function viderCache(){
+    for(const url of cache.values()) URL.revokeObjectURL(url);
+    cache.clear();
+  }
 
   function fermer(){
     generation++;
     clearTimeout(minuterie); minuterie=null;
-    libererUrls();
-    pagesOrigine=[]; pagesResultat=[];
-    for(const id of ['visuOrigine','visuResultat']){ const d=el(id); d.innerHTML=''; d.hidden=true; }
-    el('basculeOrigine').hidden=true;
+    viderCache();
+    page=0; vue='origine'; izoom=2; resultatPret=false;
+    document.querySelector('main').classList.remove('avec-doc');
+    el('pAtelier').hidden=true;
+    el('docinfo').hidden=true;
+    el('drop').hidden=false;
     el('input').hidden=false;
     el('preview').hidden=false;
     el('verif').hidden=true;
-    el('titreResultat').textContent='2 · Aperçu détecté';
-    el('titreOrigine').textContent="1 · Texte d'origine";
+    el('scene').innerHTML='';
+    el('titreResultat').textContent='3 · Résultat';
   }
 
-  /* Enveloppes de page : créées tout de suite (la mise en page ne saute pas),
-     remplies au fur et à mesure que le worker rend les images. */
-  function creerEnveloppes(conteneur, idx){
-    conteneur.innerHTML='';
-    const pages=[];
-    for(let p=0;p<idx.nPages;p++){
-      const info=idx.pages[p];
-      const bloc=document.createElement('div');
-      const cadre=document.createElement('div');
-      cadre.className='page';
-      // réserve le bon ratio avant même d'avoir l'image
-      cadre.style.aspectRatio = (info.largeur/info.hauteur).toFixed(4);
-      cadre.style.width='100%';
-      cadre.innerHTML='<div class="attente">page '+(p+1)+'…</div>';
-      const num=document.createElement('div');
-      num.className='pagenum'; num.textContent='page '+(p+1)+' / '+idx.nPages;
-      bloc.appendChild(cadre); bloc.appendChild(num);
-      conteneur.appendChild(bloc);
-      pages.push({cadre, largeur:info.largeur, hauteur:info.hauteur});
-    }
-    return pages;
-  }
-
-  async function rendreDans(pages, source, gen){
-    for(let p=0;p<pages.length;p++){
-      if(gen!==generation) return;                  // document changé entre-temps
-      try{
-        const { png } = await PdfLocal.rendre(p, ECHELLE, source);
-        if(gen!==generation) return;
-        const url=URL.createObjectURL(new Blob([png],{type:'image/png'}));
-        urls.push(url);
-        const img=new Image(); img.src=url; img.alt='page '+(p+1);
-        const att=pages[p].cadre.querySelector('.attente');
-        if(att) att.remove();
-        pages[p].cadre.insertBefore(img, pages[p].cadre.firstChild);
-      }catch(e){ /* page illisible : on laisse l'enveloppe en place */ }
-    }
-  }
-
-  function ouvrirPdf(idx){
-    generation++; libererUrls();
-    const gen=generation;
-    el('input').hidden=true;                       // le texte reste accessible via le bouton
-    el('preview').hidden=true;
-    el('basculeOrigine').hidden=false;
+  function ouvrirPdf(idx, nomFichier){
+    generation++; viderCache();
+    page=0; vue='origine'; izoom=2; resultatPret=false;
+    majSeg('vue', vue);
+    document.querySelector('main').classList.add('avec-doc');
+    el('pAtelier').hidden=false;
+    el('drop').hidden=true;                       // le bandeau le remplace
+    el('docinfo').hidden=false;
+    el('docnom').textContent=nomFichier||'Document PDF';
+    el('docmeta').textContent=idx.nPages+' page'+(idx.nPages>1?'s':'')+
+                              ' · '+idx.texte.length.toLocaleString('fr-BE')+' caractères';
+    el('input').hidden=true;                      // consultable via « Voir le texte extrait »
     el('voirTexte').textContent='Voir le texte extrait';
-    const vo=el('visuOrigine'); vo.hidden=false;
-    const vr=el('visuResultat'); vr.hidden=false;
-    el('titreResultat').textContent='2 · Résultat anonymisé';
-    el('titreOrigine').textContent="1 · Document d'origine";
-    vr.innerHTML='<div class="visu-vide">Le document anonymisé apparaîtra ici.</div>';
-    pagesOrigine=creerEnveloppes(vo, idx);
-    rendreDans(pagesOrigine, 'origine', gen);
+    el('preview').hidden=true;                    // l'aperçu texte ne sert plus
+    el('titreResultat').textContent='3 · Résultat anonymisé';
+    dessiner();
   }
 
-  /* Zones : positionnées en POURCENTAGE de la page, donc indépendantes de
-     l'échelle de rendu et de la largeur d'affichage. */
-  function majZones(hits){
-    if(!indexValide || !pagesOrigine.length) return;
-    for(const pg of pagesOrigine) pg.cadre.querySelectorAll('.zone').forEach(z=>z.remove());
+  function majSeg(id, valeur){
+    for(const b of el(id).querySelectorAll('button'))
+      b.classList.toggle('active', b.dataset.vue===valeur);
+  }
+
+  /* Largeur d'affichage d'une page, en pixels CSS. « Ajusté » remplit la
+     scène ; les autres niveaux s'en déduisent. */
+  function largeurCible(){
+    const scene = el('scene');
+    const info = pdfIndex.pages[page];
+    const dispoL = Math.max(240, scene.clientWidth - 40);
+    const dispoH = Math.max(200, scene.clientHeight - 40);
+    const baseL = vue==='cote' ? (dispoL-20)/2 : dispoL;
+    // « Ajusté » montre la page ENTIÈRE : pour vérifier un document, voir le
+    // haut d'une page ne sert à rien. On se cale donc sur la plus contraignante
+    // des deux dimensions.
+    const ajuste = Math.min(baseL, dispoH * (info.largeur/info.hauteur));
+    return Math.round(ajuste * ZOOMS[izoom] / ZOOMS[2]);
+  }
+
+  function feuille(source, largeur){
+    const info = pdfIndex.pages[page];
+    const d = document.createElement('div');
+    d.className = 'feuille'+(source==='resultat'?' resultat':'');
+    d.style.width = largeur+'px';
+    d.style.aspectRatio = (info.largeur/info.hauteur).toFixed(4);
+    if(vue==='cote'){
+      const t=document.createElement('span');
+      t.className='etiquette';
+      t.textContent = source==='resultat' ? 'anonymisé' : 'original';
+      d.appendChild(t);
+    }
+    const att=document.createElement('div');
+    att.className='attente'; att.textContent='page '+(page+1)+'…';
+    d.appendChild(att);
+    return d;
+  }
+
+  async function remplir(cadre, source, largeur, gen){
+    const k = source+'|'+page+'|'+largeur;
+    let url = cache.get(k);
+    if(!url){
+      try{
+        // on rend à la résolution de l'écran, pour une page nette
+        const ratio = Math.min(window.devicePixelRatio||1, 2);
+        const echelle = Math.min(4, largeur*ratio/pdfIndex.pages[page].largeur);
+        const { png } = await PdfLocal.rendre(page, echelle, source);
+        if(gen!==generation) return;
+        url = URL.createObjectURL(new Blob([png],{type:'image/png'}));
+        cache.set(k, url);
+      }catch(e){
+        const att=cadre.querySelector('.attente');
+        if(att) att.textContent = source==='resultat' ? 'en attente du résultat…' : 'page illisible';
+        return;
+      }
+    }
+    if(gen!==generation || !cadre.isConnected) return;
+    const img=new Image();
+    img.src=url; img.alt='page '+(page+1);
+    img.style.width='100%'; img.style.height='auto';
+    img.onload=()=>{ const a=cadre.querySelector('.attente'); if(a) a.remove(); };
+    cadre.insertBefore(img, cadre.firstChild);
+    if(source==='origine') poserZones(cadre);
+  }
+
+  /* Zones positionnées en POURCENTAGE de la page : indépendantes de l'échelle
+     de rendu comme de la largeur d'affichage. */
+  function poserZones(cadre){
+    if(!indexValide || !pdfIndex) return;
+    // idempotent : le rendu d'une page et une mise à jour des détections
+    // peuvent arriver dans n'importe quel ordre.
+    cadre.querySelectorAll('.zone').forEach(z=>z.remove());
+    const info = pdfIndex.pages[page];
+    const b = pdfIndex.bornes[page];
     let n=0;
-    for(const h of hits){
+    for(const h of lastHitsTous){
+      if(h.end<=b.debut || h.start>=b.fin) continue;
       const couleur=catColor(h.cat);
       for(const g of AnonGeom.rectsGlobaux(pdfIndex, h.start, h.end)){
-        const pg=pagesOrigine[g.page]; if(!pg) continue;
+        if(g.page!==page) continue;
         for(const r of g.rects){
           const z=document.createElement('div');
           z.className='zone'+(h.exclu?' off':'');
           z.style.background=couleur+'3d';
           z.style.border='1px solid '+couleur+'99';
-          z.style.left  =(r[0]/pg.largeur*100)+'%';
-          z.style.top   =(r[1]/pg.hauteur*100)+'%';
-          z.style.width =((r[2]-r[0])/pg.largeur*100)+'%';
-          z.style.height=((r[3]-r[1])/pg.hauteur*100)+'%';
-          z.title=(h.exclu?'IGNORÉ — ':'')+catLabel(h.cat)+' → '+h.token+'\n'+h.value+
+          z.style.left  =(r[0]/info.largeur*100)+'%';
+          z.style.top   =(r[1]/info.hauteur*100)+'%';
+          z.style.width =((r[2]-r[0])/info.largeur*100)+'%';
+          z.style.height=((r[3]-r[1])/info.hauteur*100)+'%';
+          z.title=(h.exclu ? 'CONSERVÉ TEL QUEL — '+catLabel(h.cat)
+                           : catLabel(h.cat)+' → '+(h.token||''))+'\n'+h.value+
                   '\n(cliquer pour '+(h.exclu?'anonymiser':'ne pas anonymiser')+' cette valeur)';
           z.dataset.cle=cle(h);
-          pg.cadre.appendChild(z);
+          cadre.appendChild(z);
           n++;
         }
       }
     }
-    el('infoZones').textContent=n?(n+' zone(s) sur le document — cliquez une zone pour l\'activer ou la désactiver'):'';
+    return n;
   }
 
-  /* Recalcule le document anonymisé. Débrayé : l'utilisateur peut cliquer
-     plusieurs zones de suite sans relancer un calcul à chaque clic. */
+  function dessiner(){
+    if(!pdfIndex) return;
+    const gen = ++generation;
+    const scene = el('scene');
+    scene.innerHTML='';
+    const largeur = largeurCible();
+
+    if(vue==='resultat' && !resultatPret){
+      const v=document.createElement('div');
+      v.className='scene-vide';
+      v.textContent='Le document anonymisé se prépare…';
+      scene.appendChild(v);
+    } else {
+      const sources = vue==='cote' ? ['origine','resultat'] : [vue];
+      for(const src of sources){
+        if(src==='resultat' && !resultatPret) continue;
+        const cadre = feuille(src, largeur);
+        scene.appendChild(cadre);
+        remplir(cadre, src, largeur, gen);
+      }
+    }
+    majCompteurs();
+    majRail();          // le rail suit la page affichée
+  }
+
+  /* Liste des détections de la page affichée. Le document garde le premier
+     rôle ; le rail sert à parcourir et à écarter vite. */
+  function majRail(){
+    const r=el('rail');
+    const b = pdfIndex && pdfIndex.bornes[page];
+    const ici = b ? lastHitsTous.filter(h=>h.start<b.fin && h.end>b.debut) : [];
+    if(!ici.length){
+      r.innerHTML='<h3>Détections sur cette page</h3>'+
+        '<div class="vide">Aucune détection sur la page '+(page+1)+'.</div>';
+      return;
+    }
+    const groupes=new Map();
+    for(const h of ici){
+      const k=cle(h);
+      if(!groupes.has(k)) groupes.set(k,{h, n:0});
+      groupes.get(k).n++;
+    }
+    let html='<h3>Détections sur cette page</h3><ul>';
+    for(const {h,n} of groupes.values()){
+      const c=catColor(h.cat);
+      html+='<li class="'+(h.exclu?'off':'')+'" data-cle="'+escapeHtml(cle(h))+'" '+
+            'title="Cliquer pour '+(h.exclu?'anonymiser':'ne pas anonymiser')+' cette valeur">'+
+            '<span class="puce" style="background:'+c+'"></span><span>'+
+            '<span class="val">'+escapeHtml(String(h.value||'').replace(/\s+/g,' '))+'</span>'+
+            '<div class="det">'+escapeHtml(catLabel(h.cat))+
+            (h.exclu ? ' · conservé tel quel' : ' → '+escapeHtml(h.token||''))+
+            (n>1?' · '+n+'×':'')+'</div></span></li>';
+    }
+    r.innerHTML=html+'</ul>';
+  }
+
+  function majCompteurs(){
+    el('pagePos').textContent = (page+1)+' / '+nPages();
+    el('pagePrec').disabled = page<=0;
+    el('pageSuiv').disabled = page>=nPages()-1;
+    el('zoomNiv').textContent = Math.round(ZOOMS[izoom]/ZOOMS[2]*100)+' %';
+    el('zoomMoins').disabled = izoom<=0;
+    el('zoomPlus').disabled = izoom>=ZOOMS.length-1;
+    const total = lastHitsTous.filter(h=>!h.exclu).length;
+    const ici = (()=>{ const b=pdfIndex&&pdfIndex.bornes[page]; if(!b) return 0;
+      return lastHitsTous.filter(h=>!h.exclu && h.start<b.fin && h.end>b.debut).length; })();
+    el('infoZones').textContent = total
+      ? ici+' zone(s) sur cette page · '+total+' au total — cliquez-en une pour l\'écarter'
+      : '';
+  }
+
+  function allerPage(n){
+    const p = Math.max(0, Math.min(nPages()-1, n));
+    if(p===page) return;
+    page=p; dessiner();
+  }
+  function changerVue(v){ if(v===vue) return; vue=v; majSeg('vue',v); dessiner(); }
+  function changerZoom(d){
+    const i = Math.max(0, Math.min(ZOOMS.length-1, izoom+d));
+    if(i===izoom) return;
+    izoom=i; dessiner();
+  }
+  function ajuster(){ if(izoom===2) return; izoom=2; dessiner(); }
+
+  /* Redessine seulement les zones, sans refaire le rendu des pages. */
+  function majZones(){
+    if(!indexValide) return;
+    for(const cadre of el('scene').querySelectorAll('.feuille:not(.resultat)'))
+      poserZones(cadre);
+    majCompteurs();
+    majRail();
+  }
+
   function planifierResultat(){
     if(!indexValide) return;
     clearTimeout(minuterie);
@@ -559,7 +790,7 @@ const Visu = (function(){
 
   async function rafraichirResultat(){
     if(!indexValide) return;
-    const gen=generation;
+    const monCalcul = ++calcul;      // un calcul plus récent a toujours raison
     const v=el('verif');
     try{
       const consignes=[], valeurs=[];
@@ -572,19 +803,23 @@ const Visu = (function(){
         valeurs.push(h.value);
       }
       if(!consignes.length){
-        el('visuResultat').innerHTML='<div class="visu-vide">Aucune détection à appliquer pour l\'instant.</div>';
+        resultatPret=false;
         v.className='verif work'; v.textContent='Rien à anonymiser : aucune détection active.';
+        if(vue!=='origine') dessiner();
         return;
       }
       const r=await PdfLocal.anonymiser(consignes, activeMode, valeurs);
-      if(gen!==generation) return;
+      if(monCalcul!==calcul) return;
       const ver=await PdfLocal.verifier(valeurs);
-      if(gen!==generation) return;
+      if(monCalcul!==calcul) return;
+      resultatPret = ver.fuites.length===0;
+      derniereVerif=ver;
 
-      pagesResultat=creerEnveloppes(el('visuResultat'), pdfIndex);
-      rendreDans(pagesResultat, 'resultat', gen);
+      // le résultat a changé : les rendus mis en cache ne valent plus
+      for(const [k,url] of [...cache]) if(k.startsWith('resultat|')){ URL.revokeObjectURL(url); cache.delete(k); }
+      if(vue!=='origine') dessiner();
 
-      const rapport=(r.tailleOrigine/1024).toFixed(0)+' Ko → '+(r.taille/1024).toFixed(0)+' Ko';
+      const poids=(r.tailleOrigine/1024).toFixed(0)+' Ko → '+(r.taille/1024).toFixed(0)+' Ko';
       if(ver.fuites.length){
         v.className='verif ko';
         v.innerHTML='❌ <b>Vérification échouée</b> — '+ver.fuites.length+
@@ -595,21 +830,23 @@ const Visu = (function(){
         v.innerHTML='✅ <b>Vérifié</b> : aucune des '+ver.nVerifiees+
           ' valeur(s) anonymisée(s) n\'est récupérable dans le fichier produit '+
           '<span class="count">(texte extrait et octets bruts du document décompressé)</span>. '+
-          '<span class="count">'+rapport+'</span>'+
+          '<span class="count">'+poids+'</span>'+
           '<div class="pertes">Mise en page préservée. En revanche, le ré-encodage retire '+
           'liens, formulaires, signets et signatures'+
           (r.liensRetires?' ('+r.liensRetires+' lien(s) exposant une donnée ont été neutralisés)':'')+
           ', ainsi que les métadonnées du fichier. <b>Relisez toujours le résultat.</b></div>';
       }
-      derniereVerif=ver;
     }catch(e){
-      if(gen!==generation) return;
+      if(monCalcul!==calcul) return;
+      resultatPret=false;
       v.className='verif ko'; v.textContent='Erreur lors de l\'anonymisation : '+(e.message||e);
       derniereVerif=null;
     }
   }
 
-  return { fermer, ouvrirPdf, majZones, planifierResultat, rafraichirResultat, cle };
+  return { fermer, ouvrirPdf, majZones, planifierResultat, rafraichirResultat, cle,
+           allerPage, changerVue, changerZoom, ajuster, dessiner,
+           get page(){ return page; } };
 })();
 
 let derniereVerif=null;
@@ -654,9 +891,9 @@ async function readPdf(file){
     pdfIndex=idx; indexValide=true;
     exclusionsValeurs.clear();
     document.getElementById('input').value=out;
-    Visu.ouvrirPdf(idx);
-    setStatus('✓ '+idx.nPages+' page(s) lue(s) — '+out.length+' caractères extraits. Analyse en cours…','ok');
+    Visu.ouvrirPdf(idx, file.name);
     resetBuild(); run(out);
+    setStatus('');            // le bandeau du document porte déjà l'information
   }catch(e){
     oublierIndex();
     setStatus('Erreur de lecture : '+(e.message||e),'err');
@@ -953,7 +1190,7 @@ function run(text){
   hits.forEach(h=>{ if(h.token && !(h.token in lastMapping)) lastMapping[h.token]=h.value; });
   renderAll(text,hits);
   if(indexValide){                       // document avec mise en page : visualiseur
-    Visu.majZones(lastHitsTous);
+    Visu.majZones();
     Visu.planifierResultat();
   }
   if(nerEnabled && nerText!==text) scheduleNER(text);       // lance l'IA si texte nouveau
@@ -1035,15 +1272,49 @@ function renderTable(hits){
     <tbody>${rows}</tbody></table>`;
 }
 
-function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
-/* ---------- interactions du visualiseur ---------- */
+/* ---------- commandes de l'atelier ---------- */
 // Clic sur une zone : on bascule TOUTES les occurrences de cette valeur.
-document.getElementById('visuOrigine').addEventListener('click', e=>{
+document.getElementById('scene').addEventListener('click', e=>{
   const z=e.target.closest('.zone'); if(!z) return;
   const k=z.dataset.cle;
   exclusionsValeurs.has(k) ? exclusionsValeurs.delete(k) : exclusionsValeurs.add(k);
   if(lastText) run(lastText);
+});
+
+document.getElementById('rail').addEventListener('click', e=>{
+  const li=e.target.closest('li[data-cle]'); if(!li) return;
+  const k=li.dataset.cle;
+  exclusionsValeurs.has(k) ? exclusionsValeurs.delete(k) : exclusionsValeurs.add(k);
+  if(lastText) run(lastText);
+});
+
+document.getElementById('vue').addEventListener('click', e=>{
+  if(e.target.dataset.vue) Visu.changerVue(e.target.dataset.vue);
+});
+document.getElementById('pagePrec').addEventListener('click', ()=>Visu.allerPage(Visu.page-1));
+document.getElementById('pageSuiv').addEventListener('click', ()=>Visu.allerPage(Visu.page+1));
+document.getElementById('zoomMoins').addEventListener('click', ()=>Visu.changerZoom(-1));
+document.getElementById('zoomPlus').addEventListener('click', ()=>Visu.changerZoom(+1));
+document.getElementById('zoomNiv').addEventListener('click', ()=>Visu.ajuster());
+document.getElementById('changerDoc').addEventListener('click', ()=>document.getElementById('file').click());
+
+// Flèches ← → pour feuilleter, sauf si l'on est en train de saisir du texte.
+document.addEventListener('keydown', e=>{
+  if(!indexValide || document.getElementById('pAtelier').hidden) return;
+  const t=e.target.tagName;
+  if(t==='INPUT' || t==='TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return;
+  if(e.key==='ArrowLeft'){ Visu.allerPage(Visu.page-1); e.preventDefault(); }
+  else if(e.key==='ArrowRight'){ Visu.allerPage(Visu.page+1); e.preventDefault(); }
+});
+
+// La largeur « ajustée » dépend de celle de la scène : on redessine au repos.
+let minuterieRedim=null;
+window.addEventListener('resize', ()=>{
+  if(!indexValide || document.getElementById('pAtelier').hidden) return;
+  clearTimeout(minuterieRedim);
+  minuterieRedim=setTimeout(()=>Visu.dessiner(), 200);
 });
 
 // Le texte extrait reste consultable : utile pour vérifier ce que l'outil a lu.
@@ -1051,6 +1322,7 @@ document.getElementById('voirTexte').addEventListener('click', ()=>{
   const ta=document.getElementById('input'), b=document.getElementById('voirTexte');
   ta.hidden=!ta.hidden;
   b.textContent = ta.hidden ? 'Voir le texte extrait' : 'Masquer le texte extrait';
+  if(!ta.hidden) ta.scrollIntoView({block:'center', behavior:'smooth'});
 });
 
 /* ---------- actions ---------- */
