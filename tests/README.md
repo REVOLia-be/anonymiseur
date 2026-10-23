@@ -130,6 +130,19 @@ ligne**, qui termine la ligne d'écriture, de l'**espace entre deux mots**, qui
 ne la termine pas. Confondus, chaque mot formait son propre rectangle et le
 jeton s'écrivait dans le premier, minuscule et illisible.
 
+### 12. Les signets sont encore une autre couche de texte
+
+Le titre d'un signet n'est pas dessiné sur la page, le caviardage ne le
+touche pas, et un lecteur de PDF l'affiche dans son panneau de navigation.
+Un export Word en crée un par titre de section : « Dossier Madame X » y
+survivait intact. Les titres contenant une valeur anonymisée sont remplacés
+plutôt que supprimés, pour ne pas casser l'arborescence.
+
+C'est la **cinquième** couche parallèle trouvée après le texte de la page :
+flux orphelin, liens, texte alternatif d'accessibilité, métadonnées, signets.
+La leçon tient en une phrase : *dans un PDF, la même donnée vit à plusieurs
+endroits, et le caviardage n'en atteint qu'un seul.*
+
 ---
 
 ## Licence du moteur
