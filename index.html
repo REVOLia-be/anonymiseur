@@ -432,6 +432,7 @@
   <div class="faq">
     <details><summary>Mes documents sont-ils envoyés quelque part&nbsp;?</summary><div class="a">Non. Tout le traitement (lecture, OCR, détection, anonymisation) se fait dans votre navigateur. Le contenu de vos documents ne quitte jamais votre appareil — vérifiable dans l'onglet « réseau » de votre navigateur. Voir la <a href="confidentialite.html">politique de confidentialité</a>.</div></details>
     <details><summary>Quels types de documents puis-je traiter&nbsp;?</summary><div class="a">PDF (y compris scannés, grâce à la reconnaissance de texte OCR), Word (.docx), images JPG/PNG, ou simplement du texte collé. Seul le <b>PDF</b> conserve sa mise en page&nbsp;; les autres formats passent par un rendu texte.</div></details>
+    <details><summary>Et les documents scannés&nbsp;?</summary><div class="a">Ils fonctionnent&nbsp;: la reconnaissance de texte (OCR) tourne localement et donne la position de chaque mot, ce qui permet d'effacer réellement les pixels concernés sur l'image. <b>Avec une réserve importante</b>&nbsp;: un mot mal reconnu n'est pas détecté, donc pas masqué — et comme la page est une image, la vérification automatique ne peut rien confirmer. Sur un scan, <b>parcourez les pages une à une</b> avant d'utiliser le document.</div></details>
     <details><summary>Mon PDF garde-t-il sa mise en page&nbsp;?</summary><div class="a">Oui. Le document n'est pas reconstruit ni transformé en images&nbsp;: c'est votre PDF, avec ses polices, ses tableaux, son logo et son poids d'origine — les données en moins. En contrepartie, le ré-encodage retire <b>liens, formulaires, signets et signatures</b> en tant qu'éléments interactifs, ainsi que les métadonnées du fichier. L'outil vous le rappelle avant le téléchargement.</div></details>
     <details><summary>Comment savoir que le fichier produit ne contient vraiment plus rien&nbsp;?</summary><div class="a">L'outil <b>relit le fichier qu'il vient de produire</b> et y cherche chaque valeur anonymisée — dans le texte extrait <i>et</i> dans les octets bruts du document décompressé. Le résultat s'affiche, et si quelque chose subsiste, <b>le téléchargement est bloqué</b>. C'est important&nbsp;: dans un PDF, poser un rectangle noir ne supprime pas le texte en dessous, qui reste copiable. Ici, les données sont réellement retirées du fichier.</div></details>
     <details><summary>Qu'est-ce qui est détecté&nbsp;?</summary><div class="a">Par règles : e-mails, téléphones, IBAN, n° national belge, n° d'entreprise (TVA BE), cartes, dates, montants, codes postaux. Avec la détection IA locale (optionnelle) : noms, adresses, organisations — même sans format particulier.</div></details>
@@ -578,7 +579,8 @@ const Visu = (function(){
     el('docinfo').hidden=false;
     el('docnom').textContent=nomFichier||'Document PDF';
     el('docmeta').textContent=idx.nPages+' page'+(idx.nPages>1?'s':'')+
-                              ' · '+idx.texte.length.toLocaleString('fr-BE')+' caractères';
+                              ' · '+idx.texte.length.toLocaleString('fr-BE')+' caractères'+
+                              (idx.ocr?' · texte reconnu par OCR':'');
     el('input').hidden=true;                      // consultable via « Voir le texte extrait »
     el('voirTexte').textContent='Voir le texte extrait';
     el('preview').hidden=true;                    // l'aperçu texte ne sert plus
@@ -825,6 +827,18 @@ const Visu = (function(){
         v.innerHTML='❌ <b>Vérification échouée</b> — '+ver.fuites.length+
           ' valeur(s) encore présente(s) dans le fichier produit : '+
           ver.fuites.map(escapeHtml).join(', ')+'. <b>Le téléchargement est bloqué.</b>';
+      }else if(pdfIndex && pdfIndex.ocr){
+        // Sur un scan, la page est une image : les pixels des zones ont bien
+        // été remplacés, mais aucune extraction de texte ne peut le confirmer.
+        // Le dire franchement vaut mieux qu'un ✅ qui ne prouve rien.
+        v.className='verif work';
+        v.innerHTML='🔎 <b>Document scanné</b> — les zones repérées ont été effacées de l\'image, '+
+          'et '+ver.nVerifiees+' valeur(s) ont été recherchées dans le fichier produit sans rien trouver. '+
+          '<b>Mais ce contrôle ne prouve pas grand-chose ici</b> : la page étant une image, il n\'y a pas '+
+          'de texte à extraire. <span class="count">'+poids+'</span>'+
+          '<div class="pertes">Le vrai risque est ailleurs&nbsp;: <b>un mot mal reconnu par l\'OCR '+
+          'n\'est pas détecté, donc pas masqué</b>. Parcourez les pages une à une avant d\'utiliser '+
+          'ce document, et ajoutez à la main ce qui manque.</div>';
       }else{
         v.className='verif ok';
         v.innerHTML='✅ <b>Vérifié</b> : aucune des '+ver.nVerifiees+
@@ -876,15 +890,19 @@ async function readPdf(file){
     let out=idx.texte;
 
     if(out.trim().length<15){
-      // PDF scanné (pages images, sans texte) → OCR local sur les pages rendues.
-      // L'OCR ne fournit pas encore de positions : pas d'index, donc pas
-      // d'export fidèle pour ce chemin (prévu dans un lot ultérieur).
+      // PDF scanné (pages images, sans texte) → OCR local, qui fournit une
+      // boîte par mot : on obtient le même index qu'un PDF texte, donc le
+      // visualiseur et l'export fidèle fonctionnent aussi sur un scan.
       setStatus('PDF scanné détecté — reconnaissance de texte (OCR) en cours…','work');
-      out = await ocrPdfPages(idx.nPages);
-      if(out.trim().length<5){ setStatus('Aucun texte reconnu dans ce PDF scanné.','err'); return; }
+      const idxOcr = await ocrPdfPages(idx);
+      if(idxOcr.texte.trim().length<5){ setStatus('Aucun texte reconnu dans ce PDF scanné.','err'); return; }
+      pdfIndex=idxOcr; indexValide=true;
+      exclusionsValeurs.clear();
+      out = idxOcr.texte;
       document.getElementById('input').value=out;
-      setStatus('✓ OCR : '+out.length+' caractères reconnus sur '+idx.nPages+' page(s). Analyse en cours…','ok');
+      Visu.ouvrirPdf(idxOcr, file.name);
       resetBuild(); run(out);
+      setStatus('');
       return;
     }
 
@@ -920,16 +938,83 @@ async function getOcrWorker(){
   return ocrLoading;
 }
 
-// Fait rendre chaque page par le worker PDF, puis l'OCR
-async function ocrPdfPages(nPages){
-  const worker=await getOcrWorker();
-  let out='';
-  for(let p=0;p<nPages;p++){
-    const { png } = await PdfLocal.rendre(p, 2);
-    const { data:{ text } } = await worker.recognize(new Blob([png],{type:'image/png'}));
-    out += text + '\n\n';
+/* ===========================================================
+   PDF scanné : l'OCR fournit une boîte par mot reconnu. On en
+   construit le MÊME index que pour un PDF texte (un quad par
+   caractère), si bien que le visualiseur et le caviardage
+   fonctionnent sans rien changer.
+
+   ⚠ La fiabilité dépend entièrement de la reconnaissance : un mot
+   mal lu n'est pas détecté, donc pas masqué. Et comme la page est
+   une image, la vérification par extraction de texte ne peut rien
+   confirmer — c'est dit explicitement dans l'interface.
+   =========================================================== */
+const OCR_ECHELLE = 2;          // rendu des pages pour la reconnaissance
+
+function indexDepuisOcr(idxPdf, pages){
+  const out = { texte:'', pages:[], bornes:[], nPages:idxPdf.nPages, ocr:true };
+  for(let p=0; p<pages.length; p++){
+    const info = idxPdf.pages[p];
+    const quads=[], origines=[], tailles=[], couleurs=[], sauts=[];
+    let texte='';
+    // 1 = saut de ligne, 2 = espace entre deux mots
+    const creux=(t)=>{ quads.push(0,0,0,0,0,0,0,0); origines.push(0,0); tailles.push(0);
+                       couleurs.push(0,0,0); sauts.push(t); };
+
+    for(const ligne of pages[p]){
+      if(texte) { texte+='\n'; creux(1); }
+      let premier=true;
+      for(const mot of ligne){
+        if(!premier){ texte+=' '; creux(2); }
+        premier=false;
+        const b=mot.bbox;
+        // pixels de l'image -> points de la page
+        const x0=b.x0/OCR_ECHELLE, y0=b.y0/OCR_ECHELLE;
+        const x1=b.x1/OCR_ECHELLE, y1=b.y1/OCR_ECHELLE;
+        const lettres=[...mot.text];
+        const pas=(x1-x0)/Math.max(1,lettres.length);
+        const corps=(y1-y0)*1.2;            // hauteur de boîte ≈ hauteur de capitale
+        for(let i=0;i<lettres.length;i++){
+          const a=x0+pas*i, bq=x0+pas*(i+1);
+          for(const _ of lettres[i]){       // aligne les caractères hors BMP
+            quads.push(a,y0, bq,y0, a,y1, bq,y1);
+            origines.push(a, y1);           // ligne de base ≈ bas de la boîte
+            tailles.push(corps);
+            couleurs.push(0,0,0);           // couleur inconnue sur un scan
+            sauts.push(0);
+          }
+        }
+        texte+=mot.text;
+      }
+    }
+    const debut=out.texte.length;
+    out.texte+=texte;
+    out.bornes.push({debut, fin:out.texte.length});
+    if(p<pages.length-1) out.texte+='\n\n';
+    out.pages.push({ texte,
+      quads:new Float32Array(quads), origines:new Float32Array(origines),
+      tailles:new Float32Array(tailles), couleurs:new Float32Array(couleurs),
+      sauts:new Uint8Array(sauts),
+      largeur:info.largeur, hauteur:info.hauteur });
   }
-  return out.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+  return out;
+}
+
+// Fait rendre chaque page par le worker PDF, puis l'OCR
+async function ocrPdfPages(idxPdf){
+  const worker=await getOcrWorker();
+  const pages=[];
+  for(let p=0;p<idxPdf.nPages;p++){
+    setStatus('Reconnaissance de texte — page '+(p+1)+' sur '+idxPdf.nPages+'…','work');
+    const { png } = await PdfLocal.rendre(p, OCR_ECHELLE);
+    const { data } = await worker.recognize(new Blob([png],{type:'image/png'}), {}, { blocks:true, text:true });
+    // regroupe les mots par ligne ; on retombe sur une ligne unique si besoin
+    const lignes = (data.lines && data.lines.length)
+      ? data.lines.map(l=>(l.words||[]).filter(m=>m.text && m.text.trim()))
+      : [ (data.words||[]).filter(m=>m.text && m.text.trim()) ];
+    pages.push(lignes.filter(l=>l.length));
+  }
+  return indexDepuisOcr(idxPdf, pages);
 }
 
 // OCR d'un fichier image (JPG/PNG)
