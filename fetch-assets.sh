@@ -13,6 +13,12 @@ get(){ # url, dest
   curl -fsSL "$1" -o "$2"
 }
 
+say "Moteur PDF (MuPDF — wasm)"
+# Lecture des positions de caractères, rendu des pages et caviardage réel.
+# Seul le .wasm est téléchargé ici : les deux fichiers JS sont dans le dépôt.
+get "https://cdn.jsdelivr.net/npm/mupdf@1.28.1/dist/mupdf-wasm.wasm" \
+    "vendor/mupdf/mupdf-wasm.wasm"
+
 say "Runtime ONNX (Transformers.js)"
 get "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2/dist/ort-wasm-simd-threaded.jsep.wasm" \
     "vendor/transformers/ort-wasm-simd-threaded.jsep.wasm"

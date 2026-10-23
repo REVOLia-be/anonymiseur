@@ -7,6 +7,8 @@ vendor/tesseract/*.wasm.js
 vendor/tesseract/*.traineddata.gz
 # Runtime ONNX (wasm, ~21 Mo)
 vendor/transformers/*.wasm
+# Moteur PDF MuPDF (wasm, ~10 Mo)
+vendor/mupdf/*.wasm
 
 # ─── Police sous licence commerciale — NE PAS redistribuer ───
 # iBrand est sous licence détenue par REVOLia ; chaque déploiement doit
