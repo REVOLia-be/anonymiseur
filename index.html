@@ -863,9 +863,13 @@ const Visu = (function(){
       }
       const r=await PdfLocal.anonymiser(consignes, activeMode, valeurs);
       if(monCalcul!==calcul) return;
+      // Le document anonymisé existe : il est affichable, quoi que dise la
+      // vérification ensuite. C'est le TÉLÉCHARGEMENT qui est conditionné,
+      // pas l'affichage — et quand la vérification échoue, c'est justement
+      // là qu'il faut pouvoir regarder le résultat.
+      resultatPret = true;
       const ver=await PdfLocal.verifier(valeurs);
       if(monCalcul!==calcul) return;
-      resultatPret = ver.fuites.length===0;
       derniereVerif=ver;
       majBoutonPdf();
 
