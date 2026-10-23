@@ -155,6 +155,19 @@ Quand une mention subsiste malgré tout, la vérification indique désormais le
 flux de contenu…), parce que « ailleurs dans le fichier » ne suffit pas pour
 décider quoi faire.
 
+### 14. Un nom sans titre échappe aux règles
+
+« Monsieur Dupont » passe, « Sacha Munaut » non. Sur un devis réel de 13
+pages, la détection par règles masquait montants, dates, e-mail, TVA et code
+postal, et laissait en clair les deux noms de personnes et l'organisation
+cliente — l'essentiel.
+
+Une suite de mots capitalisés est un indice fiable, mesuré sur trois
+documents : 7 candidats sur 13 pages, les 2 vrais noms en tête. Mais
+« Haute École » et « Utiliser Canva » en font partie : ce sont des
+SUGGESTIONS, validées d'un clic, jamais un masquage d'office. Masquer de
+travers abîme le document sans rien protéger.
+
 ---
 
 ## Licence du moteur

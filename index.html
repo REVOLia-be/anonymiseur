@@ -391,6 +391,11 @@
             <div class="astuce">Ou <b>cliquez un mot</b> sur le document. Un cliqué-glissé sélectionne une zone entière.</div>
             <div class="nomfichier" id="nomFichierPropo" hidden></div>
           </div>
+          <div class="rail-bloc" id="railNoms" hidden>
+            <h3>Noms propres repérés</h3>
+            <div class="nomfichier"><div class="quoi">Ils ne sont <b>pas masqués</b>. Les règles ne reconnaissent un nom que derrière un titre («&nbsp;Madame&nbsp;»)&nbsp;; ceux-ci ont été repérés sur leur forme. Cliquez ceux qui doivent disparaître.</div>
+              <div id="listeNoms"></div></div>
+          </div>
           <div class="rail-bloc" id="railDetections">
             <h3>Détections sur cette page</h3>
             <div class="vide">Analyse en cours…</div>
@@ -618,6 +623,7 @@ const Visu = (function(){
     el('input').hidden=false;
     el('preview').hidden=false;
     el('verif').hidden=true; el('verif').innerHTML='';
+    const bn=el('railNoms'); if(bn) bn.hidden=true;
     el('scene').innerHTML='';
     el('titreResultat').textContent='3 · Résultat';
     const reglages=document.querySelector('details.reglages');
@@ -644,7 +650,7 @@ const Visu = (function(){
     // rendait invisibles dès qu'on regardait l'atelier.
     const reglages=document.querySelector('details.reglages');
     el('railReglages').appendChild(reglages); reglages.open=true;
-    majTermes();
+    majTermes(); majSuggestionsNoms();
     dessiner();
   }
 
@@ -1397,6 +1403,7 @@ function run(text){
   hits.forEach(h=>{ if(h.token && !(h.token in lastMapping)) lastMapping[h.token]=h.value; });
   renderAll(text,hits);
   majBoutonPdf();                        // nom du fichier produit et état du bouton
+  majSuggestionsNoms();
   if(indexValide){                       // document avec mise en page : visualiseur
     Visu.majZones();
     Visu.planifierResultat();
@@ -1482,6 +1489,49 @@ function renderTable(hits){
 
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
+/* ---------- noms propres repérés sur leur forme ----------
+   Les règles ne voient un nom que derrière un titre : « Monsieur Dupont »
+   passe, « Sacha Munaut » non. Une suite de mots capitalisés est un indice
+   fiable de nom propre — mesuré sur trois documents réels : 7 candidats sur
+   13 pages, dont les 2 vrais noms en tête.
+
+   On ne masque RIEN d'office : « Haute École » ou « Utiliser Canva » sortent
+   aussi, et masquer de travers abîme le document. Ce sont des suggestions,
+   validées d'un clic. */
+const MOT_CAPITALISE = String.raw`\p{Lu}[\p{Ll}]+(?:[-’']\p{Lu}?[\p{Ll}]+)*`;
+const RE_NOMS = new RegExp(String.raw`\b(${MOT_CAPITALISE}(?:[ ]${MOT_CAPITALISE}){1,2})\b`, 'gu');
+
+function suggestionsDeNoms(){
+  if(!lastText) return [];
+  const norm=(x)=>String(x).toLowerCase().replace(/\s+/g,' ').trim();
+  // déjà couvert par une détection active, ou déjà ajouté à la main ?
+  const connus=[...lastHits.map(h=>norm(h.value)), ...[...termesManuels].map(norm)];
+  const comptes=new Map();
+  RE_NOMS.lastIndex=0;
+  let m;
+  while((m=RE_NOMS.exec(lastText))) comptes.set(m[1], (comptes.get(m[1])||0)+1);
+  return [...comptes.entries()]
+    .filter(([v])=>{ const n=norm(v); return !connus.some(c=>c.includes(n) || n.includes(c)); })
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,10)
+    .map(([v,n])=>({v,n}));
+}
+
+function majSuggestionsNoms(){
+  const bloc=document.getElementById('railNoms'), liste=document.getElementById('listeNoms');
+  if(!bloc||!liste) return;
+  const s=indexValide ? suggestionsDeNoms() : [];
+  if(!s.length){ bloc.hidden=true; liste.innerHTML=''; return; }
+  bloc.hidden=false;
+  liste.innerHTML=s.map(x=>'<span class="puce-propo" data-propo="'+escapeHtml(x.v)+'">+ '+
+    escapeHtml(x.v)+(x.n>1?' <span style="opacity:.6">'+x.n+'×</span>':'')+'</span>').join(' ');
+}
+
+document.getElementById('listeNoms').addEventListener('click', e=>{
+  const p=e.target.closest('[data-propo]');
+  if(p) ajouterTerme(p.dataset.propo);
+});
+
 /* ---------- ce que le nom du fichier révèle ----------
    Un nom de fichier trahit très souvent le client : « Devis pour Dupont.pdf ».
    Le terme est alors dans le document ET dans son nom. On propose les mots
@@ -1509,7 +1559,9 @@ function motsDuNomDeFichier(nom){
     const mot=morceaux[i], sep=morceaux[i+1]||'';
     if(!retenu(mot)){ courant=null; continue; }
     if(courant) courant.push(mot); else { courant=[mot]; groupes.push(courant); }
-    if(!/^[ _]+$/.test(sep)) courant=null;      // rupture nette
+    // Seule une espace soude deux mots en un nom : dans « Devis_REVOLia_CSCCNE »
+    // le souligné sépare des éléments distincts, il ne les joint pas.
+    if(!/^ +$/.test(sep)) courant=null;
   }
   return [...new Set(groupes.map(g=>g.join(' ')))];
 }
