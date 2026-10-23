@@ -26,18 +26,32 @@
     const out = [];
     let cur = null;
     for (let i = debut; i < fin; i++) {
-      if (sauts[i]) { cur = null; continue; }          // saut de ligne : pas de géométrie
+      // 1 = saut de ligne (la ligne d'écriture s'arrête) ; 2 = espace inséré
+      // entre deux mots reconnus (pas de géométrie, mais la ligne continue).
+      if (sauts[i] === 1) { cur = null; continue; }
+      if (sauts[i]) continue;
       const k = i * 8;
       const x0 = Math.min(quads[k],     quads[k + 4]);
       const y0 = Math.min(quads[k + 1], quads[k + 5]);
       const x1 = Math.max(quads[k + 2], quads[k + 6]);
       const y1 = Math.max(quads[k + 3], quads[k + 7]);
       if (!(x1 > x0) || !(y1 > y0)) continue;           // glyphe sans surface
-      // même ligne si l'écart vertical est négligeable
-      if (cur && Math.abs(y0 - cur[1]) < 2) {
-        cur[0] = Math.min(cur[0], x0); cur[1] = Math.min(cur[1], y0);
-        cur[2] = Math.max(cur[2], x1); cur[3] = Math.max(cur[3], y1);
-      } else { cur = [x0, y0, x1, y1]; out.push(cur); }
+      /* Même ligne d'écriture ? On ne compare pas les ordonnées à l'identique :
+         l'OCR donne une boîte par MOT, et ces boîtes ne s'alignent jamais au
+         point près. On exige un recouvrement vertical franc et un écart
+         horizontal court — ce qui soude « 11 juin 2026 » en un seul rectangle
+         sans jamais souder deux colonnes voisines. */
+      if (cur) {
+        const hCur = cur[3] - cur[1], hNouv = y1 - y0;
+        const recouvre = Math.min(cur[3], y1) - Math.max(cur[1], y0);
+        const ecart = x0 - cur[2];
+        if (recouvre > 0.5 * Math.min(hCur, hNouv) && ecart < 0.6 * Math.max(hCur, hNouv)) {
+          cur[0] = Math.min(cur[0], x0); cur[1] = Math.min(cur[1], y0);
+          cur[2] = Math.max(cur[2], x1); cur[3] = Math.max(cur[3], y1);
+          continue;
+        }
+      }
+      cur = [x0, y0, x1, y1]; out.push(cur);
     }
     return out;
   }

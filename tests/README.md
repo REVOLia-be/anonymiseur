@@ -120,6 +120,16 @@ alors que le texte est parfaitement extractible. Les deux contrôles sont
 complémentaires — le scan d'octets, lui, avait seul attrapé le flux orphelin
 (nº 1) et le lien `mailto:` (nº 4).
 
+### 11. Un espace n'interrompt pas une ligne d'écriture
+
+L'OCR donne une boîte par **mot**. Pour recoller « 11 juin 2026 » en un seul
+rectangle, deux choses sont nécessaires : fusionner les boîtes sur
+recouvrement vertical plutôt que sur ordonnée identique (deux boîtes OCR ne
+s'alignent jamais au point près), et distinguer dans l'index le **saut de
+ligne**, qui termine la ligne d'écriture, de l'**espace entre deux mots**, qui
+ne la termine pas. Confondus, chaque mot formait son propre rectangle et le
+jeton s'écrivait dans le premier, minuscule et illisible.
+
 ---
 
 ## Licence du moteur
