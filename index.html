@@ -195,7 +195,37 @@
   .rail .puce{width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:4px}
   .rail .val{font-weight:600;word-break:break-word}
   .rail .det{color:var(--muted);font-size:11.5px;margin-top:1px}
-  .rail .vide{color:var(--muted);font-size:12.5px;padding:18px 14px;line-height:1.5}
+  .rail .vide{color:var(--muted);font-size:12.5px;padding:14px;line-height:1.5}
+  .rail-bloc{border-bottom:1px solid var(--line)}
+  .rail-bloc:last-child{border-bottom:0}
+  .rail .ajout{display:flex;gap:6px;padding:0 14px 10px}
+  .rail .ajout input{flex:1;min-width:0;font-size:13px}
+  .rail .ajout button{padding:7px 12px;font-size:13px}
+  .rail .astuce{color:var(--muted);font-size:11.5px;line-height:1.5;padding:0 14px 12px}
+  .puces{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px}
+  .puce-terme{display:inline-flex;align-items:center;gap:6px;background:#f3eeff;color:#6d3bd4;
+        border:1px solid #d9c9ff;border-radius:99px;padding:3px 6px 3px 10px;font-size:12px;font-weight:600}
+  .puce-terme button{background:transparent;border:0;color:#6d3bd4;cursor:pointer;font-size:14px;
+        line-height:1;padding:0 2px;border-radius:50%}
+  .puce-terme button:hover{background:#e3d6ff}
+  .rail details.reglages{border:0;border-radius:0;margin:0;background:transparent}
+  .rail details.reglages>summary{padding:12px 14px 8px;font-size:11px;text-transform:uppercase;
+        letter-spacing:.05em;color:var(--muted)}
+  .rail details.reglages .contenu{border-top:0;padding:0 14px 14px}
+  .rail .seg{width:100%}
+  .rail .seg button{flex:1;padding:7px 8px;font-size:12px;line-height:1.3}
+  .rail .cat{font-size:10.5px}
+  .rail .row{gap:7px;margin-top:9px}
+  .rail #cats{gap:5px 9px}
+  .rail .opt{font-size:12px;gap:6px}
+  .rail .hint{font-size:11.5px;line-height:1.5}
+  /* L'option IA tient sur deux lignes lisibles plutôt qu'en colonne étroite */
+  .rail .opt-ia{display:block;font-size:12.5px;line-height:1.5}
+  .rail .opt-ia input{margin-right:7px;vertical-align:-1px}
+  /* Sélection d'une zone au cliqué-glissé sur la page */
+  .lasso{position:absolute;border:1.5px dashed var(--accent-d);background:rgba(0,191,99,.14);
+        pointer-events:none;border-radius:2px;z-index:3}
+  .feuille.designable{cursor:crosshair}
   @media(max-width:900px){.corps-atelier{grid-template-columns:1fr}
     .rail{border-left:0;border-top:1px solid var(--line);height:auto;max-height:260px}}
   .scene-vide{margin:auto;color:var(--muted);font-size:13.5px;padding:50px 20px;text-align:center;
@@ -277,7 +307,7 @@
     <div class="step"><div class="n">1</div><h3>Déposez votre document</h3>
       <p>PDF (même scanné), Word ou image — ou collez simplement du texte. Tout reste sur votre appareil.</p></div>
     <div class="step"><div class="n">2</div><h3>Vérifiez sur le document</h3>
-      <p>Les détections sont surlignées <b>à leur place réelle</b> sur vos pages. Un clic écarte ou remet une valeur ; vous voyez le résultat en vis-à-vis.</p></div>
+      <p>Les détections sont surlignées <b>à leur place réelle</b> sur vos pages. Un clic écarte une valeur, un autre l'ajoute&nbsp;: <b>cliquez un mot oublié</b> et il sera masqué partout.</p></div>
     <div class="step"><div class="n">3</div><h3>Téléchargez</h3>
       <p>Un PDF à la <b>mise en page identique</b>, avec les données en moins. L'outil relit le fichier produit et bloque le téléchargement s'il y trouve encore quelque chose.</p></div>
   </div>
@@ -339,8 +369,20 @@
       <div class="corps-atelier">
         <div class="scene" id="scene"></div>
         <aside class="rail" id="rail">
-          <h3>Détections sur cette page</h3>
-          <div class="vide">Analyse en cours…</div>
+          <div class="rail-bloc">
+            <h3>Ajouter un terme à masquer</h3>
+            <div class="ajout">
+              <input type="text" id="termeAjout" placeholder="Adminova, n° de dossier…">
+              <button class="secondary" id="termeBtn">Ajouter</button>
+            </div>
+            <div class="puces" id="termesListe"></div>
+            <div class="astuce">Ou <b>cliquez un mot</b> sur le document. Un cliqué-glissé sélectionne une zone entière.</div>
+          </div>
+          <div class="rail-bloc" id="railDetections">
+            <h3>Détections sur cette page</h3>
+            <div class="vide">Analyse en cours…</div>
+          </div>
+          <div class="rail-bloc" id="railReglages"></div>
         </aside>
       </div>
     </div>
@@ -371,14 +413,10 @@
             </div>
           </div>
           <div class="row" id="cats"></div>
-          <div class="row">
-            <input type="text" id="custom" placeholder="Mots/termes à masquer en plus (séparés par des virgules)" style="flex:1;min-width:220px">
-          </div>
-          <div class="hint">Astuce&nbsp;: ajoutez ici les noms propres, raisons sociales ou identifiants internes que la détection automatique pourrait rater.</div>
           <div class="row" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
-            <label class="opt" style="font-size:14px">
+            <label class="opt opt-ia" style="font-size:14px">
               <input type="checkbox" id="nerToggle">
-              <b style="color:var(--accent2)">🧠 Détection IA locale</b>&nbsp;— noms, lieux/adresses, organisations
+              <b style="color:var(--accent2)">🧠 Détection IA locale</b> — noms, lieux/adresses, organisations
             </label>
           </div>
           <div class="status" id="nerStatus"></div>
@@ -435,7 +473,7 @@
     <details><summary>Et les documents scannés&nbsp;?</summary><div class="a">Ils fonctionnent&nbsp;: la reconnaissance de texte (OCR) tourne localement et donne la position de chaque mot, ce qui permet d'effacer réellement les pixels concernés sur l'image. <b>Avec une réserve importante</b>&nbsp;: un mot mal reconnu n'est pas détecté, donc pas masqué — et comme la page est une image, la vérification automatique ne peut rien confirmer. Sur un scan, <b>parcourez les pages une à une</b> avant d'utiliser le document.</div></details>
     <details><summary>Mon PDF garde-t-il sa mise en page&nbsp;?</summary><div class="a">Oui. Le document n'est pas reconstruit ni transformé en images&nbsp;: c'est votre PDF, avec ses polices, ses tableaux, son logo et son poids d'origine — les données en moins. En contrepartie, le ré-encodage retire <b>liens, formulaires, signets et signatures</b> en tant qu'éléments interactifs, ainsi que les métadonnées du fichier. L'outil vous le rappelle avant le téléchargement.</div></details>
     <details><summary>Comment savoir que le fichier produit ne contient vraiment plus rien&nbsp;?</summary><div class="a">L'outil <b>relit le fichier qu'il vient de produire</b> et y cherche chaque valeur anonymisée — dans le texte extrait <i>et</i> dans les octets bruts du document décompressé. Le résultat s'affiche, et si quelque chose subsiste, <b>le téléchargement est bloqué</b>. C'est important&nbsp;: dans un PDF, poser un rectangle noir ne supprime pas le texte en dessous, qui reste copiable. Ici, les données sont réellement retirées du fichier.</div></details>
-    <details><summary>Qu'est-ce qui est détecté&nbsp;?</summary><div class="a">Par règles : e-mails, téléphones, IBAN, n° national belge, n° d'entreprise (TVA BE), cartes, dates, montants, codes postaux. Avec la détection IA locale (optionnelle) : noms, adresses, organisations — même sans format particulier.</div></details>
+    <details><summary>Qu'est-ce qui est détecté&nbsp;?</summary><div class="a">Par règles : e-mails, téléphones, IBAN, n° national belge, n° d'entreprise (TVA BE), cartes, dates, montants, codes postaux. Avec la détection IA locale (optionnelle) : noms, adresses, organisations — même sans format particulier. Et <b>ce que vous désignez vous-même</b> : cliquez un mot sur le document, ou faites glisser pour sélectionner une zone, et il sera masqué partout.</div></details>
     <details><summary>Pseudonymisation ou caviardage&nbsp;?</summary><div class="a">La <b>pseudonymisation</b> remplace par des jetons cohérents (<span class="tok">[PERSONNE_1]</span>) : le document reste lisible et exploitable par l'IA. Le <b>caviardage</b> supprime réellement l'information (barres noires) — rien n'est récupérable.</div></details>
     <details><summary>Est-ce une anonymisation «&nbsp;garantie&nbsp;»&nbsp;?</summary><div class="a">Non, c'est une <b>aide</b>. Aucune détection automatique n'est parfaite, et les identifiants indirects (recoupements de contexte) lui échappent. <b>Relisez toujours</b> le résultat. La pseudonymisation n'est pas une anonymisation au sens du RGPD.</div></details>
     <details><summary>C'est gratuit&nbsp;? Open source&nbsp;?</summary><div class="a">Oui — gratuit et <a href="https://github.com/REVOLia-be/anonymiseur" rel="noopener">open source (AGPL-3.0)</a>, pour que chacun puisse vérifier que rien ne sort.</div></details>
@@ -567,6 +605,8 @@ const Visu = (function(){
     el('verif').hidden=true;
     el('scene').innerHTML='';
     el('titreResultat').textContent='3 · Résultat';
+    const reglages=document.querySelector('details.reglages');
+    if(reglages){ document.querySelector('#pSortie .body').appendChild(reglages); reglages.open=false; }
   }
 
   function ouvrirPdf(idx, nomFichier){
@@ -585,6 +625,11 @@ const Visu = (function(){
     el('voirTexte').textContent='Voir le texte extrait';
     el('preview').hidden=true;                    // l'aperçu texte ne sert plus
     el('titreResultat').textContent='3 · Résultat anonymisé';
+    // Les réglages suivent le document : les laisser en bas de page les
+    // rendait invisibles dès qu'on regardait l'atelier.
+    const reglages=document.querySelector('details.reglages');
+    el('railReglages').appendChild(reglages); reglages.open=true;
+    majTermes();
     dessiner();
   }
 
@@ -611,7 +656,7 @@ const Visu = (function(){
   function feuille(source, largeur){
     const info = pdfIndex.pages[page];
     const d = document.createElement('div');
-    d.className = 'feuille'+(source==='resultat'?' resultat':'');
+    d.className = 'feuille'+(source==='resultat'?' resultat':' designable');
     d.style.width = largeur+'px';
     d.style.aspectRatio = (info.largeur/info.hauteur).toFixed(4);
     if(vue==='cote'){
@@ -717,7 +762,7 @@ const Visu = (function(){
   /* Liste des détections de la page affichée. Le document garde le premier
      rôle ; le rail sert à parcourir et à écarter vite. */
   function majRail(){
-    const r=el('rail');
+    const r=el('railDetections');
     const b = pdfIndex && pdfIndex.bornes[page];
     const ici = b ? lastHitsTous.filter(h=>h.start<b.fin && h.end>b.debut) : [];
     if(!ici.length){
@@ -1110,7 +1155,13 @@ const CATS = [
   // Catégories alimentées par le modèle IA local (pas de regex) :
   {key:'LIEU',     label:'Lieu / Adresse',color:'#2693ce', re:null, ner:true},
   {key:'ORG',      label:'Organisation',  color:'#c4b5fd', re:null, ner:true},
+  // Termes désignés par l'utilisateur, sur le document ou au clavier :
+  {key:'TERME',    label:'Terme ajouté',  color:'#8b5cf6', re:null, manuel:true},
 ];
+
+/* Termes que l'utilisateur a désignés lui-même — en cliquant un mot sur le
+   document, en sélectionnant une zone, ou au clavier. Masqués PARTOUT. */
+const termesManuels=new Set();
 
 const SAMPLE = `CONTRAT DE TRAVAIL
 
@@ -1162,12 +1213,13 @@ function detect(text){
       if(m.index===c.re.lastIndex)c.re.lastIndex++;
     }
   });
-  // termes personnalisés
-  const custom=document.getElementById('custom').value.split(',').map(s=>s.trim()).filter(Boolean);
-  custom.forEach(term=>{
-    const re=new RegExp(escapeRe(term),'gi'); let m;
+  // termes désignés par l'utilisateur : priorité 3, ils l'emportent sur tout
+  if(enabled.TERME) termesManuels.forEach(term=>{
+    const motif=term.trim().split(/\s+/).map(escapeRe).join('\\s+');   // tolère les sauts de ligne
+    if(!motif) return;
+    const re=new RegExp(motif,'gi'); let m;
     while((m=re.exec(text))!==null){
-      hits.push({start:m.index,end:m.index+m[0].length,cat:'PERSONNE',value:m[0],custom:true,prio:3});
+      hits.push({start:m.index,end:m.index+m[0].length,cat:'TERME',value:m[0],custom:true,prio:3});
       if(m.index===re.lastIndex)re.lastIndex++;
     }
   });
@@ -1359,6 +1411,144 @@ function renderTable(hits){
 
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
+/* ---------- termes désignés par l'utilisateur ---------- */
+function majTermes(){
+  const z=document.getElementById('termesListe');
+  if(!z) return;
+  if(!termesManuels.size){ z.innerHTML=''; return; }
+  z.innerHTML=[...termesManuels].map(t=>
+    '<span class="puce-terme">'+escapeHtml(t)+
+    '<button data-terme="'+escapeHtml(t)+'" title="Retirer ce terme">×</button></span>').join('');
+}
+
+function ajouterTerme(txt){
+  const t=String(txt||'').replace(/\s+/g,' ').trim();
+  if(t.length<2) return false;
+  if(termesManuels.has(t)) return false;
+  termesManuels.add(t);
+  majTermes();
+  if(lastText) run(lastText);
+  return true;
+}
+function retirerTerme(t){
+  if(!termesManuels.delete(t)) return;
+  majTermes();
+  if(lastText) run(lastText);
+}
+
+document.getElementById('termeBtn').addEventListener('click', ()=>{
+  const i=document.getElementById('termeAjout');
+  // plusieurs termes d'un coup, séparés par des virgules
+  i.value.split(',').forEach(t=>ajouterTerme(t));
+  i.value='';
+});
+document.getElementById('termeAjout').addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ e.preventDefault(); document.getElementById('termeBtn').click(); }
+});
+document.getElementById('termesListe').addEventListener('click', e=>{
+  const b=e.target.closest('button[data-terme]');
+  if(b) retirerTerme(b.dataset.terme);
+});
+
+/* ---------- désigner un mot ou une zone sur le document ----------
+   On dispose de la position de chaque caractère : un clic suffit donc à
+   savoir quel mot se trouve sous le curseur, et un cliqué-glissé à relever
+   tout le texte couvert. Taper le mot au clavier reste possible, mais ce
+   n'est plus le seul chemin. */
+const SEPARATEURS = /[\s,;:!?()«»"'’\[\]]/;
+
+function indexSousPoint(p, x, y){
+  const page=pdfIndex.pages[p], {quads,sauts}=page;
+  for(let i=0;i<page.texte.length;i++){
+    if(sauts[i]) continue;
+    const k=i*8;
+    if(x>=Math.min(quads[k],quads[k+4]) && x<=Math.max(quads[k+2],quads[k+6]) &&
+       y>=Math.min(quads[k+1],quads[k+5]) && y<=Math.max(quads[k+3],quads[k+7])) return i;
+  }
+  return -1;
+}
+
+function motAutour(texte, i){
+  const sep=(c)=>c===undefined || SEPARATEURS.test(c);
+  let a=i, b=i+1;
+  while(a>0 && !sep(texte[a-1])) a--;
+  while(b<texte.length && !sep(texte[b])) b++;
+  return texte.slice(a,b);
+}
+
+function texteDansRect(p, r){
+  const page=pdfIndex.pages[p], {quads,sauts}=page;
+  let min=-1, max=-1;
+  for(let i=0;i<page.texte.length;i++){
+    if(sauts[i]) continue;
+    const k=i*8;
+    const x0=Math.min(quads[k],quads[k+4]), y0=Math.min(quads[k+1],quads[k+5]);
+    const x1=Math.max(quads[k+2],quads[k+6]), y1=Math.max(quads[k+3],quads[k+7]);
+    if(x1<r[0] || x0>r[2] || y1<r[1] || y0>r[3]) continue;   // pas de recouvrement
+    if(min<0) min=i;
+    max=i;
+  }
+  return min<0 ? '' : page.texte.slice(min, max+1);
+}
+
+(function(){
+  const scene=document.getElementById('scene');
+  let depart=null, cadre=null, lasso=null;
+
+  const enPoints=(cadre, e)=>{
+    const b=cadre.getBoundingClientRect(), info=pdfIndex.pages[Visu.page];
+    return [ (e.clientX-b.left)/b.width*info.largeur,
+             (e.clientY-b.top)/b.height*info.hauteur ];
+  };
+
+  scene.addEventListener('mousedown', e=>{
+    if(!indexValide || e.button!==0) return;
+    if(e.target.closest('.zone')) return;             // le clic sur une zone a son propre rôle
+    const c=e.target.closest('.feuille:not(.resultat)');
+    if(!c) return;
+    cadre=c; depart=enPoints(c,e);
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', e=>{
+    if(!depart) return;
+    const p=enPoints(cadre,e), info=pdfIndex.pages[Visu.page];
+    if(!lasso){
+      if(Math.abs(p[0]-depart[0])<2 && Math.abs(p[1]-depart[1])<2) return;  // simple clic
+      lasso=document.createElement('div'); lasso.className='lasso';
+      cadre.appendChild(lasso);
+    }
+    const x0=Math.min(depart[0],p[0]), x1=Math.max(depart[0],p[0]);
+    const y0=Math.min(depart[1],p[1]), y1=Math.max(depart[1],p[1]);
+    lasso.style.left  =(x0/info.largeur*100)+'%';
+    lasso.style.top   =(y0/info.hauteur*100)+'%';
+    lasso.style.width =((x1-x0)/info.largeur*100)+'%';
+    lasso.style.height=((y1-y0)/info.hauteur*100)+'%';
+  });
+
+  window.addEventListener('mouseup', e=>{
+    if(!depart) return;
+    const fin=enPoints(cadre,e), p=Visu.page;
+    const aGlisse=!!lasso;
+    if(lasso){ lasso.remove(); lasso=null; }
+    const b=pdfIndex.bornes[p];
+    let texte='';
+    if(aGlisse){
+      texte=texteDansRect(p, [Math.min(depart[0],fin[0]), Math.min(depart[1],fin[1]),
+                              Math.max(depart[0],fin[0]), Math.max(depart[1],fin[1])]);
+    }else{
+      const i=indexSousPoint(p, depart[0], depart[1]);
+      if(i>=0) texte=motAutour(pdfIndex.pages[p].texte, i);
+    }
+    depart=null; cadre=null;
+    texte=texte.replace(/\s+/g,' ').trim();
+    if(texte.length<2) return;
+    if(!ajouterTerme(texte)) return;
+    setStatus('« '+texte.slice(0,60)+' » sera masqué partout dans le document.','ok');
+    setTimeout(()=>setStatus(''), 4000);
+  });
+})();
+
 /* ---------- commandes de l'atelier ---------- */
 // Clic sur une zone : on bascule TOUTES les occurrences de cette valeur.
 document.getElementById('scene').addEventListener('click', e=>{
@@ -1413,7 +1603,6 @@ document.getElementById('voirTexte').addEventListener('click', ()=>{
 /* ---------- actions ---------- */
 function analyze(){ resetBuild(); run(document.getElementById('input').value); }
 document.getElementById('analyze').addEventListener('click',analyze);
-document.getElementById('custom').addEventListener('input',()=>{ if(lastText){resetBuild();run(document.getElementById('input').value);} });
 document.getElementById('sample').addEventListener('click',()=>{
   oublierIndex();
   document.getElementById('input').value=SAMPLE; resetBuild(); analyze();
