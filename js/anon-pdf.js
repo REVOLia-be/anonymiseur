@@ -362,6 +362,25 @@ export function anonymiser(octetsOrigine, consignes, opts = {}) {
    dans le texte extrait ET dans les octets bruts du document décompressé.
    C'est ce second contrôle qui attrape les données survivant dans un objet
    que la page ne référence plus. */
+/* Dans quel genre d'objet PDF une mention subsiste-t-elle ? Savoir « ailleurs
+   dans le fichier » ne suffit pas pour décider : un nom de pièce jointe et un
+   reste de flux de contenu n'appellent pas la même réaction. On remonte le
+   contexte qui précède la trouvaille — les objets PDF énoncent leur type
+   avant leur contenu. */
+function natureDeLObjet(brut, position) {
+  const avant = brut.slice(Math.max(0, position - 400), position);
+  const a = (motif) => motif.test(avant);
+  if (a(/<\?xpacket|<x:xmpmeta|<rdf:/))                 return "métadonnées XMP";
+  if (a(/\/(?:Producer|Creator|Keywords|Subject)\s*\(|\/Info\b/)) return "métadonnées du fichier";
+  if (a(/\/(?:EmbeddedFile|Filespec)\b|\/UF\s*\(|\/F\s*\(/))   return "nom ou pièce jointe attachée au PDF";
+  if (a(/\/URI\s*\(|\/Subtype\s*\/Link/))              return "lien";
+  if (a(/\/Outlines\b|\/Title\s*\(/))                   return "signet ou titre";
+  if (a(/\/Type\s*\/Annot/))                           return "annotation";
+  if (a(/\/(?:Alt|ActualText)\s*\(/))                   return "texte d'accessibilité";
+  if (a(/\bstream\b(?![\s\S]*\bendstream\b)/))          return "flux de contenu";
+  return "objet non identifié";
+}
+
 export function verifier(octetsResultat, valeurs) {
   const doc = mupdf.PDFDocument.openDocument(octetsResultat, "application/pdf");
   try {
@@ -388,10 +407,11 @@ export function verifier(octetsResultat, valeurs) {
       if (!v || v.length < 3) continue;          // trop court pour être concluant
       const pages = [];
       for (let p = 0; p < parPage.length; p++) if (parPage[p].includes(v)) pages.push(p + 1);
-      const dansOctets = brut.includes(v);
-      if (!pages.length && !dansOctets) continue;
+      const ou = brut.indexOf(v);
+      if (!pages.length && ou < 0) continue;
       fuites.push(v);
-      details.push({ valeur: v, pages, dansOctets, visible: pages.length > 0 });
+      details.push({ valeur: v, pages, dansOctets: ou >= 0, visible: pages.length > 0,
+                     objet: ou < 0 ? null : natureDeLObjet(brut, ou) });
     }
     return { fuites, details, nVerifiees: new Set(valeurs).size };
   } finally { doc.destroy(); }
