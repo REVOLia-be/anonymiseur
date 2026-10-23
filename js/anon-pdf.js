@@ -230,6 +230,47 @@ function nettoyerTexteCache(doc, valeurs) {
   return n;
 }
 
+/* Les SIGNETS forment encore une autre couche de texte : le titre d'un
+   signet n'est pas dessiné sur la page, le caviardage ne le touche pas, et
+   un lecteur de PDF l'affiche dans son panneau de navigation. Un export
+   Word en crée un par titre de section — « Dossier Madame X » y survivait
+   intact. On remplace le titre plutôt que de le supprimer, pour ne pas
+   casser l'arborescence. */
+function nettoyerSignets(doc, utiles) {
+  if (!utiles.length) return 0;
+  let n = 0;
+  const vus = new Set();
+
+  const visiter = (ref, profondeur) => {
+    // les frères se parcourent en boucle : une table des matières longue
+    // ferait déborder la pile en récursion.
+    while (ref && !ref.isNull() && profondeur <= 64) {
+      if (ref.isIndirect()) {
+        const num = ref.asIndirect();
+        if (vus.has(num)) return;
+        vus.add(num);
+      }
+      const obj = ref.resolve();
+      if (!obj.isDictionary()) return;
+      const titre = obj.get("Title");
+      if (!titre.isNull() && titre.isString()) {
+        let s;
+        try { s = titre.asString(); } catch { s = null; }
+        if (s && utiles.some(v => s.includes(v))) {
+          obj.put("Title", doc.newString("[masqué]"));
+          n++;
+        }
+      }
+      visiter(obj.get("First"), profondeur + 1);
+      ref = obj.get("Next");
+    }
+  };
+
+  try { visiter(doc.getTrailer().get("Root").get("Outlines"), 0); }
+  catch { /* document sans signets */ }
+  return n;
+}
+
 /* Métadonnées : titre, auteur, logiciel et machine d'origine. Elles ne
    s'affichent pas mais voyagent avec le fichier. */
 function nettoyerMetadonnees(doc) {
@@ -306,11 +347,12 @@ export function anonymiser(octetsOrigine, consignes, opts = {}) {
     }
 
     const textesCaches = nettoyerTexteCache(doc, valeurs);
+    const signetsNettoyes = nettoyerSignets(doc, valeurs.filter(v => v && v.length >= 3));
     if (nettoyerMeta) nettoyerMetadonnees(doc);
 
     return {
       octets: doc.saveToBuffer(SAUVEGARDE).asUint8Array().slice(),  // règles nº1 et nº2
-      liensRetires, annotationsRetirees, textesCaches,
+      liensRetires, annotationsRetirees, textesCaches, signetsNettoyes,
     };
   } finally { doc.destroy(); }
 }
@@ -323,25 +365,35 @@ export function anonymiser(octetsOrigine, consignes, opts = {}) {
 export function verifier(octetsResultat, valeurs) {
   const doc = mupdf.PDFDocument.openDocument(octetsResultat, "application/pdf");
   try {
+    // Texte page par page : savoir OÙ une mention subsiste change tout.
+    // Dans le texte d'une page, n'importe qui la lit ; ailleurs dans le
+    // fichier (signet, pièce jointe, couche), c'est un autre sujet.
+    const parPage = [];
     let texte = "";
     for (let p = 0; p < doc.countPages(); p++) {
       const page = doc.loadPage(p);
       try {
         const st = page.toStructuredText("preserve-whitespace");
-        try { texte += st.asText(); } finally { st.destroy(); }
+        try { parPage.push(st.asText()); } finally { st.destroy(); }
       } finally { page.destroy(); }
+      texte += parPage[p];
     }
     const octets = doc.saveToBuffer("decompress").asUint8Array().slice();
     let brut = "";
     for (let i = 0; i < octets.length; i += 32768)
       brut += String.fromCharCode.apply(null, octets.subarray(i, i + 32768));
 
-    const fuites = [];
+    const fuites = [], details = [];
     for (const v of new Set(valeurs)) {
       if (!v || v.length < 3) continue;          // trop court pour être concluant
-      if (texte.includes(v) || brut.includes(v)) fuites.push(v);
+      const pages = [];
+      for (let p = 0; p < parPage.length; p++) if (parPage[p].includes(v)) pages.push(p + 1);
+      const dansOctets = brut.includes(v);
+      if (!pages.length && !dansOctets) continue;
+      fuites.push(v);
+      details.push({ valeur: v, pages, dansOctets, visible: pages.length > 0 });
     }
-    return { fuites, nVerifiees: new Set(valeurs).size };
+    return { fuites, details, nVerifiees: new Set(valeurs).size };
   } finally { doc.destroy(); }
 }
 

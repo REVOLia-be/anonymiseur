@@ -251,6 +251,12 @@
   .verif.work{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
   .verif b{font-weight:600}
   .pertes{font-size:11.5px;color:var(--muted);margin-top:7px;line-height:1.5}
+  .fuites{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+  .fuites li{display:flex;gap:9px;align-items:flex-start;background:#fff;border:1px solid #f3c2c3;
+        border-radius:9px;padding:8px 10px;font-size:12.5px;line-height:1.4}
+  .fuites input{margin-top:2px;flex:0 0 auto}
+  .fuites .ou{color:var(--muted);font-size:11.5px;display:block;margin-top:2px}
+  .fuites .lisible{color:var(--danger);font-weight:600}
 </style>
 <script>
   /* ── Configuration de déploiement ──────────────────────────────
@@ -861,6 +867,7 @@ const Visu = (function(){
       if(monCalcul!==calcul) return;
       resultatPret = ver.fuites.length===0;
       derniereVerif=ver;
+      majBoutonPdf();
 
       // le résultat a changé : les rendus mis en cache ne valent plus
       for(const [k,url] of [...cache]) if(k.startsWith('resultat|')){ URL.revokeObjectURL(url); cache.delete(k); }
@@ -869,9 +876,8 @@ const Visu = (function(){
       const poids=(r.tailleOrigine/1024).toFixed(0)+' Ko → '+(r.taille/1024).toFixed(0)+' Ko';
       if(ver.fuites.length){
         v.className='verif ko';
-        v.innerHTML='❌ <b>Vérification échouée</b> — '+ver.fuites.length+
-          ' valeur(s) encore présente(s) dans le fichier produit : '+
-          ver.fuites.map(escapeHtml).join(', ')+'. <b>Le téléchargement est bloqué.</b>';
+        v.innerHTML=bandeauFuites(ver);
+        majBoutonPdf();
       }else if(pdfIndex && pdfIndex.ocr){
         // Sur un scan, la page est une image : les pixels des zones ont bien
         // été remplacés, mais aucune extraction de texte ne peut le confirmer.
@@ -909,6 +915,55 @@ const Visu = (function(){
 })();
 
 let derniereVerif=null;
+/* Mentions que l'utilisateur a explicitement acceptées malgré l'échec de la
+   vérification. On ne débloque jamais en bloc : chacune doit être lue. */
+const fuitesAcceptees=new Set();
+
+function bandeauFuites(ver){
+  let h='❌ <b>Vérification échouée</b> — '+ver.fuites.length+' mention'+
+        (ver.fuites.length>1?'s sont encore présentes':' est encore présente')+
+        ' dans le fichier produit. <b>L\'outil devait '+(ver.fuites.length>1?'les':'la')+
+        ' masquer et n\'y est pas parvenu.</b>';
+  h+='<ul class="fuites">';
+  for(const d of (ver.details||ver.fuites.map(f=>({valeur:f,pages:[],dansOctets:true,visible:false})))){
+    const ou = d.visible
+      ? '<span class="lisible">lisible dans le texte de la page '+d.pages.join(', ')+'</span>'
+          + (d.dansOctets?' et dans les octets du fichier':'')
+      : 'ailleurs dans le fichier (pas dans le texte des pages)';
+    h+='<li><input type="checkbox" data-fuite="'+escapeHtml(d.valeur)+'"'+
+       (fuitesAcceptees.has(d.valeur)?' checked':'')+'>'+
+       '<span><b>'+escapeHtml(d.valeur)+'</b>'+
+       '<span class="ou">'+ou+' — cochez pour accepter qu\'elle reste</span></span></li>';
+  }
+  h+='</ul>';
+  h+='<div class="pertes">Si vous le pouvez, signalez ce document&nbsp;: c\'est souvent un cas '+
+     'que l\'outil ne sait pas encore traiter, et chaque signalement l\'a jusqu\'ici corrigé. '+
+     'Vous pouvez aussi masquer la mention à la main, en la désignant sur le document.</div>';
+  return h;
+}
+
+/* Le bouton dit toujours ce qu'il fera : bloqué, ou téléchargement assumé. */
+function majBoutonPdf(){
+  const b=document.getElementById('downloadPdf');
+  const f=(derniereVerif&&derniereVerif.fuites)||[];
+  const restantes=f.filter(x=>!fuitesAcceptees.has(x));
+  if(!indexValide || !f.length){ b.textContent='Télécharger .pdf'; b.disabled=false; b.title=''; return; }
+  if(restantes.length){
+    b.textContent='Téléchargement bloqué — '+restantes.length+' mention(s) à accepter';
+    b.disabled=true;
+    b.title='Cochez chaque mention restante dans le bandeau de vérification pour débloquer.';
+  }else{
+    b.textContent='Télécharger malgré '+f.length+' mention(s) restante(s)';
+    b.disabled=false;
+    b.title='Vous avez accepté que ces mentions restent dans le fichier.';
+  }
+}
+
+document.getElementById('verif').addEventListener('change', e=>{
+  const c=e.target.closest('input[data-fuite]'); if(!c) return;
+  c.checked ? fuitesAcceptees.add(c.dataset.fuite) : fuitesAcceptees.delete(c.dataset.fuite);
+  majBoutonPdf();
+});
 /* Valeurs que l'utilisateur a choisi de NE PAS anonymiser, en cliquant une
    zone. Indexées par catégorie + valeur : toutes les occurrences suivent. */
 const exclusionsValeurs=new Set();
@@ -942,7 +997,7 @@ async function readPdf(file){
       const idxOcr = await ocrPdfPages(idx);
       if(idxOcr.texte.trim().length<5){ setStatus('Aucun texte reconnu dans ce PDF scanné.','err'); return; }
       pdfIndex=idxOcr; indexValide=true;
-      exclusionsValeurs.clear();
+      exclusionsValeurs.clear(); fuitesAcceptees.clear(); termesManuels.clear(); majTermes();
       out = idxOcr.texte;
       document.getElementById('input').value=out;
       Visu.ouvrirPdf(idxOcr, file.name);
@@ -952,7 +1007,7 @@ async function readPdf(file){
     }
 
     pdfIndex=idx; indexValide=true;
-    exclusionsValeurs.clear();
+    exclusionsValeurs.clear(); fuitesAcceptees.clear(); termesManuels.clear(); majTermes();
     document.getElementById('input').value=out;
     Visu.ouvrirPdf(idx, file.name);
     resetBuild(); run(out);
@@ -1666,10 +1721,13 @@ async function telechargerPdfFidele(){
     await Visu.rafraichirResultat();
     const valeurs=lastHits.map(h=>h.value);
     const ver=await PdfLocal.verifier(valeurs);
-    if(ver.fuites.length){
-      alert('Téléchargement bloqué.\n\n'+ver.fuites.length+' valeur(s) sont encore présentes '+
-            'dans le fichier produit :\n'+ver.fuites.join('\n')+
-            '\n\nMerci de signaler ce document : c\'est un cas que l\'outil ne sait pas encore traiter.');
+    derniereVerif=ver; majBoutonPdf();
+    const restantes=ver.fuites.filter(x=>!fuitesAcceptees.has(x));
+    if(restantes.length){
+      alert('Téléchargement bloqué.\n\n'+restantes.length+' mention(s) sont encore présentes '+
+            'dans le fichier produit :\n\n'+restantes.join('\n')+
+            '\n\nCochez-les une à une dans le bandeau de vérification si vous acceptez '+
+            'qu\'elles restent, ou masquez-les à la main en les désignant sur le document.');
       return;
     }
     const { octets }=await PdfLocal.recupererResultat();
