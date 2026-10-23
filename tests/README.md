@@ -143,6 +143,18 @@ flux orphelin, liens, texte alternatif d'accessibilité, métadonnées, signets.
 La leçon tient en une phrase : *dans un PDF, la même donnée vit à plusieurs
 endroits, et le caviardage n'en atteint qu'un seul.*
 
+### 13. Le nom du fichier est la dernière fuite
+
+« Devis pour Dupont.pdf » reste parlant même quand le contenu est propre, et
+le producteur du PDF range souvent ce nom dans ses métadonnées. L'outil
+propose donc les mots du nom comme termes à masquer, et applique le même
+remplacement au nom du fichier produit.
+
+Quand une mention subsiste malgré tout, la vérification indique désormais le
+**type d'objet PDF** qui l'héberge (métadonnées, signet, lien, pièce jointe,
+flux de contenu…), parce que « ailleurs dans le fichier » ne suffit pas pour
+décider quoi faire.
+
 ---
 
 ## Licence du moteur
