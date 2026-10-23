@@ -8,11 +8,15 @@ Cible : **`anonymiseur.revolia.be`** · hébergement **Cloudflare Pages** · DNS
 
 | Élément | Où | Pourquoi |
 |---|---|---|
-| App (HTML, libs, OCR, wasm, polices, logo) | **Cloudflare Pages** | site statique, fichiers < 25 Mo |
+| App (HTML, libs, moteur PDF, OCR, wasm, polices, logo) | **Cloudflare Pages** | site statique, fichiers < 25 Mo |
 | Modèle IA (`models/`, ~135 Mo) | **Cloudflare R2** | dépasse la limite 25 Mo/fichier de Pages |
 | Police **iBrand** (licence, hors dépôt public) | injectée au build depuis une **URL privée** | ne pas redistribuer la police dans le dépôt public |
 
 > La détection par **règles**, l'**OCR** et tous les **exports** fonctionnent sans le modèle IA. Le modèle (R2) n'est requis que pour la détection contextuelle « IA locale ».
+
+> Le **moteur PDF** (`vendor/mupdf/mupdf-wasm.wasm`, ~10 Mo bruts, **3,5 Mo servis en Brotli**) est téléchargé
+> par `fetch-assets.sh` et reste **sous la limite des 25 Mo/fichier de Pages** : pas de détour par R2.
+> Il n'est chargé qu'à l'ouverture d'un PDF, dans un Web Worker, et `_headers` le met déjà en cache long via `/vendor/*`.
 
 ---
 

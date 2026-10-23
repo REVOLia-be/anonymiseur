@@ -1,0 +1,5 @@
+# Sorties de test
+*-anon-*.pdf
+*.png
+# Documents apportés par l'utilisateur — JAMAIS dans le dépôt public
+devis*.pdf
