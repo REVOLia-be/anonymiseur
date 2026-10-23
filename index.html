@@ -208,6 +208,12 @@
   .puce-terme button{background:transparent;border:0;color:#6d3bd4;cursor:pointer;font-size:14px;
         line-height:1;padding:0 2px;border-radius:50%}
   .puce-terme button:hover{background:#e3d6ff}
+  .puce-propo{display:inline-flex;align-items:center;gap:5px;background:#fff;color:var(--accent-d);
+        border:1px dashed var(--accent-d);border-radius:99px;padding:3px 10px;font-size:12px;
+        font-weight:600;cursor:pointer}
+  .puce-propo:hover{background:#eafaf1}
+  .rail .nomfichier{padding:0 14px 12px}
+  .rail .nomfichier .quoi{color:var(--muted);font-size:11.5px;line-height:1.5;margin-bottom:6px}
   .rail details.reglages{border:0;border-radius:0;margin:0;background:transparent}
   .rail details.reglages>summary{padding:12px 14px 8px;font-size:11px;text-transform:uppercase;
         letter-spacing:.05em;color:var(--muted)}
@@ -383,6 +389,7 @@
             </div>
             <div class="puces" id="termesListe"></div>
             <div class="astuce">Ou <b>cliquez un mot</b> sur le document. Un cliqué-glissé sélectionne une zone entière.</div>
+            <div class="nomfichier" id="nomFichierPropo" hidden></div>
           </div>
           <div class="rail-bloc" id="railDetections">
             <h3>Détections sur cette page</h3>
@@ -407,6 +414,7 @@
         <button id="downloadDocx" class="secondary">Télécharger .docx</button>
         <button id="copy" class="secondary">Copier le texte</button>
       </div>
+      <div class="hint" id="nomSortie"></div>
 
       <details class="reglages">
         <summary>⚙️ Réglages de détection</summary>
@@ -478,6 +486,7 @@
     <details><summary>Quels types de documents puis-je traiter&nbsp;?</summary><div class="a">PDF (y compris scannés, grâce à la reconnaissance de texte OCR), Word (.docx), images JPG/PNG, ou simplement du texte collé. Seul le <b>PDF</b> conserve sa mise en page&nbsp;; les autres formats passent par un rendu texte.</div></details>
     <details><summary>Et les documents scannés&nbsp;?</summary><div class="a">Ils fonctionnent&nbsp;: la reconnaissance de texte (OCR) tourne localement et donne la position de chaque mot, ce qui permet d'effacer réellement les pixels concernés sur l'image. <b>Avec une réserve importante</b>&nbsp;: un mot mal reconnu n'est pas détecté, donc pas masqué — et comme la page est une image, la vérification automatique ne peut rien confirmer. Sur un scan, <b>parcourez les pages une à une</b> avant d'utiliser le document.</div></details>
     <details><summary>Mon PDF garde-t-il sa mise en page&nbsp;?</summary><div class="a">Oui. Le document n'est pas reconstruit ni transformé en images&nbsp;: c'est votre PDF, avec ses polices, ses tableaux, son logo et son poids d'origine — les données en moins. En contrepartie, le ré-encodage retire <b>liens, formulaires, signets et signatures</b> en tant qu'éléments interactifs, ainsi que les métadonnées du fichier. L'outil vous le rappelle avant le téléchargement.</div></details>
+    <details><summary>Et le nom du fichier&nbsp;?</summary><div class="a">C'est une fuite qu'on oublie&nbsp;: «&nbsp;Devis pour Dupont.pdf&nbsp;» reste parlant même quand le contenu est propre. L'outil <b>propose les mots du nom</b> comme termes à masquer, et <b>applique le même remplacement au nom du fichier produit</b> — vous récupérez «&nbsp;Devis pour [PERSONNE_1]-anonymise.pdf&nbsp;».</div></details>
     <details><summary>Comment savoir que le fichier produit ne contient vraiment plus rien&nbsp;?</summary><div class="a">L'outil <b>relit le fichier qu'il vient de produire</b> et y cherche chaque valeur anonymisée — dans le texte extrait <i>et</i> dans les octets bruts du document décompressé. Le résultat s'affiche, et si quelque chose subsiste, <b>le téléchargement est bloqué</b>. C'est important&nbsp;: dans un PDF, poser un rectangle noir ne supprime pas le texte en dessous, qui reste copiable. Ici, les données sont réellement retirées du fichier.</div></details>
     <details><summary>Qu'est-ce qui est détecté&nbsp;?</summary><div class="a">Par règles : e-mails, téléphones, IBAN, n° national belge, n° d'entreprise (TVA BE), cartes, dates, montants, codes postaux. Avec la détection IA locale (optionnelle) : noms, adresses, organisations — même sans format particulier. Et <b>ce que vous désignez vous-même</b> : cliquez un mot sur le document, ou faites glisser pour sélectionner une zone, et il sera masqué partout.</div></details>
     <details><summary>Pseudonymisation ou caviardage&nbsp;?</summary><div class="a">La <b>pseudonymisation</b> remplace par des jetons cohérents (<span class="tok">[PERSONNE_1]</span>) : le document reste lisible et exploitable par l'IA. Le <b>caviardage</b> supprime réellement l'information (barres noires) — rien n'est récupérable.</div></details>
@@ -567,7 +576,7 @@ const PdfLocal = (function(){
    que l'utilisateur modifie le texte à la main : les offsets ne correspondent
    alors plus au document, et l'export fidèle doit être désactivé. */
 let pdfIndex=null, indexValide=false;
-function oublierIndex(){ pdfIndex=null; indexValide=false; Visu.fermer(); }
+function oublierIndex(){ pdfIndex=null; indexValide=false; nomDocument=''; Visu.fermer(); }
 
 /* ===========================================================
    Visualiseur — le document à l'écran, les détections à leur
@@ -608,7 +617,7 @@ const Visu = (function(){
     el('drop').hidden=false;
     el('input').hidden=false;
     el('preview').hidden=false;
-    el('verif').hidden=true;
+    el('verif').hidden=true; el('verif').innerHTML='';
     el('scene').innerHTML='';
     el('titreResultat').textContent='3 · Résultat';
     const reglages=document.querySelector('details.reglages');
@@ -948,6 +957,8 @@ function bandeauFuites(ver){
 
 /* Le bouton dit toujours ce qu'il fera : bloqué, ou téléchargement assumé. */
 function majBoutonPdf(){
+  const n=document.getElementById('nomSortie');
+  if(n) n.textContent = indexValide ? 'Fichier produit : '+nomDeSortie() : '';
   const b=document.getElementById('downloadPdf');
   const f=(derniereVerif&&derniereVerif.fuites)||[];
   const restantes=f.filter(x=>!fuitesAcceptees.has(x));
@@ -1004,7 +1015,7 @@ async function readPdf(file){
       exclusionsValeurs.clear(); fuitesAcceptees.clear(); termesManuels.clear(); majTermes();
       out = idxOcr.texte;
       document.getElementById('input').value=out;
-      Visu.ouvrirPdf(idxOcr, file.name);
+      nomDocument=file.name; Visu.ouvrirPdf(idxOcr, file.name);
       resetBuild(); run(out);
       setStatus('');
       return;
@@ -1013,7 +1024,7 @@ async function readPdf(file){
     pdfIndex=idx; indexValide=true;
     exclusionsValeurs.clear(); fuitesAcceptees.clear(); termesManuels.clear(); majTermes();
     document.getElementById('input').value=out;
-    Visu.ouvrirPdf(idx, file.name);
+    nomDocument=file.name; Visu.ouvrirPdf(idx, file.name);
     resetBuild(); run(out);
     setStatus('');            // le bandeau du document porte déjà l'information
   }catch(e){
@@ -1385,6 +1396,7 @@ function run(text){
   lastMapping={};
   hits.forEach(h=>{ if(h.token && !(h.token in lastMapping)) lastMapping[h.token]=h.value; });
   renderAll(text,hits);
+  majBoutonPdf();                        // nom du fichier produit et état du bouton
   if(indexValide){                       // document avec mise en page : visualiseur
     Visu.majZones();
     Visu.planifierResultat();
@@ -1470,15 +1482,83 @@ function renderTable(hits){
 
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
+/* ---------- ce que le nom du fichier révèle ----------
+   Un nom de fichier trahit très souvent le client : « Devis pour Dupont.pdf ».
+   Le terme est alors dans le document ET dans son nom. On propose les mots
+   du nom, sans rien masquer d'autorité : « Devis » ou « Contrat » n'ont rien
+   à être masqués, et deviner à la place de l'utilisateur serait pénible. */
+const MOTS_GENERIQUES=new Set(['devis','contrat','facture','offre','proposition','rapport','courrier',
+  'document','final','finale','copie','version','scan','scanne','scanné','signe','signé','signee','signée',
+  'annexe','note','lettre','attestation','fiche','paie','salaire','bon','commande','projet','dossier',
+  'pour','chez','avec','les','des','par','sur','mise','jour','new','old','def','vdef','ok']);
+
+function motsDuNomDeFichier(nom){
+  const base=String(nom||'').replace(/\.[a-z0-9]{1,5}$/i,'');
+  // On garde les séparateurs : deux mots retenus séparés par un simple espace
+  // ou un souligné forment un seul nom (« Claire Hanssen »), alors qu'un tiret
+  // ou une parenthèse marque une rupture.
+  const morceaux=base.split(/([^\p{L}\p{N}]+)/u);
+  // Un mot n'est proposé que s'il a une chance d'être parlant : soit il
+  // apparaît dans le document, soit il porte une majuscule (nom propre,
+  // raison sociale). Sans ce filtre, « fiche-reelle.pdf » proposait « reelle ».
+  const dansTexte=(m)=> !!lastText && lastText.toLowerCase().includes(m.toLowerCase());
+  const retenu=(m)=> m && m.length>=3 && !/^\d+$/.test(m) && !MOTS_GENERIQUES.has(m.toLowerCase())
+                     && (dansTexte(m) || /^\p{Lu}/u.test(m));
+  const groupes=[]; let courant=null;
+  for(let i=0;i<morceaux.length;i+=2){
+    const mot=morceaux[i], sep=morceaux[i+1]||'';
+    if(!retenu(mot)){ courant=null; continue; }
+    if(courant) courant.push(mot); else { courant=[mot]; groupes.push(courant); }
+    if(!/^[ _]+$/.test(sep)) courant=null;      // rupture nette
+  }
+  return [...new Set(groupes.map(g=>g.join(' ')))];
+}
+
+let nomDocument='';
+function majPropositionsNom(){
+  const z=document.getElementById('nomFichierPropo');
+  if(!z) return;
+  const restants=motsDuNomDeFichier(nomDocument)
+    .filter(m=>![...termesManuels].some(t=>t.toLowerCase()===m.toLowerCase()));
+  if(!restants.length){ z.hidden=true; z.innerHTML=''; return; }
+  z.hidden=false;
+  z.innerHTML='<div class="quoi">Le nom du fichier contient&nbsp;:</div>'+
+    restants.map(m=>'<span class="puce-propo" data-propo="'+escapeHtml(m)+'">+ '+escapeHtml(m)+'</span>').join(' ');
+}
+
+document.getElementById('nomFichierPropo').addEventListener('click', e=>{
+  const p=e.target.closest('[data-propo]');
+  if(p) ajouterTerme(p.dataset.propo);
+});
+
+/* Nom du fichier produit. Le nom d'origine est souvent la dernière fuite :
+   « Devis pour Dupont.pdf » reste parlant même quand le contenu est propre.
+   On y applique donc le même remplacement que dans le document. */
+function nomDeSortie(){
+  let base=String(nomDocument||'document').replace(/\.[a-z0-9]{1,5}$/i,'');
+  const valeurs=[...new Set(lastHits.map(h=>h.value))].sort((a,b)=>b.length-a.length);
+  for(const v of valeurs){
+    const jeton=(lastHits.find(h=>h.value===v)||{}).token || '[masqué]';
+    // dans un nom de fichier, les espaces deviennent souvent _ ou -
+    const motif=v.trim().split(/\s+/).map(escapeRe).join('[\\s_-]+');
+    if(!motif) continue;
+    try{ base=base.replace(new RegExp(motif,'gi'), jeton); }catch(e){ /* motif inattendu */ }
+  }
+  base=base.replace(/[^\p{L}\p{N}\[\]_ -]+/gu,' ').replace(/\s+/g,' ').trim();
+  return (base||'document')+'-anonymise.pdf';
+}
+
 /* ---------- termes désignés par l'utilisateur ---------- */
 function majTermes(){
   const z=document.getElementById('termesListe');
   if(!z) return;
-  if(!termesManuels.size){ z.innerHTML=''; return; }
+  if(!termesManuels.size){ z.innerHTML=''; majPropositionsNom(); return; }
   z.innerHTML=[...termesManuels].map(t=>
     '<span class="puce-terme">'+escapeHtml(t)+
     '<button data-terme="'+escapeHtml(t)+'" title="Retirer ce terme">×</button></span>').join('');
+  majPropositionsNom();
 }
+
 
 function ajouterTerme(txt){
   const t=String(txt||'').replace(/\s+/g,' ').trim();
@@ -1737,7 +1817,7 @@ async function telechargerPdfFidele(){
     const { octets }=await PdfLocal.recupererResultat();
     const a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob([octets],{type:'application/pdf'}));
-    a.download='document-anonymise.pdf';
+    a.download=nomDeSortie();
     a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href), 30000);
   }catch(e){
