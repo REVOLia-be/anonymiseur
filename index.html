@@ -398,6 +398,15 @@
   .pli-titre{flex:none}
   .pli-resume{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400;color:var(--encre-3)}
 
+  /* Après un téléchargement : la ligne « aller plus loin » (#suite) */
+  .suite{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--e-2) var(--e-5);
+         padding:var(--e-3) var(--e-5);border:1px solid var(--bord);border-radius:var(--r-3);
+         background:var(--surface);font-size:var(--t-14);line-height:1.5;color:var(--encre-2)}
+  .suite p{margin:0}
+  .suite-liens{display:flex;flex-wrap:wrap;gap:var(--e-1) var(--e-5)}
+  .suite a{font-weight:600;white-space:nowrap}
+  @media (max-width:640px){ .suite{padding:var(--e-3) var(--e-4)} .suite a{white-space:normal;padding:var(--e-2) 0} }
+
   /* Consigne pour l'IA (#consigne, dans le résultat) */
   #consigne{margin-top:var(--e-4);padding-top:var(--e-3);border-top:1px solid var(--bord)}
   #demoExemple{margin:var(--e-4) 0 0}
@@ -835,6 +844,17 @@
       </div>
     </div>
   </section>
+
+  <!-- Après un téléchargement ou une copie : une ligne, deux liens, rien de plus.
+       Deux liens sortants ordinaires (nouvel onglet, sans référent) : aucune
+       ressource de ces sites n'est chargée ici, et rien du document ne les suit. -->
+  <aside class="suite" id="suite" aria-label="Aller plus loin avec REVOLia" hidden>
+    <p>Relire un document anonymisé, savoir quoi confier à une IA : c'est ce qu'on apprend en formation.</p>
+    <p class="suite-liens">
+      <a href="https://revolia.be/formations" target="_blank" rel="noopener noreferrer">Se former à l'IA avec REVOLia</a>
+      <a href="https://tally.so/r/NqXrQN" target="_blank" rel="noopener noreferrer">Je voudrais le même outil pour mon entreprise</a>
+    </p>
+  </aside>
 
   <!-- TABLEAU DE CORRESPONDANCE -->
   <section class="panel panel-large" id="pTable" aria-labelledby="titreTable">
@@ -2679,6 +2699,21 @@ document.getElementById('zoomMoins').addEventListener('click', ()=>Visu.changerZ
 document.getElementById('zoomPlus').addEventListener('click', ()=>Visu.changerZoom(+1));
 document.getElementById('zoomNiv').addEventListener('click', ()=>Visu.ajuster());
 document.getElementById('changerDoc').addEventListener('click', ()=>document.getElementById('file').click());
+
+/* La ligne « aller plus loin » n'apparaît qu'après un téléchargement ou une
+   copie : avant, elle distrairait de la relecture. Un bouton désactivé (blocage
+   de la vérification) ne reçoit pas le clic, donc ne la fait pas apparaître. */
+(function(){
+  const suite=document.getElementById('suite');
+  for(const id of ['downloadPdf','download','downloadDocx','copy','copyConsigne']){
+    const b=document.getElementById(id);
+    if(b) b.addEventListener('click', ()=>{ setTimeout(()=>{ suite.hidden=false; }, 600); });
+  }
+  for(const id of ['clear','file']){
+    const e=document.getElementById(id);
+    if(e) e.addEventListener(id==='file'?'change':'click', ()=>{ suite.hidden=true; });
+  }
+})();
 
 // Flèches ← → pour feuilleter, sauf si l'on est en train de saisir du texte.
 document.addEventListener('keydown', e=>{
