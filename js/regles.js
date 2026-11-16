@@ -180,49 +180,51 @@
   const MOT_VILLE = `(?:${L}${l}+|${L}{2,})`;
   const PARTIE_VILLE = "(?:la|le|les|lez|sur|sous|aan|op|de|den|l|d|en|ter|ten|van)";
 
+  /* Couleurs : au moins 4,5:1 sur leur surlignage (fond à 20 %), rangées par
+     famille pour rester distinctes. */
   const CATS = [
-    { key: "EMAIL", label: "E-mail", color: "#5b8def",
+    { key: "EMAIL", label: "E-mail", color: "#1755d1",
       re: /[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g,
       // écrit à la main pour tromper les robots : « x (at) exemple.org »
       aussi: [/[\w.+-]+[ ]*[\[(][ ]*(?:at|arobase)[ ]*[\])][ ]*[\w-]+(?:[ ]*(?:\.|[\[(][ ]*(?:dot|point)[ ]*[\])])[ ]*[\w-]+)+/gi] },
-    { key: "IBAN", label: "IBAN", color: "#0b9d63",
+    { key: "IBAN", label: "IBAN", color: "#0c6e2d",
       re: new RegExp(`${G}[A-Z]{2}\\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}(?:[ ]?[A-Z0-9]{1,3})?${D}`, "gu"), valid: validIban },
-    { key: "NISS", label: "N° national", color: "#e5484d",
+    { key: "NISS", label: "N° national", color: "#b51414",
       re: /\b\d{2}[.\-]?\d{2}[.\-]?\d{2}[.\- ]?\d{3}[.\-]?\d{2}\b/g, valid: validNiss },
-    { key: "TVA_BE", label: "N° entreprise (BE)", color: "#f2c14e",
+    { key: "TVA_BE", label: "N° entreprise (BE)", color: "#7e590e",
       re: new RegExp(`(?<![\\p{L}\\p{N}.,])(?:BE[ ]?)?[01]\\d{3}[. ]?\\d{3}[. ]?\\d{3}(?![\\p{N}]|[.,]\\d)`, "giu"), valid: validBce },
-    { key: "INAMI", label: "N° INAMI / RIZIV", color: "#9acd32",
+    { key: "INAMI", label: "N° INAMI / RIZIV", color: "#a112a1",
       re: new RegExp(`(?<![\\p{L}\\p{N}-])[1-9]-\\d{5}-\\d{2}-\\d{3}(?![\\p{N}-])|(?<=(?:INAMI|RIZIV)[^\\n\\d]{0,20})(?<!\\d)\\d{11}(?!\\d)`, "giu") },
-    { key: "PLAQUE", label: "Plaque d’immatriculation", color: "#e07a3f",
+    { key: "PLAQUE", label: "Plaque d’immatriculation", color: "#63630b",
       re: new RegExp(`(?<![\\p{L}\\p{N}-])[1-9]-[A-Z]{3}-\\d{3}(?![\\p{L}\\p{N}-])`, "gu") },
-    { key: "CARTE_ID", label: "Carte d’identité", color: "#e879f9",
+    { key: "CARTE_ID", label: "Carte d’identité", color: "#b31449",
       re: new RegExp(`(?<![\\p{L}\\p{N}-])\\d{3}-\\d{7}-\\d{2}(?![\\p{N}-])`, "gu") },
-    { key: "CARTE", label: "Carte bancaire", color: "#e5484d",
+    { key: "CARTE", label: "Carte bancaire", color: "#9e4112",
       re: /\b\d{4}[ \-]\d{4}[ \-]\d{4}[ \-]\d{2,7}\b|\b\d{13,19}\b/g, valid: luhn },
-    { key: "TEL", label: "Téléphone", color: "#f0a020",
+    { key: "TEL", label: "Téléphone", color: "#4343ea",
       re: new RegExp(`(?:\\+|(?<!\\d)00)[ ]?(?:${INDICATIFS.join("|")})[ .]?(?:\\(0\\)[ ]?)?\\d(?:[ .\\-/]?\\d){6,10}(?!\\d)|\\b0(?:[ .\\-/]?\\d){8,9}\\b`, "g"),
       valid: validTel },
     // Dates : jamais l'espace comme séparateur entre trois nombres (« +33 6 12 34 56 78 »
     // n'est pas deux dates) ; mois en toutes lettres FR et NL ; format ISO.
-    { key: "DATE", label: "Date", color: "#b07cff",
+    { key: "DATE", label: "Date", color: "#6c2ee8",
       re: new RegExp(`${G}(?:\\d{1,2}[\\/.\\-]\\d{1,2}[\\/.\\-]${AN}|\\d{1,2}(?:er|ème|e)?[\\/.\\- ]+(?:${MOIS})(?:\\.[ ]?|[\\/\\- ])${AN}|(?:19|20)\\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01]))${D}`, "giu") },
     // « euros » AVANT « EUR » : sous le drapeau i, EUR l'emporterait et laisserait « os ».
-    { key: "MONTANT", label: "Montant", color: "#0b9d63",
+    { key: "MONTANT", label: "Montant", color: "#2c6c0c",
       re: new RegExp(`${G}\\d{1,3}(?:[ .\\u00a0\\u202f]?\\d{3})*(?:[,.]\\d{1,2})?\\s?(?:euros?|EUR|€)(?![\\p{L}])|${G}(?:€|EUR)[ \\u00a0]?\\d{1,3}(?:[ .\\u00a0\\u202f]?\\d{3})*(?:,\\d{1,2})?(?![\\p{N}])`, "giu") },
     // Après « n°, réf., dossier, matricule… » : sans le drapeau i sur la valeur, sinon
     // « dossier en-cours » en serait une (le validateur refuse les minuscules).
-    { key: "REFERENCE", label: "Référence de dossier", color: "#94a3b8",
+    { key: "REFERENCE", label: "Référence de dossier", color: "#49670b",
       re: new RegExp(`(?<=\\b(?:n°|nr\\.?|no\\.?|réf\\.?|référence|dossier|matricule|affilié|lidnummer|numéro|nummer)[ ]?(?:n°|nr\\.?)?[ ]?:?[ ]?)[A-Z0-9]{1,6}(?:[\\/\\-][A-Z0-9]{2,8}){1,3}(?![\\p{L}\\p{N}])`, "giu"),
       valid: validReference },
-    { key: "CP_VILLE", label: "Code postal", color: "#2693ce",
+    { key: "CP_VILLE", label: "Code postal", color: "#10648e",
       re: new RegExp(`(?<![\\p{L}\\p{N}-])(?:[BLFD]-)?(?:[1-9]\\d{3}|\\d{5})[ ]+(?:(?:Sint|Saint|Sainte|Mont|Ter|Ten|Den|Bad|Le|La|Les)[ ])?${MOT_VILLE}(?:(?:-|['’])(?:${MOT_VILLE}|${PARTIE_VILLE})){0,4}${D}`, "gu"),
       valid: validCp },
-    { key: "RUE", label: "Adresse (rue)", color: "#17b3a6",
+    { key: "RUE", label: "Adresse (rue)", color: "#0c6a6a",
       // rue française : mot-clé + nom propre (« dans la rue » n'en est pas une)
       re: new RegExp(`(?:${G}\\d{1,4}(?:[ ]?(?:bis|ter|[A-Za-z]))?,?[ ]+)?${G}(?:${VOIES_FR})[ ]+(?:${PARTICULES_RUE}[ ]?)?${L}[\\p{L}'’\\-]*(?:[ ](?:(?:du|de la|de|des|d['’]|la|le|l['’])[ ]?)?${L}[\\p{L}'’\\-]*){0,4}(?:,?[ ]+${NUM_RUE})?`, "gu"),
       // rue néerlandaise : suffixe, et le numéro est exigé
       aussi: [new RegExp(`${G}(?:(?:Lange|Korte|Grote|Kleine|Nieuwe|Oude|Groot|Klein|Sint|Onze-Lieve-Vrouw|Burgemeester|Koning|Koningin|Prins|Prinses|Kardinaal|Generaal|Pastoor|Dokter)[ ])?(?:${L}[\\p{L}'’\\-]{0,25}?(?:${SUFFIXES_NL})|Markt|Plein|Kaai|Lei|Dreef|Steenweg|Vest)[ ]+${NUM_RUE}`, "gu")] },
-    { key: "PERSONNE", label: "Nom", color: "#ff7eb6",
+    { key: "PERSONNE", label: "Nom", color: "#ac1379",
       /* Le titre SERT à reconnaître le nom mais n'en fait pas partie : la valeur
          masquée est « Sophie Vandenberghe », pas « Madame Sophie Vandenberghe ».
          Sinon le même nom écrit SANS titre ailleurs (note de bas de page,
@@ -232,10 +234,10 @@
          personne, et « Madame [PERSONNE_1] » reste plus lisible pour une IA. */
       re: new RegExp(`(?<=${G}${TITRE}${SP}+)(?:${PARTICULE}${SP}?)?${NOM_MOT}(?:${SP}+(?:${PARTICULE}${SP}?)?${NOM_MOT}){0,3}`, "gu") },
     // Catégories alimentées par le modèle IA local (pas de regex) :
-    { key: "LIEU", label: "Lieu / Adresse", color: "#2693ce", re: null, ner: true },
-    { key: "ORG", label: "Organisation", color: "#c4b5fd", re: null, ner: true },
+    { key: "LIEU", label: "Lieu / Adresse", color: "#0c6c4c", re: null, ner: true },
+    { key: "ORG", label: "Organisation", color: "#8e16ca", re: null, ner: true },
     // Termes désignés par l'utilisateur, sur le document ou au clavier :
-    { key: "TERME", label: "Terme ajouté", color: "#8b5cf6", re: null, manuel: true },
+    { key: "TERME", label: "Terme ajouté", color: "#3e3e50", re: null, manuel: true },
   ];
 
   /* Mots à NE JAMAIS anonymiser (faux positifs fréquents : formes juridiques,
