@@ -33,7 +33,9 @@ node regles.mjs          # couverture sur le corpus, faux positifs, cas unitaire
 103 valeurs sensibles repérées par `[[valeur|ÉTIQUETTE]]`). Le compte rendu
 donne, par type de valeur, combien sont masquées **en entier**, **à moitié**
 (le pire cas : une zone colorée donne l'impression d'avoir masqué) ou pas du
-tout, puis les faux positifs sur des textes sans donnée personnelle. Le code
+tout — avec les **réglages par défaut** de l'outil (montants et dates
+ordinaires décochés, dates de naissance masquées) —, puis les faux positifs sur
+des textes sans donnée personnelle, par défaut et tout coché. Le code
 de sortie vaut 1 sous les seuils inscrits en tête de `regles.mjs` : on les
 relève quand les règles progressent, jamais l'inverse.
 
@@ -564,6 +566,34 @@ Elle tolère `PERSONNE_1` sans crochets, `[ personne_1 ]` et le markdown
 n'est pas `PERSONNE_1` suivi d'un 2, `rapport_1` n'est pas un jeton. Les jetons
 de la forme `[XXX_n]` qui n'y figurent pas sont signalés, jamais devinés, tout
 comme ceux de la table que la réponse ne contient pas.
+
+### R13. Une date de naissance classée « Date » reste en clair
+
+Depuis que `DATE` est décochée par défaut, la catégorie d'une date décide de
+son sort. `DATE_NAISSANCE` et `DATE` partagent le même motif : à égalité de
+position et de longueur, le dédoublonnage gardait la première arrivée, donc
+l'ordre du tableau `CATS` et la stabilité du tri. `DATE_NAISSANCE` porte une
+priorité propre (2,5, au-dessus des règles, sous les termes ajoutés) : le test
+la met en concurrence avec `DATE` dans les deux ordres. La complétion des
+occurrences recopie la catégorie : la même date ailleurs suit.
+
+### R14. Le libellé d'un formulaire est sur sa ligne, la valeur dessous
+
+Sur `fiche-reelle.pdf`, le texte extrait donne `Date de naissance\n03/07/1989` :
+le contexte « date de naissance » ne franchissait pas le saut de ligne, et la
+date de naissance restait **en clair** avec les nouveaux défauts (constaté dans
+le navigateur, pas par le corpus, où libellé et valeur partagent la ligne). Un
+seul saut de ligne est admis juste avant la date ; « Lieu de naissance\nGand\n
+Engagé le 01/03/2025 » reste une date ordinaire.
+
+### R15. Une puce électronique n'a pas de clé de contrôle
+
+Quinze chiffres et un préfixe (code pays ISO 3166 ou fabricant 900–998) : c'est
+tout. Les garde-fous sont donc ailleurs : pas de chiffre collé ni séparé d'une
+espace avant ou après (une carte à 16 chiffres, un IBAN, un montant groupé
+« 12 345 678 901 234 567 » ne s'y découpent pas), une carte American Express
+(15 chiffres, Luhn juste) reste une carte, et après « réf. », « commande »,
+« facture », « EAN »… c'est une référence — sauf si « puce » précède aussi.
 
 ### Ce que les règles ne font pas encore
 

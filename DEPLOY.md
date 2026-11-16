@@ -87,9 +87,4 @@ Sans cette étape, le mot-symbole « revolia » s'affiche en **Poppins** (repli)
 
 ## 7. Renforcement optionnel (après tests)
 
-Ajouter une **CSP** dans `_headers` une fois validée (à tester car restrictive). Exemple à adapter (autoriser l'origine R2) :
-```
-/*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://assets.revolia.be; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'none'
-```
-Une `connect-src` limitée à `'self'` + R2 est un argument de confiance fort (le navigateur bloque toute autre sortie réseau).
+Une **CSP** est en place dans `_headers` : `connect-src` est limitée à `'self'` et au stockage R2 du modèle d'IA, si bien que le navigateur bloque toute autre sortie réseau. Elle a été éprouvée sur tous les parcours (PDF, scan/OCR, image, Word, texte collé, IA locale). `blob:` et `data:` y sont nécessaires : workers de l'OCR, pages rendues, polices et images incorporées des Word. **Si l'origine du modèle change** (`window.ANON_MODEL_BASE` dans `index.html`), mettre `connect-src` à jour dans `_headers`, sinon l'IA locale ne se chargera plus.

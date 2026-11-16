@@ -1,11 +1,20 @@
 # En-têtes Cloudflare Pages
 
 # Sécurité (toutes les pages)
+# Politique de sécurité du contenu (CSP) : le navigateur lui-même interdit toute
+# sortie réseau hors du site (connect-src). Seule exception : le stockage
+# REVOLia (R2) qui sert le modèle d'IA optionnel. Même si une dépendance
+# essayait d'envoyer un document ailleurs, le navigateur l'en empêcherait.
+# Éprouvée sur tous les parcours (PDF, scan/OCR, image, Word, texte, IA) :
+# blob: et data: servent aux workers, aux pages rendues et aux polices des Word.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   X-Frame-Options: DENY
-  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=31536000
+  Cross-Origin-Opener-Policy: same-origin
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; connect-src 'self' https://pub-e266f6665a8741d0b3ce5ad0b1ac2f22.r2.dev blob: data:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
 
 # Cache long pour les ressources versionnées (libs, polices, logo, wasm)
 /vendor/*
