@@ -168,6 +168,21 @@ documents : 7 candidats sur 13 pages, les 2 vrais noms en tête. Mais
 SUGGESTIONS, validées d'un clic, jamais un masquage d'office. Masquer de
 travers abîme le document sans rien protéger.
 
+### 15. Une image réécrite en PDF sans « compress » gonfle d'un facteur 60 à 160
+
+Pour ouvrir une image dans l'atelier, MuPDF la lit comme un document puis la
+réécrit en PDF (`DocumentWriter`). Avec les options vides, les pixels sont
+écrits bruts :
+
+```
+PNG de 150 Ko (1490 × 2108)    "" → 9 426 289 o      "compress" → 152 493 o
+PNG de 4172 × 5901             "" → 73 860 447 o     "compress" → 456 306 o
+```
+
+Les bornes d'une page-image dépendent aussi de la densité (dpi) déclarée :
+la taille en pixels se lit sur `mupdf.Image`, pas sur le pixmap d'une page
+rendue à l'échelle 1.
+
 ---
 
 ## Licence du moteur

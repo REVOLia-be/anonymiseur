@@ -10,12 +10,13 @@ Un outil web gratuit qui repère les informations identifiantes d'un document (c
 
 ## ✨ Fonctionnalités
 
-- **Entrées** : PDF (texte **et scanné**), Word (`.docx`), images (JPG/PNG), ou texte collé.
+- **Entrées** : PDF (texte **et scanné**), Word (`.docx`), images (JPG, PNG, WebP, GIF, BMP — HEIC seulement si le navigateur sait le décoder), ou texte collé.
 - **OCR local** des documents scannés et images (Tesseract.js, français).
 - **Détection** combinée :
   - règles (e-mail, téléphone, IBAN, **n° national belge**, **n° d'entreprise/TVA BE**, carte, dates, montants, code postal…) ;
   - **IA locale** optionnelle (noms, lieux/adresses, organisations) via un modèle de reconnaissance d'entités tournant dans le navigateur.
 - **PDF : mise en page préservée.** Le document s'affiche page par page, les détections sont surlignées **à leur place réelle**, et le PDF produit est le document d'origine — mêmes polices, même mise en page, même poids — avec les données en moins. Pas de rasterisation.
+- **Images** : une image déposée s'ouvre dans le même atelier qu'un PDF scanné d'une page (aperçu, zones, côte à côte, gestes, vérification) et ressort en PDF d'une page dont les pixels masqués sont réellement effacés. Elle est d'abord décodée et ré-encodée dans le navigateur : orientation EXIF appliquée, réduite à 3000 px au plus, et **métadonnées EXIF (GPS, appareil, date) retirées**.
 - **PDF scannés** : l'OCR fournit une boîte par mot reconnu, d'où le même traitement — zones sur la page et effacement réel des pixels. ⚠️ La fiabilité dépend entièrement de la reconnaissance : **un mot mal lu n'est pas détecté, donc pas masqué**, et la vérification par extraction de texte ne peut rien confirmer sur une image. L'outil le dit explicitement.
 - **Noms propres repérés** : les règles ne reconnaissent un nom que derrière un titre («&nbsp;Madame&nbsp;»). Les suites de mots capitalisés sont donc repérées sur leur forme et **proposées** — jamais masquées d'office, car « Haute École » en fait partie. Mesuré sur un devis de 13 pages : 7 candidats, les 2 vrais noms en tête.
 - **Nom du fichier** : les mots du nom d'origine sont proposés comme termes à masquer (un nom de fichier trahit souvent le client), et le même remplacement est appliqué au nom du fichier produit.
