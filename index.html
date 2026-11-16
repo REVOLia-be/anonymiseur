@@ -519,7 +519,15 @@
 <script src="vendor/tesseract/tesseract.min.js"></script>
 <script src="vendor/mammoth.browser.min.js"></script>
 <script src="vendor/docx.umd.js"></script>
+<!-- docx.umd.js (génération du .docx d'export) et docx-preview (aperçu) installent
+     TOUS DEUX un global `docx` : on capture chacun juste après son <script>. -->
+<script>window.docxGen = window.docx;</script>
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/docx-preview.min.js"></script>
+<script>window.docxPreview = window.docx; window.docx = window.docxGen;</script>
 <script src="js/anon-geom.js"></script>
+<script src="js/anon-docx.js"></script>
+<script src="js/apercu-docx.js"></script>
 <script>
 /* ===========================================================
    Lecture de PDF — 100% local via MuPDF (WebAssembly), dans un
@@ -583,7 +591,15 @@ const PdfLocal = (function(){
    que l'utilisateur modifie le texte à la main : les offsets ne correspondent
    alors plus au document, et l'export fidèle doit être désactivé. */
 let pdfIndex=null, indexValide=false;
-function oublierIndex(){ pdfIndex=null; indexValide=false; nomDocument=''; Visu.fermer(); }
+/* Moteur du document ouvert (PDF ou Word) : voir « Moteurs de document » plus
+   bas. `chargement` change à chaque abandon ou nouveau document : un rendu
+   asynchrone qui se termine après coup compare sa valeur et se retire. */
+let moteur=null, chargement=0;
+function oublierIndex(){
+  chargement++;
+  if(moteur){ moteur.fermer(); moteur=null; }       // libère URL d'objet et conteneurs hors écran
+  pdfIndex=null; indexValide=false; nomDocument=''; derniereVerif=null; Visu.fermer();
+}
 
 /* ===========================================================
    Visualiseur — le document à l'écran, les détections à leur
@@ -600,7 +616,6 @@ const Visu = (function(){
      des vignettes illisibles. */
   const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
   let generation = 0;          // annule les rendus devenus obsolètes
-  let cache = new Map();       // "source|page|largeurCible" -> URL d'objet
   let page = 0, vue = 'origine', izoom = 2;   // izoom : index dans ZOOMS
   let resultatPret = false, minuterie = null, calcul = 0;
 
@@ -608,19 +623,14 @@ const Visu = (function(){
   const cle = (h)=> h.cat+'::'+String(h.value).toLowerCase().replace(/\s+/g,' ').trim();
   const nPages = ()=> pdfIndex ? pdfIndex.nPages : 0;
 
-  function viderCache(){
-    for(const url of cache.values()) URL.revokeObjectURL(url);
-    cache.clear();
-  }
-
   function fermer(){
-    generation++;
+    generation++; calcul++;      // un calcul de résultat en vol n'a plus de raison d'aboutir
     clearTimeout(minuterie); minuterie=null;
-    viderCache();
     page=0; vue='origine'; izoom=2; resultatPret=false;
     document.querySelector('main').classList.remove('avec-doc');
     el('pAtelier').hidden=true;
     el('docinfo').hidden=true;
+    const note=el('docnote'); if(note){ note.hidden=true; note.textContent=''; }
     el('drop').hidden=false;
     el('input').hidden=false;
     el('preview').hidden=false;
@@ -633,17 +643,27 @@ const Visu = (function(){
   }
 
   function ouvrirPdf(idx, nomFichier){
-    generation++; viderCache();
+    generation++; calcul++;
     page=0; vue='origine'; izoom=2; resultatPret=false;
     majSeg('vue', vue);
     document.querySelector('main').classList.add('avec-doc');
     el('pAtelier').hidden=false;
     el('drop').hidden=true;                       // le bandeau le remplace
     el('docinfo').hidden=false;
-    el('docnom').textContent=nomFichier||'Document PDF';
-    el('docmeta').textContent=idx.nPages+' page'+(idx.nPages>1?'s':'')+
+    el('docnom').textContent=nomFichier||(idx.docx?'Document Word':'Document PDF');
+    el('docmeta').textContent=idx.nPages+' page'+(idx.nPages>1?'s':'')+(idx.docx?' (aperçu)':'')+
                               ' · '+idx.texte.length.toLocaleString('fr-BE')+' caractères'+
                               (idx.ocr?' · texte reconnu par OCR':'');
+    // Un Word n'a pas de pages « fixes » : l'aperçu est une interprétation du
+    // navigateur. On le dit, une fois, sobrement.
+    const note=el('docnote');
+    if(note){
+      note.hidden=!idx.docx;
+      note.textContent=idx.docx
+        ? 'Aperçu interprété par votre navigateur : polices de remplacement et pagination approchées. '+
+          'Le fichier produit garde la mise en page d\'origine, car seul le texte y est remplacé.'
+        : '';
+    }
     el('input').hidden=true;                      // consultable via « Voir le texte extrait »
     el('voirTexte').textContent='Voir le texte extrait';
     el('preview').hidden=true;                    // l'aperçu texte ne sert plus
@@ -677,7 +697,8 @@ const Visu = (function(){
   }
 
   function feuille(source, largeur){
-    const info = pdfIndex.pages[page];
+    // le résultat d'un Word peut avoir des pages d'une autre hauteur
+    const info = (source==='resultat' && moteur.dims && moteur.dims('resultat', page)) || pdfIndex.pages[page];
     const d = document.createElement('div');
     d.className = 'feuille'+(source==='resultat'?' resultat':' designable');
     d.style.width = largeur+'px';
@@ -694,31 +715,19 @@ const Visu = (function(){
     return d;
   }
 
+  /* Le contenu d'une feuille vient du moteur du document (image rendue pour un
+     PDF, clone du DOM rendu pour un Word). */
   async function remplir(cadre, source, largeur, gen){
-    const k = source+'|'+page+'|'+largeur;
-    let url = cache.get(k);
-    if(!url){
-      try{
-        // on rend à la résolution de l'écran, pour une page nette
-        const ratio = Math.min(window.devicePixelRatio||1, 2);
-        const echelle = Math.min(4, largeur*ratio/pdfIndex.pages[page].largeur);
-        const { png } = await PdfLocal.rendre(page, echelle, source);
-        if(gen!==generation) return;
-        url = URL.createObjectURL(new Blob([png],{type:'image/png'}));
-        cache.set(k, url);
-      }catch(e){
-        const att=cadre.querySelector('.attente');
-        if(att) att.textContent = source==='resultat' ? 'en attente du résultat…' : 'page illisible';
-        return;
-      }
+    const actif = ()=> gen===generation && cadre.isConnected && !!moteur;
+    try{
+      const ok = await moteur.remplir(cadre, source, page, largeur, actif);
+      if(!ok) return;
+    }catch(e){
+      const att=cadre.querySelector('.attente');
+      if(att) att.textContent = source==='resultat' ? 'en attente du résultat…' : 'page illisible';
+      return;
     }
-    if(gen!==generation || !cadre.isConnected) return;
-    const img=new Image();
-    img.src=url; img.alt='page '+(page+1);
-    img.style.width='100%'; img.style.height='auto';
-    img.onload=()=>{ const a=cadre.querySelector('.attente'); if(a) a.remove(); };
-    cadre.insertBefore(img, cadre.firstChild);
-    if(source==='origine') poserZones(cadre);
+    if(source==='origine' && actif()) poserZones(cadre);
   }
 
   /* Zones positionnées en POURCENTAGE de la page : indépendantes de l'échelle
