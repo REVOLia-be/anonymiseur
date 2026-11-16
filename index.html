@@ -317,7 +317,7 @@
   <p class="subtitle">Trois étapes, zéro envoi de données. Vous gardez le contrôle du début à la fin.</p>
   <div class="steps">
     <div class="step"><div class="n">1</div><h3>Déposez votre document</h3>
-      <p>PDF (même scanné), Word ou image — ou collez simplement du texte. Tout reste sur votre appareil.</p></div>
+      <p>PDF (même scanné), image (JPG, PNG…) ou Word — ou collez simplement du texte. Tout reste sur votre appareil.</p></div>
     <div class="step"><div class="n">2</div><h3>Vérifiez sur le document</h3>
       <p>Les détections sont surlignées <b>à leur place réelle</b> sur vos pages. Un clic écarte une valeur, un autre l'ajoute&nbsp;: <b>cliquez un mot oublié</b> et il sera masqué partout.</p></div>
     <div class="step"><div class="n">3</div><h3>Téléchargez</h3>
@@ -332,8 +332,8 @@
     <div class="body">
       <div class="drop" id="drop">
         📄 <b>Glissez un PDF, un Word ou une image ici</b> ou cliquez pour choisir un fichier
-        <div class="small">PDF (texte ou scanné) · Word (.docx) · images JPG/PNG. Tout est lu dans votre navigateur — rien n'est envoyé. Les scans sont reconnus par OCR local.</div>
-        <input type="file" id="file" accept="application/pdf,image/*,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+        <div class="small">PDF (texte ou scanné) · Word (.docx) · images JPG, PNG, WebP, GIF, BMP. Tout est lu dans votre navigateur — rien n'est envoyé. Les scans sont reconnus par OCR local.</div>
+        <input type="file" id="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/gif,image/bmp,.jpg,.jpeg,.png,.webp,.gif,.bmp,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
       </div>
       <!-- Une fois un document chargé, ce bandeau remplace la grande zone de dépôt -->
       <div class="docinfo" id="docinfo" hidden>
@@ -488,8 +488,8 @@
   <p class="subtitle">Tout ce qu'il faut savoir avant d'anonymiser votre premier document.</p>
   <div class="faq">
     <details><summary>Mes documents sont-ils envoyés quelque part&nbsp;?</summary><div class="a">Non. Tout le traitement (lecture, OCR, détection, anonymisation) se fait dans votre navigateur. Le contenu de vos documents ne quitte jamais votre appareil — vérifiable dans l'onglet « réseau » de votre navigateur. Voir la <a href="confidentialite.html">politique de confidentialité</a>.</div></details>
-    <details><summary>Quels types de documents puis-je traiter&nbsp;?</summary><div class="a">PDF (y compris scannés, grâce à la reconnaissance de texte OCR), Word (.docx), images JPG/PNG, ou simplement du texte collé. Seul le <b>PDF</b> conserve sa mise en page&nbsp;; les autres formats passent par un rendu texte.</div></details>
-    <details><summary>Et les documents scannés&nbsp;?</summary><div class="a">Ils fonctionnent&nbsp;: la reconnaissance de texte (OCR) tourne localement et donne la position de chaque mot, ce qui permet d'effacer réellement les pixels concernés sur l'image. <b>Avec une réserve importante</b>&nbsp;: un mot mal reconnu n'est pas détecté, donc pas masqué — et comme la page est une image, la vérification automatique ne peut rien confirmer. Sur un scan, <b>parcourez les pages une à une</b> avant d'utiliser le document.</div></details>
+    <details><summary>Quels types de documents puis-je traiter&nbsp;?</summary><div class="a">PDF (y compris scannés, grâce à la reconnaissance de texte OCR), Word (.docx), images (JPG, PNG, WebP, GIF, BMP), ou simplement du texte collé. Le <b>PDF</b> et les <b>images</b> conservent leur mise en page (une image devient un PDF d'une page)&nbsp;; Word et le texte collé passent par un rendu texte.</div></details>
+    <details><summary>Et les documents scannés&nbsp;?</summary><div class="a">Ils fonctionnent&nbsp;: la reconnaissance de texte (OCR) tourne localement et donne la position de chaque mot, ce qui permet d'effacer réellement les pixels concernés sur l'image. <b>Avec une réserve importante</b>&nbsp;: un mot mal reconnu n'est pas détecté, donc pas masqué — et comme la page est une image, la vérification automatique ne peut rien confirmer. Sur un scan ou une image, <b>parcourez les pages une à une</b> avant d'utiliser le document.</div></details>
     <details><summary>Mon PDF garde-t-il sa mise en page&nbsp;?</summary><div class="a">Oui. Le document n'est pas reconstruit ni transformé en images&nbsp;: c'est votre PDF, avec ses polices, ses tableaux, son logo et son poids d'origine — les données en moins. En contrepartie, le ré-encodage retire <b>liens, formulaires, signets et signatures</b> en tant qu'éléments interactifs, ainsi que les métadonnées du fichier. L'outil vous le rappelle avant le téléchargement.</div></details>
     <details><summary>Et le nom du fichier&nbsp;?</summary><div class="a">C'est une fuite qu'on oublie&nbsp;: «&nbsp;Devis pour Dupont.pdf&nbsp;» reste parlant même quand le contenu est propre. L'outil <b>propose les mots du nom</b> comme termes à masquer, et <b>applique le même remplacement au nom du fichier produit</b> — vous récupérez «&nbsp;Devis pour [PERSONNE_1]-anonymise.pdf&nbsp;».</div></details>
     <details><summary>Comment savoir que le fichier produit ne contient vraiment plus rien&nbsp;?</summary><div class="a">L'outil <b>relit le fichier qu'il vient de produire</b> et y cherche chaque valeur anonymisée — dans le texte extrait <i>et</i> dans les octets bruts du document décompressé. Le résultat s'affiche, et si quelque chose subsiste, <b>le téléchargement est bloqué</b>. C'est important&nbsp;: dans un PDF, poser un rectangle noir ne supprime pas le texte en dessous, qui reste copiable. Ici, les données sont réellement retirées du fichier.</div></details>
@@ -567,7 +567,9 @@ const PdfLocal = (function(){
   return {
     // Le tampon est TRANSFÉRÉ au worker : le thread principal n'en garde pas
     // de copie, c'est le worker qui détient le document.
-    charger: (octets)=>appel('charger', {octets}, [octets]),
+    // `image` (type MIME) : les octets sont ceux d'une image, que le worker
+    // convertit en PDF d'une page avant de la charger comme n'importe quel PDF.
+    charger: (octets, image)=>appel('charger', {octets, image}, [octets]),
     rendre:  (page, echelle, source)=>appel('rendre', {page, echelle, source}),
     anonymiser: (consignes, mode, valeurs)=>appel('anonymiser', {consignes, mode, valeurs}),
     verifier: (valeurs)=>appel('verifier', {valeurs}),
@@ -902,7 +904,7 @@ const Visu = (function(){
         // été remplacés, mais aucune extraction de texte ne peut le confirmer.
         // Le dire franchement vaut mieux qu'un ✅ qui ne prouve rien.
         v.className='verif work';
-        v.innerHTML='🔎 <b>Document scanné</b> — les zones repérées ont été effacées de l\'image, '+
+        v.innerHTML='🔎 <b>'+(pdfIndex.image?'Image':'Document scanné')+'</b> — les zones repérées ont été effacées de l\'image, '+
           'et '+ver.nVerifiees+' valeur(s) ont été recherchées dans le fichier produit sans rien trouver. '+
           '<b>Mais ce contrôle ne prouve pas grand-chose ici</b> : la page étant une image, il n\'y a pas '+
           'de texte à extraire. <span class="count">'+poids+'</span>'+
@@ -1004,19 +1006,72 @@ function setStatus(msg,type){
    dans la chaîne, sinon l'index texte ↔ page ne correspond plus. */
 async function readPdf(file){
   setStatus('Lecture de « '+file.name+' »…','work');
+  await chargerDocument(file, async()=>({ buf: await file.arrayBuffer(), image: null }));
+}
+
+/* Une image (JPG, PNG, WebP, GIF, BMP) s'ouvre comme un PDF scanné d'une page. */
+async function readImage(file){
+  setStatus('Lecture de l\'image « '+file.name+' »…','work');
+  await chargerDocument(file, async()=>{
+    const { octets, mime } = await normaliserImage(file);
+    return { buf: octets.buffer, image: mime };
+  });
+}
+
+/* Décode l'image dans le navigateur, la redessine et la ré-encode.
+   Un seul passage règle quatre problèmes :
+   - l'orientation EXIF est appliquée (les pixels sont réellement tournés) ;
+   - WebP / GIF / BMP, que MuPDF ne lit pas tous, deviennent JPEG ou PNG ;
+   - une photo de 12 Mpx est réduite (plus grand côté <= IMAGE_MAX_PX) ;
+   - CONFIDENTIALITÉ : le ré-encodage ne conserve AUCUNE métadonnée — position
+     GPS, appareil, date de prise de vue, logiciel — qui seraient restés dans
+     le fichier produit si l'image avait été embarquée telle quelle. */
+const IMAGE_MAX_PX = 3000;
+async function normaliserImage(file){
+  let bmp;
+  try{
+    bmp = await createImageBitmap(file, { imageOrientation:'from-image' });
+  }catch(e){
+    const heic = /hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+    throw new Error(heic
+      ? 'ce navigateur ne sait pas lire le format HEIC/HEIF : convertissez la photo en JPG ou PNG, puis déposez-la à nouveau'
+      : 'l\'image « '+file.name+' » n\'a pas pu être décodée (fichier corrompu ou format que ce navigateur ne lit pas)');
+  }
+  try{
+    const k = Math.min(1, IMAGE_MAX_PX/Math.max(bmp.width, bmp.height));
+    const l = Math.max(1, Math.round(bmp.width*k)), h = Math.max(1, Math.round(bmp.height*k));
+    const cv = document.createElement('canvas'); cv.width=l; cv.height=h;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,l,h);     // la transparence devient du blanc
+    ctx.drawImage(bmp, 0, 0, l, h);
+    const mime = (file.type==='image/png' || /\.png$/i.test(file.name)) ? 'image/png' : 'image/jpeg';
+    const blob = await new Promise(ok=>cv.toBlob(ok, mime, 0.92));
+    if(!blob) throw new Error('l\'image « '+file.name+' » n\'a pas pu être ré-encodée');
+    return { octets: new Uint8Array(await blob.arrayBuffer()), mime };
+  } finally { bmp.close(); }
+}
+
+/* Chemin commun PDF / image : `preparer` fournit les octets (et, pour une
+   image, son type MIME). Un PDF sans texte, et toute image, passent par l'OCR. */
+async function chargerDocument(file, preparer){
   oublierIndex();
   try{
-    const buf=await file.arrayBuffer();
-    const idx=await PdfLocal.charger(buf);
+    const { buf, image } = await preparer();
+    const idx=await PdfLocal.charger(buf, image);
     let out=idx.texte;
 
-    if(out.trim().length<15){
-      // PDF scanné (pages images, sans texte) → OCR local, qui fournit une
-      // boîte par mot : on obtient le même index qu'un PDF texte, donc le
-      // visualiseur et l'export fidèle fonctionnent aussi sur un scan.
-      setStatus('PDF scanné détecté — reconnaissance de texte (OCR) en cours…','work');
+    if(image || out.trim().length<15){
+      // Page(s) image, sans texte → OCR local, qui fournit une boîte par mot :
+      // on obtient le même index qu'un PDF texte, donc le visualiseur et
+      // l'export fidèle fonctionnent aussi sur un scan ou une image.
+      const quoi = image ? 'Image « '+file.name+' »' : 'PDF scanné détecté';
+      setStatus(quoi+' — reconnaissance de texte (OCR) en cours… (1ᵉʳ usage : initialisation du moteur local)','work');
       const idxOcr = await ocrPdfPages(idx);
-      if(idxOcr.texte.trim().length<5){ setStatus('Aucun texte reconnu dans ce PDF scanné.','err'); return; }
+      if(idxOcr.texte.trim().length<5){
+        setStatus(image ? 'Aucun texte reconnu dans cette image.' : 'Aucun texte reconnu dans ce PDF scanné.','err');
+        return;
+      }
+      idxOcr.image=!!image;
       pdfIndex=idxOcr; indexValide=true;
       exclusionsValeurs.clear(); fuitesAcceptees.clear(); termesManuels.clear(); majTermes();
       out = idxOcr.texte;
@@ -1070,9 +1125,13 @@ async function getOcrWorker(){
    une image, la vérification par extraction de texte ne peut rien
    confirmer — c'est dit explicitement dans l'interface.
    =========================================================== */
-const OCR_ECHELLE = 2;          // rendu des pages pour la reconnaissance
+const OCR_ECHELLE = 2;          // rendu des pages d'un PDF pour la reconnaissance
 
-function indexDepuisOcr(idxPdf, pages){
+/* `echelle` : pixels par point de page utilisés au rendu. Pour une image, c'est
+   celle que renvoie le worker (résolution de l'image réduite, plafonnée) ;
+   les boîtes de l'OCR sont reconverties en points avec CETTE même valeur. */
+function indexDepuisOcr(idxPdf, pages, echelle){
+  echelle = echelle || OCR_ECHELLE;
   const out = { texte:'', pages:[], bornes:[], nPages:idxPdf.nPages, ocr:true };
   for(let p=0; p<pages.length; p++){
     const info = idxPdf.pages[p];
@@ -1090,8 +1149,8 @@ function indexDepuisOcr(idxPdf, pages){
         premier=false;
         const b=mot.bbox;
         // pixels de l'image -> points de la page
-        const x0=b.x0/OCR_ECHELLE, y0=b.y0/OCR_ECHELLE;
-        const x1=b.x1/OCR_ECHELLE, y1=b.y1/OCR_ECHELLE;
+        const x0=b.x0/echelle, y0=b.y0/echelle;
+        const x1=b.x1/echelle, y1=b.y1/echelle;
         const lettres=[...mot.text];
         const pas=(x1-x0)/Math.max(1,lettres.length);
         const corps=(y1-y0)*1.2;            // hauteur de boîte ≈ hauteur de capitale
@@ -1123,11 +1182,12 @@ function indexDepuisOcr(idxPdf, pages){
 
 // Fait rendre chaque page par le worker PDF, puis l'OCR
 async function ocrPdfPages(idxPdf){
+  const echelle = idxPdf.echelleOcr || OCR_ECHELLE;
   const worker=await getOcrWorker();
   const pages=[];
   for(let p=0;p<idxPdf.nPages;p++){
     setStatus('Reconnaissance de texte — page '+(p+1)+' sur '+idxPdf.nPages+'…','work');
-    const { png } = await PdfLocal.rendre(p, OCR_ECHELLE);
+    const { png } = await PdfLocal.rendre(p, echelle);
     const { data } = await worker.recognize(new Blob([png],{type:'image/png'}), {}, { blocks:true, text:true });
     // regroupe les mots par ligne ; on retombe sur une ligne unique si besoin
     const lignes = (data.lines && data.lines.length)
@@ -1135,22 +1195,7 @@ async function ocrPdfPages(idxPdf){
       : [ (data.words||[]).filter(m=>m.text && m.text.trim()) ];
     pages.push(lignes.filter(l=>l.length));
   }
-  return indexDepuisOcr(idxPdf, pages);
-}
-
-// OCR d'un fichier image (JPG/PNG)
-async function ocrImageFile(file){
-  if(!window.Tesseract){ setStatus("Moteur OCR non chargé.",'err'); return; }
-  setStatus('Image « '+file.name+' » — reconnaissance de texte (OCR) en cours… (1ᵉʳ usage : initialisation du moteur local)','work');
-  try{
-    const worker=await getOcrWorker();
-    const { data:{ text } } = await worker.recognize(file);
-    const out=text.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
-    if(out.length<2){ setStatus('Aucun texte reconnu dans cette image.','err'); return; }
-    document.getElementById('input').value=out;
-    setStatus('✓ OCR : '+out.length+' caractères reconnus. Analyse en cours…','ok');
-    resetBuild(); run(out);
-  }catch(e){ setStatus('Erreur OCR : '+(e.message||e),'err'); }
+  return indexDepuisOcr(idxPdf, pages, echelle);
 }
 
 // Lecture d'un Word (.docx) via mammoth — extraction du texte, 100% local
@@ -1172,12 +1217,13 @@ async function readDocx(file){
 function handleFile(f){
   if(!f) return;
   const isDocx = f.type==='application/vnd.openxmlformats-officedocument.wordprocessingml.document' || /\.docx$/i.test(f.name);
-  // Word, images et texte collé n'ont pas de mise en page à préserver :
-  // ils suivent le chemin « texte » et n'ont donc pas d'index.
+  const isImage = (f.type && f.type.startsWith('image/')) || /\.(jpe?g|png|webp|gif|bmp|hei[cf])$/i.test(f.name);
+  // PDF et images ont une page à montrer (une image devient un PDF d'une page) ;
+  // Word et texte collé suivent le chemin « texte » et n'ont pas d'index.
   if(f.type==='application/pdf') readPdf(f);
   else if(isDocx){ oublierIndex(); readDocx(f); }
-  else if(f.type && f.type.startsWith('image/')){ oublierIndex(); ocrImageFile(f); }
-  else setStatus('Format non géré : déposez un PDF, un Word (.docx) ou une image (JPG/PNG).','err');
+  else if(isImage) readImage(f);
+  else setStatus('Format non géré : déposez un PDF, un Word (.docx) ou une image (JPG, PNG, WebP, GIF, BMP).','err');
 }
 
 (function(){

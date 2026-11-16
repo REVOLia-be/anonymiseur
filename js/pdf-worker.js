@@ -4,7 +4,7 @@
    même sur un document de plusieurs dizaines de pages.
    Le document n'est jamais envoyé nulle part : il vit ici, en mémoire.
    =========================================================================== */
-import { ouvrir, indexer, rendre, anonymiser, verifier } from "./anon-pdf.js";
+import { ouvrir, indexer, rendre, anonymiser, verifier, imageEnPdf } from "./anon-pdf.js";
 
 /* Octets d'ORIGINE conservés tels quels : toute anonymisation repart de là,
    le document ouvert pour l'affichage n'est jamais muté. */
@@ -32,12 +32,20 @@ const ACTIONS = {
   charger(a) {
     fermer("tout");
     octetsOrigine = new Uint8Array(a.octets);
+    // Une image (déjà normalisée par le thread principal) devient un PDF d'une
+    // page, qui est alors « le document d'origine » : la suite est inchangée.
+    let echelleOcr = null;
+    if (a.image) {
+      const r = imageEnPdf(octetsOrigine, a.image);
+      octetsOrigine = r.octets; echelleOcr = r.echelleOcr;
+    }
     docOrigine = ouvrir(octetsOrigine);
     const idx = indexer(docOrigine);
     const transferts = [];
     for (const pg of idx.pages)
       transferts.push(pg.quads.buffer, pg.origines.buffer, pg.tailles.buffer,
                       pg.couleurs.buffer, pg.sauts.buffer);
+    if (echelleOcr) idx.echelleOcr = echelleOcr;
     return { valeur: idx, transferts };
   },
 
