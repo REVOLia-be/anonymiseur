@@ -168,6 +168,7 @@
   .nav .navlink{color:var(--encre-2);font-size:var(--t-14);font-weight:500;text-decoration:none;padding:8px 0}
   .nav .navlink:hover{color:var(--encre)}
   @media (max-width:760px){ .nav .navlink{display:none} }
+  @media (max-width:1080px){ .nav .navlink-large{display:none} }   /* repris dans le pied de page */
   @media (max-width:640px){ .brand .logo-mark{height:26px} .brand .wm{font-size:21px} }
 
   /* ── 7. Héros ── */
@@ -397,6 +398,18 @@
   .rail .metier select{width:100%}
   .pli-titre{flex:none}
   .pli-resume{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400;color:var(--encre-3)}
+
+  /* Bandeau « le même outil pour votre entreprise ? » (un atelier de formation) */
+  .appel{max-width:var(--conteneur);margin:var(--e-8) auto 0;padding:0 var(--gouttiere)}
+  .appel .inner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--e-5) var(--e-7);
+                background:var(--vert);color:#fff;border-radius:var(--r-3);padding:var(--e-6) var(--e-7)}
+  .appel .texte{flex:1 1 420px;min-width:0}
+  .appel h2{font-family:var(--police-titre);font-size:var(--t-28);line-height:1.2;letter-spacing:-.01em;color:#fff}
+  .appel p{margin-top:var(--e-2);max-width:62ch;font-size:var(--t-16);line-height:1.55;color:#fff}
+  .appel .btn{flex:0 0 auto;background:#fff;color:var(--vert-actif);border-color:#fff}
+  .appel .btn:hover{background:var(--vert-teinte);color:var(--vert-actif)}
+  .appel :focus-visible{outline-color:#fff}
+  @media (max-width:640px){ .appel{margin-top:var(--e-7)} .appel .inner{padding:var(--e-5)} .appel .btn{width:100%} }
 
   /* Après un téléchargement : la ligne « aller plus loin » (#suite) */
   .suite{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--e-2) var(--e-5);
@@ -660,6 +673,7 @@
       <a class="navlink" href="#comment">Comment ça marche</a>
       <a class="navlink" href="#faq">Questions</a>
       <a class="navlink" href="https://github.com/REVOLia-be/anonymiseur" rel="noopener">Code source</a>
+      <a class="navlink navlink-large" href="https://tally.so/r/NqXrQN" target="_blank" rel="noopener noreferrer">Le même outil pour mon entreprise&nbsp;?</a>
       <a class="btn sm" href="#outil">Anonymiser un document</a>
     </nav>
   </div>
@@ -852,7 +866,7 @@
     <p>Relire un document anonymisé, savoir quoi confier à une IA : c'est ce qu'on apprend en formation.</p>
     <p class="suite-liens">
       <a href="https://revolia.be/formations" target="_blank" rel="noopener noreferrer">Se former à l'IA avec REVOLia</a>
-      <a href="https://tally.so/r/NqXrQN" target="_blank" rel="noopener noreferrer">Je voudrais le même outil pour mon entreprise</a>
+      <a href="https://tally.so/r/NqXrQN" target="_blank" rel="noopener noreferrer">Construire le même outil pour mon entreprise, en atelier</a>
     </p>
   </aside>
 
@@ -895,6 +909,21 @@
     </div>
   </details>
 </div>
+
+<!-- LE MÊME OUTIL POUR VOTRE ENTREPRISE ? L'offre est un atelier de formation :
+     on construit l'outil AVEC le visiteur. Lien sortant ordinaire vers le formulaire
+     (nouvel onglet, sans référent) : rien de ce site tiers n'est chargé ici. -->
+<section class="appel" aria-labelledby="titre-appel">
+  <div class="inner">
+    <div class="texte">
+      <h2 id="titre-appel">Le même outil pour votre entreprise&nbsp;?</h2>
+      <p>L'Anonymiseur a été conçu par REVOLia. Construisons le vôtre ensemble&nbsp;: lors d'un atelier de formation,
+        vous créez avec nous un outil adapté à vos documents, à vos règles et à votre métier, et vous apprenez à le
+        faire évoluer.</p>
+    </div>
+    <a class="btn lg" href="https://tally.so/r/NqXrQN" target="_blank" rel="noopener noreferrer">Demander un atelier</a>
+  </div>
+</section>
 
 <section class="section" id="comment" aria-labelledby="titre-comment">
   <h2 class="title" id="titre-comment">Comment ça marche</h2>
@@ -943,6 +972,7 @@
       <a href="confidentialite.html">Confidentialité</a>
       <a href="mentions-legales.html">Mentions légales</a>
       <a href="https://github.com/REVOLia-be/anonymiseur" rel="noopener">Code source (AGPL-3.0)</a>
+      <a href="https://tally.so/r/NqXrQN" target="_blank" rel="noopener noreferrer">Le même outil pour mon entreprise&nbsp;?</a>
       <span class="footbrand">REVOLia · traitement 100 % local</span>
     </nav>
   </div>
