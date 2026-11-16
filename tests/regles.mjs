@@ -14,6 +14,7 @@
       métier et consigne pour l'IA.
 
    Usage : node regles.mjs          (depuis tests/, ou de n'importe où)  */
+import "../js/codes-postaux.js";                 // installe globalThis.CodesPostaux (liste officielle)
 import "../js/regles.js";                         // installe globalThis.Regles
 import "../js/recapitulatif.js";                  // installe globalThis.Recapitulatif
 import { CORPUS, FAUX_POSITIFS, parse } from "./corpus-regles.mjs";
@@ -473,11 +474,219 @@ entiers("E-mail écrit « (at) »", "EMAIL", ["thomas.mathieu (at) exemple.org",
     "Outil d'aide, pas une garantie : ce récapitulatif décrit un traitement, il ne certifie pas un résultat."])
     verifier(`K récapitulatif contient « ${attendu} »`, recap.includes(attendu), recap);
   verifier("K jamais « attestation » ni « certificat »", !/attestation|certificat\b/i.test(recap));
+  verifier("K noms de jetons sans numéro, par catégorie", recap.includes("  - Nom : 2   [PERSONNE_n]") && recap.includes("[N_NATIONAL_n]") && recap.includes("[TERME_n]"), recap);
+  verifier("K pavés noirs : pas de nom de jeton", !/_n\]/.test(globalThis.Recapitulatif.generer({ ...infos, mode: "redact" })));
   // filet : un nom de fichier produit qui contiendrait encore une valeur est filtré
   const r2 = globalThis.Recapitulatif.generer({ ...infos, nomProduit: "Contrat Karim El Amrani-anonymise.pdf" });
   verifier("K le nom du fichier produit est repassé au filtre", !/Karim/.test(r2) && r2.includes("Contrat [masqué]-anonymise.pdf"), r2.split("\n")[4]);
   verifier("K texte collé : vérification sans objet",
     globalThis.Recapitulatif.generer({ entree: "texte", verification: { etat: "sans-objet" } }).includes("Type d'entrée       : Texte collé"));
+}
+
+// --- L : jetons lisibles par l'IA et par l'humain
+{
+  const attendus = { EMAIL: "EMAIL", IBAN: "IBAN", NISS: "N_NATIONAL", TVA_BE: "N_ENTREPRISE", INAMI: "N_INAMI", PLAQUE: "PLAQUE",
+    CARTE_ID: "CARTE_IDENTITE", PUCE: "PUCE_ANIMAL", CARTE: "CARTE_BANCAIRE", TEL: "TELEPHONE", DATE_NAISSANCE: "DATE_NAISSANCE",
+    DATE: "DATE", MONTANT: "MONTANT", REFERENCE: "REFERENCE", CP_VILLE: "LOCALITE", RUE: "ADRESSE", PERSONNE: "PERSONNE",
+    LIEU: "LIEU", ORG: "ORGANISATION", TERME: "TERME" };
+  const obtenus = Object.fromEntries(R.CATS.map(c => [c.key, c.jeton]));
+  verifier("L table clé interne → nom de jeton", JSON.stringify(obtenus) === JSON.stringify(attendus), JSON.stringify(obtenus));
+  verifier("L noms de jetons : [A-Z0-9_] seulement, tous distincts",
+    R.CATS.every(c => /^[A-Z][A-Z0-9_]*[A-Z0-9]$/.test(c.jeton)) && new Set(R.CATS.map(c => c.jeton)).size === R.CATS.length);
+  const t = "Société BE 0456.789.123, Kerkstraat 52, 2000 Antwerpen, NISS 85073003328, tél. 0478 12 34 56.";
+  const r = R.analyser(t, { table: R.creerTable() }).actifs.map(h => h.token).join(" ");
+  verifier("L jetons d'un texte", r === "[N_ENTREPRISE_1] [ADRESSE_1] [LOCALITE_1] [N_NATIONAL_1] [TELEPHONE_1]", r);
+  // compatibilité : une table exportée AVANT le changement (anciens noms) ré-identifie toujours
+  const ancienne = { "[CP_VILLE_1]": "1050 Ixelles", "[TVA_BE_1]": "BE 0456.789.123", "[NISS_1]": "85073003328",
+                     "[RUE_1]": "27 avenue Louise", "[TERME_1]": "BelgaTech", "[TEL_1]": "0478 12 34 56" };
+  const a = R.reidentifier("Domicile : [RUE_1], [CP_VILLE_1]. Société [TERME_1] ([TVA_BE_1]), NISS_1, [tel_1], [CP_VILLE_2].", ancienne);
+  verifier("L ancienne table : anciens jetons ré-identifiés (et leurs variantes)",
+    a.texte === "Domicile : 27 avenue Louise, 1050 Ixelles. Société BelgaTech (BE 0456.789.123), 85073003328, 0478 12 34 56, [CP_VILLE_2]." && a.remplaces === 6, JSON.stringify(a));
+  verifier("L ancienne table : un ancien jeton inconnu reste signalé", a.inconnus.join() === "[CP_VILLE_2]", JSON.stringify(a.inconnus));
+  const inc = R.reidentifier("voir [localite_9] et N_ENTREPRISE_4, rapport_2", ancienne).inconnus.join();
+  verifier("L nouveaux jetons inconnus signalés (« [localite_9] », « N_ENTREPRISE_4 »), pas « rapport_2 »", inc === "[LOCALITE_9],[N_ENTREPRISE_4]", inc);
+  // une table d'aujourd'hui, exportée en JSON puis relue, ré-identifie les nouveaux jetons
+  const table = R.creerTable();
+  const res = R.analyser(t, { table });
+  const relue = JSON.parse(JSON.stringify({ correspondances: table.correspondances() })).correspondances;
+  const anon = res.actifs.reduceRight((s, h) => s.slice(0, h.start) + h.token + s.slice(h.end), t);
+  verifier("L export → import → ré-identification", R.reidentifier(anon, relue).texte === t, anon);
+  // jetons stables : écarter une détection ne renumérote rien, avec les nouveaux noms
+  const ex = new Set([R.cle({ cat: "TVA_BE", value: "BE 0456.789.123" }), R.cle({ cat: "CP_VILLE", value: "2000 Antwerpen" })]);
+  const b = R.analyser(t + " Autre : 4000 Liège.", { table, exclusions: ex }).actifs.map(h => h.token).join(" ");
+  verifier("L écarter ne renumérote pas : [LOCALITE_2] pour la nouvelle localité", b === "[ADRESSE_1] [N_NATIONAL_1] [TELEPHONE_1] [LOCALITE_2]", b);
+  verifier("L la consigne accepte un nouveau jeton en exemple", R.consigneIA("pseudo", "[N_ENTREPRISE_1]").includes("comme [N_ENTREPRISE_1],"));
+  verifier("L consigne retirée avec un nouveau jeton en exemple",
+    R.reidentifier(R.consigneIA("pseudo", "[DATE_NAISSANCE_1]") + "\n\n[TELEPHONE_1]", { "[TELEPHONE_1]": "0478" }).texte === "0478");
+}
+
+// --- M : termes ajoutés à la main, typés
+{
+  const termes = R.creerTermes();
+  termes.add("Nadia Collard"); termes.add("BelgaTech SPRL"); termes.add("Gembloux"); termes.add("projet Alpha");
+  verifier("M type par défaut : « Autre », sauf forme juridique en fin de terme",
+    termes.info("Nadia Collard").type === "AUTRE" && termes.info("BelgaTech SPRL").type === "ORGANISATION" && termes.info("projet Alpha").type === "AUTRE");
+  for (const [t, ty] of [["Bakkerij Verhaegen BV", "ORGANISATION"], ["Dupont & Fils S.A.", "ORGANISATION"], ["Lemaire SRL", "ORGANISATION"],
+    ["SRL", "AUTRE"], ["Sabine", "AUTRE"], ["Avenue Louise", "AUTRE"], ["Marc Sa", "AUTRE"], ["Thérèse Nv", "AUTRE"]])
+    verifier(`M type par défaut de « ${t} » : ${ty}`, R.typeTermeParDefaut(t) === ty, R.typeTermeParDefaut(t));
+  termes.definir("Nadia Collard", { type: "PERSONNE" }); termes.definir("Gembloux", { type: "LIEU" });
+  const t = "Madame Sophie Vandenberghe et Nadia Collard (BelgaTech SPRL), à Gembloux, projet Alpha.";
+  const table = R.creerTable();
+  const r = R.analyser(t, { table, termes }).actifs.map(h => h.cat + ":" + h.token).join(" ");
+  verifier("M jetons des termes typés, numérotés avec les personnes détectées",
+    r === "PERSONNE:[PERSONNE_1] TERME:[PERSONNE_2] TERME:[ORGANISATION_1] TERME:[LIEU_1] TERME:[TERME_1]", r);
+  // même valeur, détectée ET ajoutée comme Personne : un seul jeton
+  const t2 = "Monsieur Paul Martin écrit. Paul Martin signe.";
+  const tm = R.creerTermes(); tm.add("Paul Martin"); tm.definir("Paul Martin", { type: "PERSONNE" });
+  const r2 = R.analyser(t2, { table: R.creerTable(), termes: tm }).actifs.map(h => h.token);
+  verifier("M « Paul Martin » détecté et ajouté comme Personne : même jeton", r2.join() === "[PERSONNE_1],[PERSONNE_1]", r2.join());
+  // changer le type : nouveau jeton, l'ancien reste dans la table (une réponse d'IA déjà obtenue)
+  termes.definir("projet Alpha", { type: "ORGANISATION" });
+  const r3 = R.analyser(t, { table, termes }).actifs.find(h => /Alpha/.test(h.value)).token;
+  verifier("M changer le type donne un nouveau jeton, l'ancien reste ré-identifiable",
+    r3 === "[ORGANISATION_2]" && table.correspondances()["[TERME_1]"] === "projet Alpha", r3);
+  termes.delete("Gembloux"); termes.add("Gembloux");
+  verifier("M retirer puis remettre un terme : son type repart du défaut", termes.info("Gembloux").type === "AUTRE");
+  termes.clear();
+  verifier("M vider les termes oublie les types", termes.size === 0 && termes.info("Nadia Collard").type === "AUTRE");
+  verifier("M un Set ordinaire marche encore (tous « Autre »)",
+    R.analyser("Nadia Collard.", { table: R.creerTable(), termes: new Set(["Nadia Collard"]) }).actifs[0].token === "[TERME_1]");
+  verifier("M type inconnu → Autre", (() => { const x = R.creerTermes(); x.add("a b"); x.definir("a b", { type: "XYZ" }); return x.info("a b").type; })() === "AUTRE");
+}
+
+// --- N : parties d'un nom déjà masqué (suggestions, jamais masquées d'office)
+{
+  const parties = (t, termes) => {
+    const tm = termes || R.creerTermes();
+    const res = R.analyser(t, { table: R.creerTable(), actives: DEFAUT, termes: tm, completer: true });
+    return R.suggestionsDeParties(t, res.actifs, tm);
+  };
+  const voir = (l) => l.map(x => x.v + (x.aliasDe ? "=" + x.aliasDe : "")).join(" | ");
+  const cas = [
+    ["Dr Nathalie Mertens, médecin.\nConfraternellement,\nN. Mertens", "N. Mertens=Nathalie Mertens"],
+    ["Client : Cabinet vétérinaire Janssens, à l'attention de Dr Pieter Janssens.", "Janssens=Pieter Janssens"],
+    // « De Smet » derrière « de heer » est déjà masqué (règle + complétion) : seul le prénom reste à proposer
+    ["Werknemer: De heer Pieter De Smet.\nBeste Pieter, de heer De Smet is akkoord. Groeten aan De Smet.", "Pieter=Pieter De Smet"],
+    ["Mevrouw Annelies Van den Bossche, verhuurder.\nHandtekening: Van den Bossche", "Van den Bossche=Annelies Van den Bossche"],
+    ["Monsieur Karim El Amrani est arrivé. El Amrani signe.", "El Amrani=Karim El Amrani"],
+    ["Madame VAN DEN BERGHE écrit. Merci, Van den Berghe.", "Van den Berghe=VAN DEN BERGHE"],
+    ["De : thomas.mathieu@exemple.be\nBonjour Thomas,", "Thomas"],
+    ["Van: k.janssens@vakbond-voorbeeld.be\nGroeten, K. Janssens", "K. Janssens"],
+  ];
+  for (const [t, attendu] of cas) verifier(`N parties — « ${t.replace(/\n/g, " ⏎ ").slice(0, 60)} »`, voir(parties(t)) === attendu, voir(parties(t)));
+  const aucune = [
+    "Je vous adresse Mme Aïcha Benali. Son mari, Youssef Benali, peut être joint.",      // un autre nom : pas une partie
+    "Dr Pieter Janssens et Kris Janssens se sont parlé.",
+    "Madame Rose Dumont est venue. Rose a signé.",                                        // mot courant sans indice
+    "Monsieur Pierre Lambert. Pierre a signé, la pierre est posée.",                      // le mot existe en minuscules
+    "Monsieur Marc Wauters vient. Le marc de café.",
+    "Madame Sophie Renard. Le Renard et la cigogne.",                                     // mot courant, pas d'indice
+    "Monsieur Paul Namur habite Namur. Namur est belle.",                                 // localité belge sans indice
+    "Écrire à info.contact@exemple.be. Info importante : Contact direct.",                // adresse générique
+    "Monsieur Al Li a signé. Li est parti.",                                              // moins de 3 lettres
+  ];
+  for (const t of aucune) verifier(`N pas de partie — « ${t.slice(0, 60)} »`, parties(t).length === 0, voir(parties(t)));
+  verifier("N mot courant AVEC indice : « Beste Rose » proposé",
+    voir(parties("Mevrouw Rose Peeters. Beste Rose, dank u.")) === "Rose=Rose Peeters");
+  // ambiguïté : deux personnes du même prénom → jeton propre
+  verifier("N deux « Pieter » masqués : « Beste Pieter » proposé avec un jeton propre",
+    voir(parties("De heer Pieter De Smet en Dr Pieter Janssens.\nBeste Pieter,")) === "Pieter");
+  // ambiguïté : la partie apparaît aussi dans un autre nom → jeton propre (accepter masquerait « Kris [..] » aussi)
+  verifier("N « Janssens » aussi dans « Kris Janssens » : proposé, jeton propre",
+    voir(parties("Dr Pieter Janssens. Cabinet Janssens. Kris Janssens viendra.")) === "Janssens");
+  // déjà ajouté : plus proposé
+  const tm = R.creerTermes(); tm.add("Janssens");
+  verifier("N déjà ajouté : plus proposé", parties("Client : Cabinet vétérinaire Janssens, à l'attention de Dr Pieter Janssens.", tm).length === 0);
+  // acceptée : le terme Personne avec alias prend le jeton de la personne, la table garde le nom complet
+  const t = "Dr Nathalie Mertens, médecin. Confraternellement, N. Mertens";
+  const termes = R.creerTermes(); termes.add("N. Mertens"); termes.definir("N. Mertens", { type: "PERSONNE", aliasDe: "Nathalie Mertens" });
+  const table = R.creerTable();
+  const res = R.analyser(t, { table, termes, completer: true }).actifs;
+  verifier("N partie acceptée : même jeton que la personne", res.map(h => h.token).join() === "[PERSONNE_1],[PERSONNE_1]", fmt(res));
+  verifier("N un jeton ↔ une valeur : la table garde le nom complet", JSON.stringify(table.correspondances()) === '{"[PERSONNE_1]":"Nathalie Mertens"}' && table.taille === 1,
+    JSON.stringify(table.correspondances()));
+  verifier("N ré-identification : le nom complet", R.reidentifier("Bien reçu de [PERSONNE_1].", table.correspondances()).texte === "Bien reçu de Nathalie Mertens.");
+  // ordre inverse dans le texte (partie AVANT la personne) : même jeton, même table
+  const t2 = "Note de N. Mertens. Signé : Dr Nathalie Mertens.";
+  const tab2 = R.creerTable();
+  const res2 = R.analyser(t2, { table: tab2, termes, completer: true }).actifs;
+  verifier("N partie avant la personne : même jeton", new Set(res2.map(h => h.token)).size === 1 && tab2.taille === 1, fmt(res2));
+  // alias stable : une valeur qui avait son propre jeton le garde
+  const tab3 = R.creerTable();
+  const sansAlias = R.creerTermes(); sansAlias.add("N. Mertens"); sansAlias.definir("N. Mertens", { type: "PERSONNE" });
+  R.analyser(t, { table: tab3, termes: sansAlias });
+  const res3 = R.analyser(t, { table: tab3, termes }).actifs;
+  verifier("N alias : un jeton déjà attribué ne change pas", res3.map(h => h.token).join() === "[PERSONNE_1],[PERSONNE_2]", fmt(res3));
+  // type changé en Organisation : l'alias tombe
+  const t4 = R.creerTermes(); t4.add("N. Mertens"); t4.definir("N. Mertens", { type: "PERSONNE", aliasDe: "Nathalie Mertens" }); t4.definir("N. Mertens", { type: "ORGANISATION" });
+  verifier("N type changé : l'alias tombe", !t4.info("N. Mertens").aliasDe);
+  // textes neutres : aucune partie (aucun nom masqué) ; corpus : chiffres affichés plus haut
+  for (const [nom, texte] of Object.entries(FAUX_POSITIFS)) verifier(`N textes neutres : ${nom}`, parties(texte).length === 0);
+}
+
+// --- O : codes postaux validés sur la liste officielle (js/codes-postaux.js)
+{
+  const C = globalThis.CodesPostaux;
+  verifier("O liste chargée : plus de 1 100 codes", C && C.nbCodes > 1100, C && C.nbCodes);
+  verifier("O couples connus", C.correspond("1348", "Louvain-la-Neuve") && C.correspond("8200", "Sint-Andries") && C.correspond(1000, "BRUXELLES") &&
+    C.correspond("4000", "Liege") && C.correspond("9000", "Gand") && !C.correspond("2024", "Bruxelles") && !C.estCode("2024"));
+  entiers("O code + localité", "CP_VILLE", ["1000 BRUXELLES", "B-4000 Liège", "8200 Sint-Andries", "1348 Louvain-la-Neuve", "9000 Gand",
+    "1435 Mont-Saint-Guibert", "4700 Eupen", "2018 Antwerpen"], (v) => `Adresse : ${v}.`);
+  // étranger : jamais une fuite
+  entiers("O code étranger", "CP_VILLE", ["L-1234 Luxembourg", "F-59000 Lille", "75008 Paris", "D-52062 Aachen", "1012 AB Amsterdam",
+    "2132 Luxembourg", "1204 Genève"], (v) => `Adresse : ${v}.`);
+  rien("O année ou code inconnu suivi d'une localité belge", "CP_VILLE", ["En 2024 Bruxelles Environnement a publié", "En 2019 Liège accueillait",
+    "Rapport 2021 Namur", "Plan 1999 Gent", "Note 1599 Anvers"]);
+  verifier("O le format néerlandais n'avale pas une commune belge en capitales",
+    fmt(analyse("Adresse : 1000 BRUXELLES.")) === "CP_VILLE:«1000 BRUXELLES»");
+  // sans la liste (fichier absent) : l'ancien comportement
+  const sauve = globalThis.CodesPostaux; delete globalThis.CodesPostaux;
+  verifier("O sans la liste : « 2024 Bruxelles » refusé comme avant, « 2132 Luxembourg » accepté",
+    !analyse("En 2024 Bruxelles Environnement").length && analyse("à 2132 Luxembourg.").some(h => h.cat === "CP_VILLE"));
+  globalThis.CodesPostaux = sauve;
+}
+
+// --- P : temps linéaire sur les entrées pathologiques, et e-mails inchangés
+{
+  // l'expression d'origine des e-mails, gardée ici comme référence
+  const ANCIENNES = [/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g,
+    /[\w.+-]+[ ]*[\[(][ ]*(?:at|arobase)[ ]*[\])][ ]*[\w-]+(?:[ ]*(?:\.|[\[(][ ]*(?:dot|point)[ ]*[\])])[ ]*[\w-]+)+/gi];
+  const email = R.CATS.find(c => c.key === "EMAIL");
+  const NOUVELLES = [email.re, ...email.aussi];
+  const toutes = (re, t) => { const r = []; let m; re.lastIndex = 0; while ((m = re.exec(t)) !== null) { r.push(m.index + ":" + m[0]); if (m.index === re.lastIndex) re.lastIndex++; } return r.join("|"); };
+  // générateur pseudo-aléatoire reproductible
+  let graine = 12345; const hasard = (n) => { graine = (graine * 1103515245 + 12345) & 0x7fffffff; return graine % n; };
+  const alphabet = "ab.Z9_-+%@ ()[]atdotpoint.orgbe\n";
+  const morceaux = ["a", "b", ".", "@", " ", "(at)", "[at]", " (at) ", "arobase", "(dot)", " [ point ] ", "org", "be", "x.y", "-", "_", "%", "+", "\n", "é"];
+  let diff = 0, essais = 0, exemple = "";
+  for (let k = 0; k < 4000; k++) {
+    let t = "";
+    const n = 1 + hasard(30);
+    for (let j = 0; j < n; j++) t += hasard(2) ? alphabet[hasard(alphabet.length)] : morceaux[hasard(morceaux.length)];
+    for (let r = 0; r < 2; r++) { essais++; if (toutes(ANCIENNES[r], t) !== toutes(NOUVELLES[r], t)) { diff++; exemple = exemple || JSON.stringify(t); } }
+  }
+  for (const t of ["x@y.com.z@w.org", "a.b@c.de, f@g.hi", "jean(arobase)truc.be", "x [at] exemple . org", "thomas.mathieu (at) exemple.org",
+    "@@a@b.cd", "a@b.c", "é@b.cd", "aa@bb.cc.dd.e1", "n.a-b_c%d+e@sous-domaine.exemple.travel."])
+    for (let r = 0; r < 2; r++) { essais++; if (toutes(ANCIENNES[r], t) !== toutes(NOUVELLES[r], t)) { diff++; exemple = exemple || JSON.stringify(t); } }
+  verifier(`P e-mails : mêmes correspondances que l'expression d'origine (${essais} chaînes)`, diff === 0, `${diff} écart(s), ex. ${exemple}`);
+  // temps : chaque entrée de 48 000 caractères doit passer toutes les règles en moins de 250 ms
+  // (mesuré avant correction : 500 ms pour 12 000 caractères, rien que pour les e-mails)
+  const N = 48000;
+  const b64 = (() => { const a = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"; let s = ""; for (let i = 0; i < N; i++) s += a[(i * 7919) % a.length]; return s; })();
+  const entrees = { "base64 sans + ni /": b64, "lettres": "a".repeat(N), "chiffres": "1".repeat(N), "majuscules": "A".repeat(N),
+    "tirets": "-".repeat(N), "chiffres et espaces": "1 ".repeat(N / 2), "points et lettres": "a.".repeat(N / 2), "chiffres et tirets": "1-".repeat(N / 2),
+    "mots capitalisés": "Abc ".repeat(N / 4), "capitalisés à tirets": "Abc-".repeat(N / 4), "« (at) » répété": "a (at) ".repeat(N / 7),
+    "majuscules et espaces": "AB ".repeat(N / 3), "né à …": "né à " + "x".repeat(N), "jetons": "PERSONNE_".repeat(N / 9) };
+  for (const [nom, t] of Object.entries(entrees)) {
+    const t0 = performance.now();
+    const tm = R.creerTermes(); tm.add("Abc");
+    const res = R.analyser(t, { table: R.creerTable(), completer: true, termes: tm });
+    R.suggestionsDeNoms(t, res.actifs, []);
+    R.suggestionsDeParties(t, [{ cat: "PERSONNE", value: "Abc Def", start: 0, end: 0 }], []);
+    R.reidentifier(t, { "[PERSONNE_1]": "x" });
+    const dt = performance.now() - t0;
+    verifier(`P ${nom} (${t.length} car.) : ${dt.toFixed(0)} ms, sous 250 ms`, dt < 250);
+  }
 }
 
 console.log(`\n${echecs ? rouge(`ÉCHEC : ${echecs} contrôle(s) en défaut`) : `OK : les ${controles} contrôles passent`}`);

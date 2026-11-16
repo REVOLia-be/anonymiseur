@@ -39,7 +39,8 @@
   /* infos :
        date (Date), nomProduit, entree ('pdf' | 'pdf-scanne' | 'image' | 'word' | 'texte'),
        mode ('pseudo' | 'redact'), profil (libellé, ou « personnalisé »), ia (bool),
-       hits (détections ACTIVES : seuls `cat` et `token` servent, à compter),
+       hits (détections ACTIVES : seuls `cat` et `token` servent, à compter, et le
+             nom du jeton sans son numéro, « [LOCALITE_n] », en mode pseudonymes),
        libelle (cat → libellé), nEcartees, nTermes,
        verification : { etat: 'verifie' | 'non-verifiable' | 'echec' | 'sans-objet' | 'en-attente',
                         nMentions, nAcceptees },
@@ -49,11 +50,15 @@
     const o = infos || {};
     const libelle = o.libelle || ((k) => k);
     // par catégorie : nombre de VALEURS distinctes (un jeton = une valeur)
-    const parCat = new Map();
+    const parCat = new Map(), nomsJetons = new Map();
     for (const h of o.hits || []) {
       const s = parCat.get(h.cat) || new Set();
       s.add(h.token || h.cat + "#" + s.size);
       parCat.set(h.cat, s);
+      // nom du jeton SANS son numéro (« [LOCALITE_n] ») : il dit ce que lira l'IA,
+      // sans relier un jeton précis à une valeur
+      const m = /^\[([A-Z][A-Z0-9_]*?)_\d+\]$/.exec(h.token || "");
+      if (m) { const n = nomsJetons.get(h.cat) || new Set(); n.add("[" + m[1] + "_n]"); nomsJetons.set(h.cat, n); }
     }
     const totalValeurs = [...parCat.values()].reduce((a, s) => a + s.size, 0);
     const v = o.verification || { etat: "en-attente" };
@@ -79,7 +84,8 @@
     L.push("Valeurs masquées par catégorie (" + pl(totalValeurs, "valeur", "valeurs") + " au total) :");
     if (!parCat.size) L.push("  aucune");
     for (const [cat, s] of [...parCat.entries()].sort((a, b) => b[1].size - a[1].size))
-      L.push("  - " + libelle(cat) + " : " + s.size);
+      L.push("  - " + libelle(cat) + " : " + s.size +
+             (o.mode !== "redact" && nomsJetons.has(cat) ? "   " + [...nomsJetons.get(cat)].sort().join(", ") : ""));
     L.push("");
     L.push("Valeurs écartées par l'utilisateur  : " + (o.nEcartees || 0));
     L.push("Termes ajoutés à la main            : " + (o.nTermes || 0));

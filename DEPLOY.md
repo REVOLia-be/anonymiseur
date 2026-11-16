@@ -12,6 +12,8 @@ Cible : **`anonymiseur.revolia.be`** · hébergement **Cloudflare Pages** · DNS
 | Modèle IA (`models/`, ~135 Mo) | **Cloudflare R2** | dépasse la limite 25 Mo/fichier de Pages |
 | Police **iBrand** (licence, hors dépôt public) | injectée au build depuis une **URL privée** | ne pas redistribuer la police dans le dépôt public |
 
+> Les langues de l'OCR (`fra` et `nld`, ~6 Mo et ~10 Mo compressés) sont téléchargées par `fetch-assets.sh` depuis la même source (`tessdata.projectnaptha.com/4.0.0/`) et restent sous la limite de 25 Mo/fichier de Pages. Le néerlandais n'est chargé que si l'utilisateur le choisit ; s'il manque au déploiement, l'outil lit en français et le signale.
+
 > La détection par **règles**, l'**OCR** et tous les **exports** fonctionnent sans le modèle IA. Le modèle (R2) n'est requis que pour la détection contextuelle « IA locale ».
 
 > Le **moteur PDF** (`vendor/mupdf/mupdf-wasm.wasm`, ~10 Mo bruts, **3,5 Mo servis en Brotli**) est téléchargé
