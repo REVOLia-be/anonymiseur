@@ -132,7 +132,7 @@ function rien(titre, cat, textes) {
   verifier("B2 … et dans une adresse e-mail quand la catégorie E-mail est décochée",
     analyse(web, { termes: new Set(["REVOLia"]), actives: { EMAIL: false } }).filter(h => h.cat === "TERME").length === 4);
   // terme à plusieurs mots, coupé par un saut de ligne (PDF)
-  verifier("B2 terme sur deux lignes", analyse("Claire\nHanssen est venue.", { termes: new Set(["Claire Hanssen"]) }).length === 1);
+  verifier("B2 terme sur deux lignes", analyse("Nadia\nCollard est venue.", { termes: new Set(["Nadia Collard"]) }).length === 1);
   verifier("B2 terme introuvable : zéro occurrence", R.occurrencesTerme("Une annexe.", "Anne") === 0 && R.occurrencesTerme("Anne vient.", "anne") === 1);
   // complétion des occurrences (valeur trouvée par l'IA à un endroit, pas aux autres)
   const txt = "Marc signe. Le marché, Marché aux fleurs. Marc revient.";

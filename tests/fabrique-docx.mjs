@@ -13,9 +13,9 @@ const JSZip = createRequire(import.meta.url)("../vendor/jszip.min.js");
 export const MULTILIGNE = "Rue de la Loi 16\n1000 Bruxelles";
 export const SENSIBLES = [
   "Sophie Vandenberghe", "Vandenberghe", "sophie.vandenberghe@exemple.be",
-  "BE68 5390 0754 7034", "Jean-Pierre Lambert", "Dupont & Fils SRL", "Adminova SRL",
+  "BE68 5390 0754 7034", "Jean-Pierre Lambert", "Dupont & Fils SRL", "Belgatech SRL",
   "Hélène Marchal",    // uniquement dans un texte supprimé en suivi des modifications
-  "Claire Hanssen",    // uniquement auteur de révision/commentaire et métadonnée
+  "Nadia Collard",    // uniquement auteur de révision/commentaire et métadonnée
   "Paul Delvaux",      // uniquement métadonnée (Manager, description)
   MULTILIGNE,
 ];
@@ -94,7 +94,7 @@ function documentXml() {
     // IBAN avec espaces ordinaires puis insécables
     p(t("IBAN : BE68 5390 0754 7034 et BE68 5390 0754 7034.")),
     // entités XML dans une valeur
-    p(t("Facture de Dupont &amp; Fils SRL pour Adminova SRL.")),
+    p(t("Facture de Dupont &amp; Fils SRL pour Belgatech SRL.")),
     // entités XML dans du texte neutre : doit rester identique
     p(t("NEUTRE-2 : seuil &lt; cinq cents &amp; TVA incluse, symbole €, balise littérale &lt;w:t&gt; et guillemets &quot;droits&quot;.")),
     // valeur sur deux lignes (deux paragraphes)
@@ -105,8 +105,8 @@ function documentXml() {
       `<w:tr><w:tc><w:tcPr><w:tcW w:w="3000" w:type="dxa"/></w:tcPr>${p(t("Ville"))}</w:tc><w:tc><w:tcPr><w:tcW w:w="6000" w:type="dxa"/></w:tcPr>${p(t("Namur"))}</w:tc></w:tr></w:tbl>`,
     // suivi des modifications : le texte supprimé RESTE dans le fichier
     p(t("Avant révision : "),
-      '<w:del w:id="101" w:author="Claire Hanssen" w:date="2026-05-02T10:00:00Z"><w:r><w:delText xml:space="preserve">Madame Hélène Marchal</w:delText></w:r></w:del>',
-      '<w:ins w:id="102" w:author="Claire Hanssen" w:date="2026-05-02T10:00:00Z"><w:r><w:t>la bénéficiaire</w:t></w:r></w:ins>'),
+      '<w:del w:id="101" w:author="Nadia Collard" w:date="2026-05-02T10:00:00Z"><w:r><w:delText xml:space="preserve">Madame Hélène Marchal</w:delText></w:r></w:del>',
+      '<w:ins w:id="102" w:author="Nadia Collard" w:date="2026-05-02T10:00:00Z"><w:r><w:t>la bénéficiaire</w:t></w:r></w:ins>'),
     // zone de texte, en double (Choice + Fallback)
     p(boite(2)),
     // image avec texte alternatif, commentaire et note de bas de page
@@ -157,12 +157,12 @@ export async function construire() {
   ajouter("docProps/core.xml", ENTETE +
     '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
     "<dc:title>Fiche Sophie Vandenberghe</dc:title><dc:subject>Dossier Jean-Pierre Lambert</dc:subject><dc:creator>Sophie Vandenberghe</dc:creator>" +
-    "<cp:keywords>Adminova</cp:keywords><dc:description>Note de Paul Delvaux</dc:description><cp:lastModifiedBy>Claire Hanssen</cp:lastModifiedBy>" +
+    "<cp:keywords>Belgatech</cp:keywords><dc:description>Note de Paul Delvaux</dc:description><cp:lastModifiedBy>Nadia Collard</cp:lastModifiedBy>" +
     "<cp:category>Confidentiel</cp:category>" +
     '<dcterms:created xsi:type="dcterms:W3CDTF">2026-01-01T00:00:00Z</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">2026-01-02T00:00:00Z</dcterms:modified></cp:coreProperties>');
   ajouter("docProps/app.xml", ENTETE +
     '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Microsoft Office Word</Application>' +
-    "<Company>Adminova SRL</Company><Manager>Paul Delvaux</Manager><Pages>1</Pages></Properties>");
+    "<Company>Belgatech SRL</Company><Manager>Paul Delvaux</Manager><Pages>1</Pages></Properties>");
   ajouter("docProps/custom.xml", ENTETE +
     '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/custom-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">' +
     '<property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="2" name="Client"><vt:lpwstr>Sophie Vandenberghe</vt:lpwstr></property></Properties>');
@@ -197,10 +197,10 @@ export async function construire() {
     `<w:footnote w:id="1">${p(t("Note : joindre la fiche de Sophie Vandenberghe au dossier."))}</w:footnote></w:footnotes>`);
   ajouter("word/comments.xml", ENTETE + `<w:comments ${NS}>` +
     `<w:comment w:id="0" w:author="Sophie Vandenberghe" w:date="2026-05-02T10:00:00Z" w:initials="SV">${p(t("À vérifier avec Madame Sophie Vandenberghe."))}</w:comment>` +
-    `<w:comment w:id="1" w:author="Claire Hanssen" w:date="2026-05-03T10:00:00Z" w:initials="CH">${p(t("NEUTRE-5 : d'accord."))}</w:comment></w:comments>`);
+    `<w:comment w:id="1" w:author="Nadia Collard" w:date="2026-05-03T10:00:00Z" w:initials="NC">${p(t("NEUTRE-5 : d'accord."))}</w:comment></w:comments>`);
   ajouter("word/people.xml", ENTETE + `<w15:people ${NS}>` +
     '<w15:person w15:author="Sophie Vandenberghe"><w15:presenceInfo w15:providerId="Windows Live" w15:userId="sophie.vandenberghe@exemple.be"/></w15:person>' +
-    '<w15:person w15:author="Claire Hanssen"><w15:presenceInfo w15:providerId="None" w15:userId="Claire Hanssen"/></w15:person></w15:people>');
+    '<w15:person w15:author="Nadia Collard"><w15:presenceInfo w15:providerId="None" w15:userId="Nadia Collard"/></w15:person></w15:people>');
 
   return await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
 }

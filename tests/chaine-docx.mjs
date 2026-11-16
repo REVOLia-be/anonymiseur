@@ -177,7 +177,7 @@ if (basename(fichier) === "fiche-word.docx") {
   // les valeurs sont à rechercher aussi dans l'archive entière, en octets bruts
   let brut = "";
   for (const nom of nomsApres) brut += new TextDecoder("latin1").decode(await zipApres.files[nom].async("uint8array")) + "\n";
-  verifie(!/Vandenberghe|Hanssen|Delvaux|Marchal|Lambert|Adminova|vandenberghe@/.test(brut), "aucun fragment de nom ou d'e-mail dans les octets décompressés");
+  verifie(!/Vandenberghe|Collard|Delvaux|Marchal|Lambert|Belgatech|vandenberghe@/.test(brut), "aucun fragment de nom ou d'e-mail dans les octets décompressés");
 
   const doc = await lire(zipApres, "word/document.xml"), doc0 = await lire(zipAvant, "word/document.xml");
   const cr = await lire(zipApres, "word/_rels/document.xml.rels");
@@ -198,11 +198,11 @@ if (basename(fichier) === "fiche-word.docx") {
   verifie(rapport.liensNeutralises === 1, "1 lien neutralisé");
   verifie(!/w:author="(?!Auteur")/.test(doc) && !/w:author="(?!Auteur")|w:initials="(?!Auteur")/.test(await lire(zipApres, "word/comments.xml")), "auteurs de révisions et de commentaires remplacés par « Auteur »");
   const people = await lire(zipApres, "word/people.xml");
-  verifie(!/Vandenberghe|Hanssen|vandenberghe@/.test(people) && /w15:author="Auteur"/.test(people), "people.xml : noms et identifiants vidés");
+  verifie(!/Vandenberghe|Collard|vandenberghe@/.test(people) && /w15:author="Auteur"/.test(people), "people.xml : noms et identifiants vidés");
   verifie(rapport.auteursNeutralises === 10, `auteurs neutralisés : 10 (${rapport.auteursNeutralises})`);
   verifie(/<dc:creator><\/dc:creator>/.test(core) && /<cp:lastModifiedBy><\/cp:lastModifiedBy>/.test(core) && /<dc:title><\/dc:title>/.test(core) &&
           /<dc:subject><\/dc:subject>/.test(core) && /<cp:keywords><\/cp:keywords>/.test(core) && /<dc:description><\/dc:description>/.test(core) &&
-          /<cp:category><\/cp:category>/.test(core), "core.xml : 7 champs vidés, même sans valeur détectée (Claire Hanssen, Paul Delvaux)");
+          /<cp:category><\/cp:category>/.test(core), "core.xml : 7 champs vidés, même sans valeur détectée (Nadia Collard, Paul Delvaux)");
   verifie(/<Company><\/Company>/.test(app) && /<Manager><\/Manager>/.test(app) && /<Application>Microsoft Office Word</.test(app) && /<dcterms:created/.test(core), "app.xml : Company et Manager vidés ; reste intact");
   verifie(aucun(/Sophie/, cus) && /<vt:lpwstr><\/vt:lpwstr>/.test(cus), "custom.xml : valeur de propriété vidée");
   verifie(rapport.metaNettoyees === 10, `champs de métadonnées vidés : 10 (${rapport.metaNettoyees})`);

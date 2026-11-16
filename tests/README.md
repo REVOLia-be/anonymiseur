@@ -149,13 +149,13 @@ l'index texte ↔ page ne correspond plus. Chaque caractère garde sa position.
 `\s` franchit `\n` et avale le début de la ligne suivante : « Madame Sophie
 Vandenberghe\nNumero » a fait caviarder le mot « Numero ». Utiliser `[ \t]`.
 À l'inverse, pour **regrouper** une entité, le saut de ligne doit être accepté :
-un PDF coupe volontiers « Claire\nHanssen » en fin de ligne.
+un PDF coupe volontiers « Nadia\nCollard » en fin de ligne.
 
 ### 9. Une valeur anonymisée doit l'être PARTOUT
 
 L'outil ne masquait que les occurrences *détectées*. Les règles les trouvent
 toutes, mais l'IA en rate : sur un devis réel, « REVOLia » repéré **1 fois sur
-17**, « Adminova » 12 sur 16. La valeur restait lisible ailleurs. Les
+17**, « Belgatech » 12 sur 16. La valeur restait lisible ailleurs. Les
 occurrences manquantes sont désormais complétées par recherche dans le texte.
 
 ### 10. Le contrôle des octets bruts est aveugle sur certains PDF
@@ -204,7 +204,7 @@ décider quoi faire.
 
 ### 14. Un nom sans titre échappe aux règles
 
-« Monsieur Dupont » passe, « Sacha Munaut » non. Sur un devis réel de 13
+« Monsieur Dupont » passe, « Camille Renard » non. Sur un devis réel de 13
 pages, la détection par règles masquait montants, dates, e-mail, TVA et code
 postal, et laissait en clair les deux noms de personnes et l'organisation
 cliente — l'essentiel.
@@ -299,8 +299,8 @@ dans l'archive. Le test garde un lien externe neutre pour le prouver.
 `w15:userId` (`people.xml`, où l'identifiant de compte peut être une adresse
 e-mail), `descr`/`title`/`name` d'une image (le nom peut être celui du
 fichier), `w:tooltip`. Les auteurs sont remplacés par « Auteur » **qu'une valeur
-soit détectée ou non** (comme `nettoyerMetadonnees` pour le PDF) : « Claire
-Hanssen » n'est que là. Les autres attributs ne sont touchés que s'ils sont
+soit détectée ou non** (comme `nettoyerMetadonnees` pour le PDF) : « Nadia
+Collard » n'est que là. Les autres attributs ne sont touchés que s'ils sont
 dans une liste connue : une valeur courte ne doit pas aller écraser un `w:val`,
 un id ou un style.
 
