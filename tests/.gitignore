@@ -3,3 +3,6 @@
 *.png
 # Documents apportés par l'utilisateur — JAMAIS dans le dépôt public
 devis*.pdf
+# Word : sorties de test et documents apportés par l'utilisateur
+*-anon-*.docx
+devis*.docx
