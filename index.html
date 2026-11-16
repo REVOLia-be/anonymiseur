@@ -215,9 +215,9 @@
   main.avec-doc>.panel{grid-column:1/-1}
   .panel{background:var(--surface);border:1px solid var(--bord);border-radius:var(--r-3);min-width:0}
   .panel>h2{padding:var(--e-5) var(--e-5) 0;font-family:var(--police);font-size:var(--t-18);line-height:1.35}
-  .panel>h2 .sous-titre{display:block;margin-top:2px;font-size:var(--t-14);font-weight:400;color:var(--encre-3)}
+  .panel>.sous-titre{margin:2px 0 0;padding:0 var(--e-5);font-size:var(--t-14);line-height:1.35;font-weight:400;color:var(--encre-3)}
   .panel .body{padding:var(--e-4) var(--e-5) var(--e-5)}
-  @media (max-width:640px){ .panel>h2{padding:var(--e-4) var(--e-4) 0} .panel .body{padding:var(--e-3) var(--e-4) var(--e-4)} }
+  @media (max-width:640px){ .panel>h2{padding:var(--e-4) var(--e-4) 0} .panel>.sous-titre{padding:0 var(--e-4)} .panel .body{padding:var(--e-3) var(--e-4) var(--e-4)} }
   main:not(.avec-doc) .si-doc{display:none}
   .controls{display:flex;flex-wrap:wrap;gap:var(--e-2);align-items:center;margin-top:var(--e-4)}
   .row{display:flex;flex-wrap:wrap;gap:var(--e-2) var(--e-3);align-items:center;margin-top:var(--e-3)}
@@ -672,7 +672,7 @@
     <nav class="nav" aria-label="Navigation principale">
       <a class="navlink" href="#comment">Comment ça marche</a>
       <a class="navlink" href="#faq">Questions</a>
-      <a class="navlink" href="https://github.com/REVOLia-be/anonymiseur" rel="noopener">Code source</a>
+      <a class="navlink" href="https://github.com/REVOLia-be/anonymiseur" target="_blank" rel="noopener noreferrer">Code source</a>
       <a class="navlink navlink-large" href="https://tally.so/r/NqXrQN" target="_blank" rel="noopener noreferrer">Le même outil pour mon entreprise&nbsp;?</a>
       <a class="btn sm" href="#outil">Anonymiser un document</a>
     </nav>
@@ -872,7 +872,9 @@
 
   <!-- TABLEAU DE CORRESPONDANCE -->
   <section class="panel panel-large" id="pTable" aria-labelledby="titreTable">
-    <h2 id="titreTable">Table de correspondance <span class="sous-titre si-doc">Pour écarter une valeur, cliquez-la sur le document.</span><span class="sous-titre si-texte">Pour écarter une valeur, cliquez-la dans le texte surligné.</span></h2>
+    <h2 id="titreTable">Table de correspondance</h2>
+    <p class="sous-titre si-doc">Pour écarter une valeur, cliquez-la sur le document.</p>
+    <p class="sous-titre si-texte">Pour écarter une valeur, cliquez-la dans le texte surligné.</p>
     <div class="body">
       <div id="table-wrap"><div class="empty">Aucune détection pour l'instant.</div></div>
       <div class="controls">
@@ -954,7 +956,7 @@
     <details><summary>Que dire à l'IA quand je lui donne le document&nbsp;?</summary><div class="a">L'outil vous fournit la phrase. Pour un texte collé, elle est jointe en tête de ce que vous copiez (case «&nbsp;Joindre la consigne pour l'IA&nbsp;»)&nbsp;; pour un document, le bouton «&nbsp;Copier la consigne pour l'IA&nbsp;» la met dans le presse-papiers, à coller dans la conversation. Elle demande à l'IA de reprendre les pseudonymes (<span class="tok">[PERSONNE_1]</span>) tels quels, sans chercher à les deviner&nbsp;: c'est ce qui permet ensuite de remettre vos données dans sa réponse. Elle n'entre jamais dans le fichier produit.</div></details>
     <details><summary>Puis-je garder une trace de ce qui a été fait&nbsp;?</summary><div class="a">Oui&nbsp;: «&nbsp;Télécharger le récapitulatif&nbsp;» produit un fichier texte d'une page — date, réglages, nombre de valeurs masquées par catégorie, résultat de la vérification, et une ligne pour noter votre relecture. Il ne contient <b>aucune donnée du document</b>, pas même le nom du fichier d'origine. Ce n'est pas une attestation&nbsp;: il décrit un traitement, il ne garantit pas le résultat.</div></details>
     <details><summary>Pseudonymes ou pavés noirs&nbsp;?</summary><div class="a">La <b>pseudonymisation</b> remplace chaque donnée par un jeton cohérent (<span class="tok">[PERSONNE_1]</span>)&nbsp;: le document reste lisible et exploitable par l'IA. Le <b>caviardage</b> (pavés noirs) supprime réellement l'information&nbsp;: rien n'est récupérable.</div></details>
-    <details><summary>C'est gratuit&nbsp;? Open source&nbsp;?</summary><div class="a">Oui — gratuit et <a href="https://github.com/REVOLia-be/anonymiseur" rel="noopener">open source (AGPL-3.0)</a>, pour que chacun puisse vérifier que rien ne sort.</div></details>
+    <details><summary>C'est gratuit&nbsp;? Open source&nbsp;?</summary><div class="a">Oui — gratuit et <a href="https://github.com/REVOLia-be/anonymiseur" target="_blank" rel="noopener noreferrer">open source (AGPL-3.0)</a>, pour que chacun puisse vérifier que rien ne sort.</div></details>
   </div>
 </section>
 
@@ -971,7 +973,7 @@
     <nav class="footlinks" aria-label="Liens légaux">
       <a href="confidentialite.html">Confidentialité</a>
       <a href="mentions-legales.html">Mentions légales</a>
-      <a href="https://github.com/REVOLia-be/anonymiseur" rel="noopener">Code source (AGPL-3.0)</a>
+      <a href="https://github.com/REVOLia-be/anonymiseur" target="_blank" rel="noopener noreferrer">Code source (AGPL-3.0)</a>
       <a href="https://tally.so/r/NqXrQN" target="_blank" rel="noopener noreferrer">Le même outil pour mon entreprise&nbsp;?</a>
       <span class="footbrand">REVOLia · traitement 100 % local</span>
     </nav>
