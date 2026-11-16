@@ -319,7 +319,8 @@
       if (p < sacs.length - 1) index.texte += "\n\n";
       index.pages.push({ texte, quads, origines, tailles, couleurs, sauts,
                          largeur: meta.largeur, hauteur: meta.hauteur,
-                         section: meta.section, tranche: meta.tranche });
+                         section: meta.section, tranche: meta.tranche,
+                         fenetre: { debut: meta.debut, fin: meta.fin, decalage: meta.decalage } });
     });
     return index;
   }
