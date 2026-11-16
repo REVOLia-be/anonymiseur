@@ -154,6 +154,57 @@
      en-cours » ressemblait à une référence sous le drapeau i). */
   function validReference(v) { return /^[A-Z0-9\/\-]+$/.test(v) && /\d/.test(v); }
 
+  /* Date de naissance : la même forme qu'une date, reconnue par ce qui la
+     précède. Une date seule n'identifie personne ; une date de naissance, si.
+       FR : « né le », « née le », « né(e) le », « né à Gand le »,
+            « date de naissance : », « Lieu et date de naissance : Gand, »,
+            « naissance : », « ° » (mais pas « n° »)
+       NL : « geboren op », « geboren te Brugge op », « geboren: »,
+            « geboortedatum: »
+     Un formulaire met volontiers le libellé sur sa ligne et la valeur sur la
+     suivante (« Date de naissance\n03/07/1989 », mesuré sur fiche-reelle.pdf) :
+     UN saut de ligne est admis juste avant la date. Sinon la portée est courte
+     et ne franchit ni un saut de ligne ni un chiffre :
+     « Lieu de naissance : Gand. Engagé le 01/03/2025 » ne doit pas faire de la
+     date d'engagement une date de naissance. */
+  const NE = "n[ée]e?(?:[ \\u00a0]?\\([ée]?e\\))?";
+  const CONTEXTE_NAISSANCE = new RegExp("(?:" + [
+    `(?<!\\p{L})${NE}(?:[ \\u00a0]+[àa][ \\u00a0]+[^\\n\\d]{1,40}?)?,?[ \\u00a0]+le`,
+    `(?<!\\p{L})(?:date|jour)[ \\u00a0]+de[ \\u00a0]+naissance[^\\n\\d]{0,30}`,
+    `(?<!\\p{L})naissance[ \\u00a0]*(?::|(?=\\n))`,
+    `(?<!\\p{L})geboren(?:[ \\u00a0]+te[ \\u00a0]+[^\\n\\d]{1,40}?)?,?[ \\u00a0]+op`,
+    `(?<!\\p{L})geboren[ \\u00a0]*(?::|(?=\\n))`,
+    `(?<!\\p{L})geboortedatum[^\\n\\d]{0,30}`,
+    `(?<![nN])°`,
+  ].join("|") + ")[ \\u00a0(]*[:\\-]?[ \\u00a0]*(?:\\n[ \\u00a0]*)?$", "iu");
+  function validNaissance(v, text, i) {
+    return CONTEXTE_NAISSANCE.test(text.slice(Math.max(0, i - 70), i));
+  }
+
+  /* N° de puce électronique (ISO 11784) : 15 chiffres, dont les 3 premiers sont
+     un code pays ISO 3166 (056 Belgique, 250 France, 528 Pays-Bas…) ou un code
+     fabricant (900 à 998). Pas de clé de contrôle : le préfixe est le seul
+     indice, d'où trois garde-fous.
+       · un nombre plus long (carte à 16 chiffres, référence) n'est pas une puce :
+         le motif refuse un chiffre collé, ou séparé d'une espace, avant et après ;
+       · une carte American Express (15 chiffres, 34… ou 37…, clé de Luhn juste)
+         reste une carte ;
+       · après « réf. », « commande », « facture », « EAN »… c'est un numéro de
+         référence, sauf si un mot de puce (« puce », « transpondeur », « chip »)
+         le précède aussi. */
+  const PAYS_PUCE = new Set(("040 056 100 191 196 203 208 233 246 250 276 300 348 352 372 380 428 438 440 " +
+    "442 470 492 504 528 578 616 620 642 703 705 724 752 756 792 826 840 124 012 788 036 554").split(" "));
+  function validPuce(v, text, i) {
+    const d = v.replace(/\D/g, "");
+    if (d.length !== 15) return false;
+    const pre = d.slice(0, 3);
+    if (!PAYS_PUCE.has(pre) && !(+pre >= 900 && +pre <= 998)) return false;
+    if (/^3[47]/.test(d) && luhn(d)) return false;
+    const avant = text.slice(Math.max(0, i - 40), i);
+    if (/puce|transpondeur|chip|identification|i-?cad|dogid|catid/i.test(avant)) return true;
+    return !/r[ée]f|r[ée]f[ée]rence|commande|facture|bestel|factuur|EAN|GTIN|colis|suivi|tracking|order|n°[ ]?de[ ]?(?:lot|s[ée]rie)/i.test(avant);
+  }
+
   /* ------------------------------ catégories ------------------------------
      Ordre = priorité à égalité de position et de longueur (les plus
      spécifiques d'abord). Les catégories alimentées par l'IA ou par
@@ -180,8 +231,20 @@
   const MOT_VILLE = `(?:${L}${l}+|${L}{2,})`;
   const PARTIE_VILLE = "(?:la|le|les|lez|sur|sous|aan|op|de|den|l|d|en|ter|ten|van)";
 
+  // Dates : jamais l'espace comme séparateur entre trois nombres (« +33 6 12 34 56 78 »
+  // n'est pas deux dates) ; mois en toutes lettres FR et NL ; format ISO.
+  const RE_DATE = `${G}(?:\\d{1,2}[\\/.\\-]\\d{1,2}[\\/.\\-]${AN}|\\d{1,2}(?:er|ème|e)?[\\/.\\- ]+(?:${MOIS})(?:\\.[ ]?|[\\/\\- ])${AN}|(?:19|20)\\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01]))${D}`;
+
   /* Couleurs : au moins 4,5:1 sur leur surlignage (fond à 20 %), rangées par
-     famille pour rester distinctes. */
+     famille pour rester distinctes.
+
+     `defaut: false` : catégorie DÉCOCHÉE dans les réglages par défaut. Un
+     montant ou une date ordinaire n'identifie personne à lui seul, et c'est
+     souvent exactement ce que l'utilisateur veut faire analyser (mesuré sur un
+     devis réel : 8 des 12 valeurs masquées étaient des montants). Les profils
+     métier (PROFILS, plus bas) partent de ces défauts.
+
+     `prio` : priorité dans le dédoublonnage (terme ajouté 3, règle 2, IA 1). */
   const CATS = [
     { key: "EMAIL", label: "E-mail", color: "#1755d1",
       re: /[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g,
@@ -199,17 +262,27 @@
       re: new RegExp(`(?<![\\p{L}\\p{N}-])[1-9]-[A-Z]{3}-\\d{3}(?![\\p{L}\\p{N}-])`, "gu") },
     { key: "CARTE_ID", label: "Carte d’identité", color: "#b31449",
       re: new RegExp(`(?<![\\p{L}\\p{N}-])\\d{3}-\\d{7}-\\d{2}(?![\\p{N}-])`, "gu") },
+    // Avant CARTE : à égalité (15 chiffres d'une puce qui passent par hasard la
+    // clé de Luhn), c'est une puce. Écritures groupées : « 981 000 012 345 678 ».
+    { key: "PUCE", label: "N° de puce électronique", color: "#0b5c78",
+      re: new RegExp(`(?<![\\p{L}\\p{N}])(?<!\\d[ \\u00a0])\\d(?:[ \\u00a0]?\\d){14}(?![\\p{L}\\p{N}])(?![ \\u00a0]\\d)`, "gu"),
+      valid: validPuce },
     { key: "CARTE", label: "Carte bancaire", color: "#9e4112",
       re: /\b\d{4}[ \-]\d{4}[ \-]\d{4}[ \-]\d{2,7}\b|\b\d{13,19}\b/g, valid: luhn },
     { key: "TEL", label: "Téléphone", color: "#4343ea",
       re: new RegExp(`(?:\\+|(?<!\\d)00)[ ]?(?:${INDICATIFS.join("|")})[ .]?(?:\\(0\\)[ ]?)?\\d(?:[ .\\-/]?\\d){6,10}(?!\\d)|\\b0(?:[ .\\-/]?\\d){8,9}\\b`, "g"),
       valid: validTel },
-    // Dates : jamais l'espace comme séparateur entre trois nombres (« +33 6 12 34 56 78 »
-    // n'est pas deux dates) ; mois en toutes lettres FR et NL ; format ISO.
-    { key: "DATE", label: "Date", color: "#6c2ee8",
-      re: new RegExp(`${G}(?:\\d{1,2}[\\/.\\-]\\d{1,2}[\\/.\\-]${AN}|\\d{1,2}(?:er|ème|e)?[\\/.\\- ]+(?:${MOIS})(?:\\.[ ]?|[\\/\\- ])${AN}|(?:19|20)\\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01]))${D}`, "giu") },
+    /* Date de naissance : même motif que DATE, plus un mot de contexte devant.
+       Elle doit l'emporter sur DATE pour la même valeur : DATE est décochée par
+       défaut, une date de naissance classée DATE resterait EN CLAIR. D'où une
+       priorité au-dessus des autres règles (2.5), qui ne dépend pas de l'ordre
+       de ce tableau ni de celui du tri. */
+    { key: "DATE_NAISSANCE", label: "Date de naissance", color: "#4b2a99", prio: 2.5,
+      re: new RegExp(RE_DATE, "giu"), valid: validNaissance },
+    { key: "DATE", label: "Date", color: "#6c2ee8", defaut: false,
+      re: new RegExp(RE_DATE, "giu") },
     // « euros » AVANT « EUR » : sous le drapeau i, EUR l'emporterait et laisserait « os ».
-    { key: "MONTANT", label: "Montant", color: "#2c6c0c",
+    { key: "MONTANT", label: "Montant", color: "#2c6c0c", defaut: false,
       re: new RegExp(`${G}\\d{1,3}(?:[ .\\u00a0\\u202f]?\\d{3})*(?:[,.]\\d{1,2})?\\s?(?:euros?|EUR|€)(?![\\p{L}])|${G}(?:€|EUR)[ \\u00a0]?\\d{1,3}(?:[ .\\u00a0\\u202f]?\\d{3})*(?:,\\d{1,2})?(?![\\p{N}])`, "giu") },
     // Après « n°, réf., dossier, matricule… » : sans le drapeau i sur la valeur, sinon
     // « dossier en-cours » en serait une (le validateur refuse les minuscules).
@@ -293,7 +366,7 @@
             if (r === false) { re.lastIndex = m.index + 1; continue; }
             if (typeof r === "number" && r > 0 && r < val.length) { val = val.slice(0, r); re.lastIndex = m.index + r; }
           }
-          hits.push({ start: m.index, end: m.index + val.length, cat: c.key, value: val, prio: 2 });
+          hits.push({ start: m.index, end: m.index + val.length, cat: c.key, value: val, prio: c.prio || 2 });
           if (m.index === re.lastIndex) re.lastIndex++;
         }
       });
@@ -443,6 +516,12 @@
   const nomDeJeton = (t) => String(t).replace(/^\s*\\?\[\s*|\s*\\?\]\s*$/g, "").replace(/[\\\s]/g, "").toUpperCase();
 
   function reidentifier(src, correspondances) {
+    // Un texte recollé tel qu'on l'a copié commence par la consigne pour l'IA,
+    // dont l'exemple est un vrai jeton : on la retire avant tout, sinon elle
+    // compterait comme un remplacement (et afficherait la vraie valeur).
+    const sansConsigne = retirerConsigne(src);
+    const consigneRetiree = sansConsigne !== String(src);
+    src = sansConsigne;
     const parNom = new Map();
     for (const [tok, val] of Object.entries(correspondances || {})) parNom.set(nomDeJeton(tok), { tok, val });
     const categories = new Set(CATS.map(c => c.key));
@@ -465,11 +544,70 @@
     });
     const absents = [];
     for (const [nom, e] of parNom) if (!compte.has(nom)) absents.push(e.tok);
-    return { texte, remplaces, variantes, inconnus: [...inconnus], absents };
+    return { texte, remplaces, variantes, inconnus: [...inconnus], absents, consigneRetiree };
+  }
+
+  /* ------------------------- consigne pour l'IA ---------------------------
+     La ré-identification échoue quand l'IA réécrit les jetons ; un débutant ne
+     sait pas quoi lui dire. L'outil fournit la phrase. Elle n'entre JAMAIS dans
+     le fichier produit (PDF, Word) : seulement dans ce qu'on copie, le .txt, ou
+     le presse-papiers à part. `exemple` : un jeton réellement présent. */
+  const CONSIGNE_PSEUDO = (ex) => "Ce document est pseudonymisé. Les éléments entre crochets, comme " + ex +
+    ", remplacent des données réelles : reprends-les tels quels dans ta réponse, sans les modifier ni chercher à les deviner.";
+  const CONSIGNE_PAVES = "Ce document est anonymisé. Les passages noircis masquent des données réelles : " +
+    "ne cherche pas à les deviner.";
+  function consigneIA(mode, exemple) {
+    if (mode === "redact") return CONSIGNE_PAVES;
+    const ex = /^\[[A-Z][A-Z_]*_\d+\]$/.test(String(exemple || "")) ? exemple : "[PERSONNE_1]";
+    return CONSIGNE_PSEUDO(ex);
+  }
+  /* Retire une consigne placée en tête (avec les blancs qui la suivent). La
+     forme est reconnue, pas le texte exact : l'exemple change d'un document à
+     l'autre, et un copier-coller peut ajouter des espaces. */
+  const RE_CONSIGNE = /^\s*Ce document est (?:pseudonymisé\. Les éléments entre crochets, comme [^\n]{1,60}?, remplacent des données réelles : reprends-les tels quels dans ta réponse, sans les modifier ni chercher à les deviner\.|anonymisé\. Les passages noircis masquent des données réelles : ne cherche pas à les deviner\.)[ \t]*(?:\r?\n|$)\s*/u;
+  function retirerConsigne(src) { return String(src).replace(RE_CONSIGNE, ""); }
+
+  /* ------------------------------ profils métier ---------------------------
+     Un profil = les écarts au réglage « Général » (défauts des catégories). Ils
+     vivent ici, et non dans le balisage, pour être testés sous Node. L'adresse
+     (?metier=…) retient le profil : aucun stockage dans le navigateur. */
+  const PROFILS = [
+    { id: "general", label: "Général", ecarts: {},
+      phrase: "Tout ce qui identifie une personne est masqué. Les montants et les dates ordinaires restent en clair." },
+    { id: "comptabilite", label: "Comptabilité / fiduciaire", ecarts: { REFERENCE: false },
+      phrase: "Les numéros de facture, de pièce et de dossier restent aussi en clair : ils servent au travail." },
+    { id: "rh", label: "RH / paie", ecarts: {},
+      phrase: "Dates de période et montants en clair ; matricules, n° national et coordonnées masqués." },
+    { id: "syndical", label: "Délégué·e syndical·e", ecarts: { DATE: true },
+      phrase: "Les dates sont aussi masquées : la date d'un fait ou d'une audition aide à reconnaître un dossier." },
+    { id: "sante", label: "Soins de santé", ecarts: { DATE: true },
+      phrase: "Les dates sont aussi masquées : une date de soins peut suffire à reconnaître un patient." },
+    { id: "veterinaire", label: "Vétérinaire", ecarts: {}, enAvant: ["PUCE"],
+      phrase: "Les numéros de puce électronique sont masqués, comme les coordonnées du propriétaire." },
+  ];
+  function profil(id) { return PROFILS.find(p => p.id === id) || PROFILS[0]; }
+  /* Réglage complet d'un profil : { CAT: bool } pour chaque catégorie. */
+  function reglagesProfil(id) {
+    const p = profil(id), r = {};
+    for (const c of CATS) r[c.key] = c.defaut !== false;
+    return Object.assign(r, p.ecarts);
+  }
+  /* Les cases cochées correspondent-elles exactement au profil ? */
+  function memesReglages(actives, id) {
+    const r = reglagesProfil(id);
+    return CATS.every(c => (actives[c.key] !== false) === r[c.key]);
+  }
+  /* « ?metier=sante » → "sante" ; absent ou inconnu → "general", sans erreur. */
+  function profilDepuisAdresse(recherche) {
+    let v = null;
+    try { v = new URLSearchParams(String(recherche || "")).get("metier"); } catch (e) { v = null; }
+    return PROFILS.some(p => p.id === v) ? v : "general";
   }
 
   global.Regles = { CATS, EXCLUDE, cle, escapeRe, detect, dedup, completerOccurrences, extendAddresses,
                     analyser, creerTable, attribuerJetons, suggestionsDeNoms, reidentifier,
                     motifTerme, occurrencesTerme,
-                    valid: { luhn, validTel, validNiss, validBce, validIban, validCp, validReference } };
+                    consigneIA, retirerConsigne, PROFILS, profil, reglagesProfil, memesReglages, profilDepuisAdresse,
+                    valid: { luhn, validTel, validNiss, validBce, validIban, validCp, validReference,
+                             validNaissance, validPuce } };
 })(globalThis);

@@ -146,6 +146,14 @@
   input[type=text]:focus,textarea:focus{outline:2px solid var(--vert);outline-offset:-1px;border-color:var(--vert)}
   ::placeholder{color:var(--encre-3);opacity:1}
   textarea{display:block;width:100%;min-height:220px;resize:vertical;line-height:1.6}
+  /* Liste déroulante : même champ que input[type=text], chevron du jeu d'icônes */
+  select{font:inherit;font-size:var(--t-14);line-height:1.4;color:var(--encre);min-height:36px;max-width:100%;
+       padding:6px 36px 6px 12px;border:1px solid var(--bord-fort);border-radius:var(--r-2);cursor:pointer;
+       -webkit-appearance:none;appearance:none;
+       background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235f5f70' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center/18px;
+       transition:border-color var(--d-1) var(--courbe)}
+  select:hover{border-color:var(--encre-3)}
+  select:focus-visible{outline:2px solid var(--vert);outline-offset:-1px;border-color:var(--vert)}
   input[type=checkbox]{width:18px;height:18px;margin:0;accent-color:var(--vert);flex:none;cursor:pointer}
   label.opt{display:inline-flex;align-items:center;gap:8px;font-size:var(--t-14);color:var(--encre);cursor:pointer}
 
@@ -289,7 +297,8 @@
 
   /* Résultat, document chargé : vérification à gauche, actions à droite */
   main.avec-doc #pSortie .body{display:grid;grid-template-columns:minmax(0,1fr) 280px;
-       grid-template-areas:"verif actions" "stats nom";gap:var(--e-3) var(--e-6);align-items:start}
+       grid-template-areas:"verif actions" "stats nom" ". consigne";gap:var(--e-3) var(--e-6);align-items:start}
+  main.avec-doc #consigne{grid-area:consigne;margin:0}
   main.avec-doc #verif{grid-area:verif;margin:0}
   main.avec-doc #stats{grid-area:stats;margin:0}
   main.avec-doc #pSortie .controls{grid-area:actions;margin:0}
@@ -297,7 +306,7 @@
   main.avec-doc #downloadPdf{flex:1 1 100%}
   main.avec-doc #pSortie .controls button.sm{flex:1 1 auto}
   @media (max-width:900px){
-    main.avec-doc #pSortie .body{grid-template-columns:minmax(0,1fr);grid-template-areas:"verif" "actions" "nom" "stats"}
+    main.avec-doc #pSortie .body{grid-template-columns:minmax(0,1fr);grid-template-areas:"verif" "actions" "nom" "consigne" "stats"}
   }
 
   /* Bandeaux de vérification (#verif) */
@@ -373,6 +382,33 @@
   #cats .cat::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:currentColor}
   .cats-groupe{grid-column:1/-1;margin-top:var(--e-2);font-size:var(--t-12);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--encre-3)}
   .cats-actions{display:flex;gap:var(--e-1);margin-top:var(--e-1)}
+  #cats .cat{overflow-wrap:anywhere;min-width:0}    /* « d’immatriculation » ne déborde plus de sa colonne */
+  #cats .en-avant .cat{font-weight:600}
+  .cats-note{margin-top:var(--e-2)}
+
+  /* Profil métier (#metier dans le rail, #metierDepot avant tout document) */
+  .metier-ligne{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e-2) var(--e-3)}
+  .metier-titre{font-size:var(--t-14);font-weight:600;color:var(--encre-2)}
+  .metier .hint{margin-top:var(--e-1)}
+  #metierDepot{margin-top:var(--e-5);padding-top:var(--e-4);border-top:1px solid var(--bord)}
+  #metierDepot .metier-ligne .hint{flex:1 1 260px;margin:0}
+  main.avec-doc #metierDepot{display:none}
+  .rail .metier{margin:var(--e-1) 0 var(--e-3)}
+  .rail .metier select{width:100%}
+  .pli-titre{flex:none}
+  .pli-resume{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400;color:var(--encre-3)}
+
+  /* Consigne pour l'IA (#consigne, dans le résultat) */
+  #consigne{margin-top:var(--e-4);padding-top:var(--e-3);border-top:1px solid var(--bord)}
+  #demoExemple{margin:var(--e-4) 0 0}
+  #demoExemple .rates{margin:var(--e-2) 0 0;padding-left:var(--e-5)}
+  /* Profil changé : ce qui vient de changer se remarque, brièvement */
+  .signal{outline:2px solid var(--vert)!important;outline-offset:1px;animation:signal 1.6s var(--courbe) both}
+  @keyframes signal{0%,40%{box-shadow:0 0 0 4px rgba(0,130,77,.28)}100%{box-shadow:0 0 0 0 rgba(0,130,77,0)}}
+  #cats label.signal{border-radius:var(--r-1);background:var(--vert-teinte)}
+  .pli-resume.signal{color:var(--vert-actif);font-weight:600}
+  #consigne .hint{margin-top:var(--e-1)}
+  #consigne button{width:100%}
 
   /* Interrupteur « Détection par IA » (#nerToggle reste une case à cocher) */
   .ia{padding:var(--e-3) 0 0}
@@ -425,7 +461,9 @@
   main.atelier-commun>.panel{grid-column:1/-1}
   @media (min-width:901px){
     main.atelier-commun:not(.avec-doc) #pDepot .body{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
-         grid-template-areas:"drop sep texte" "drop sep actions" "status status status";column-gap:var(--e-5);align-items:stretch}
+         grid-template-areas:"drop sep texte" "drop sep actions" "status status status" "demo demo demo" "metier metier metier";column-gap:var(--e-5);align-items:stretch}
+    main.atelier-commun:not(.avec-doc) #metierDepot{grid-area:metier}
+    main.atelier-commun:not(.avec-doc) #demoExemple{grid-area:demo}
     main.atelier-commun:not(.avec-doc) #drop{grid-area:drop}
     main.atelier-commun:not(.avec-doc) .ou-sep{grid-area:sep;flex-direction:column;margin:0}
     main.atelier-commun:not(.avec-doc) .ou-sep .ou-suite{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -434,7 +472,8 @@
     main.atelier-commun:not(.avec-doc) #pDepot .controls{grid-area:actions}
     main.atelier-commun:not(.avec-doc) #status{grid-area:status}
     main.atelier-commun #pSortie .body{display:grid;grid-template-columns:minmax(0,1fr) 280px;
-         grid-template-areas:"verif actions" "stats nom";gap:var(--e-3) var(--e-6);align-items:start}
+         grid-template-areas:"verif actions" "stats nom" ". consigne";gap:var(--e-3) var(--e-6);align-items:start}
+    main.atelier-commun #consigne{grid-area:consigne;margin:0}
     main.atelier-commun #verif{grid-area:verif;margin:0} main.atelier-commun #stats{grid-area:stats;margin:0}
     main.atelier-commun #pSortie .controls{grid-area:actions;margin:0} main.atelier-commun #nomSortie{grid-area:nom;margin:0}
     main.atelier-commun #downloadPdf{flex:1 1 100%}
@@ -558,7 +597,7 @@
   #preview mark[data-cle]:hover{outline:2px solid var(--vert);outline-offset:1px}
   /* Résultat d'un texte collé : pas de bandeau de vérification, les chiffres prennent sa place */
   @media (min-width:901px){
-    main.atelier-commun:not(.avec-doc) #pSortie .body{grid-template-areas:"stats actions" "stats nom"}
+    main.atelier-commun:not(.avec-doc) #pSortie .body{grid-template-areas:"stats actions" "stats nom" "stats consigne"}
   }
   .rail li:focus-visible{outline-offset:-2px}
   .puce-terme.introuvable{color:var(--encre-3);background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--bord)}
@@ -582,6 +621,7 @@
     details.reglages>summary,details.pli>summary,.ia-ligne{min-height:44px}
     details.pli>summary{padding:0}
     #cats label.opt{min-height:44px}
+    select{font-size:var(--t-16);min-height:44px}
   }
 </style>
 <script>
@@ -667,6 +707,17 @@
         <button type="button" class="secondary" id="sample">Essayer avec un exemple</button>
         <button type="button" class="ghost" id="clear">Tout effacer</button>
       </div>
+      <!-- Exemple seulement : ce que l'outil a masqué, et ce qu'il a laissé passer -->
+      <div class="verif" id="demoExemple" role="status" aria-live="polite" hidden></div>
+      <!-- Profil métier, visible avant de déposer un document (repris dans le rail) -->
+      <div class="metier" id="metierDepot">
+        <div class="metier-ligne">
+          <label class="metier-titre" for="metierChoixDepot">Mon métier</label>
+          <select id="metierChoixDepot" data-metier></select>
+          <p class="hint" data-metier-phrase></p>
+        </div>
+        <div class="status" data-metier-retour role="status" aria-live="polite"></div>
+      </div>
     </div>
   </section>
 
@@ -719,9 +770,16 @@
                   <button type="button" data-mode="redact">Pavés noirs</button>
                 </div>
                 <p class="hint">Pseudonymes&nbsp;: <span class="tok">[PERSONNE_1]</span>, lisible par l'IA. Pavés noirs&nbsp;: caviardage définitif.</p>
-                <details class="pli">
-                  <summary>Catégories détectées</summary>
+                <details class="pli" id="pliCats">
+                  <summary><span class="pli-titre">Catégories détectées</span> <span class="pli-resume" id="metierResume"></span></summary>
+                  <div class="metier">
+                    <label class="reglage-titre" for="metierChoix">Mon métier</label>
+                    <select id="metierChoix" data-metier></select>
+                    <div class="status" data-metier-retour role="status" aria-live="polite"></div>
+                    <p class="hint" data-metier-phrase></p>
+                  </div>
                   <div class="row" id="cats"></div>
+                  <p class="hint cats-note">Montants et dates ordinaires restent en clair&nbsp;: seuls, ils n'identifient personne, et l'IA en a besoin pour travailler. Cochez-les si le montant ou la date est lui-même confidentiel (une rémunération très particulière peut suffire à reconnaître quelqu'un).</p>
                 </details>
               </div>
             </details>
@@ -765,8 +823,16 @@
         <button type="button" id="download" class="secondary sm">Télécharger .txt</button>
         <button type="button" id="downloadDocx" class="secondary sm">Télécharger .docx</button>
         <button type="button" id="copy" class="secondary sm">Copier le texte</button>
+        <button type="button" id="downloadRecap" class="secondary sm" title="Un fichier texte d'une page qui décrit le traitement, sans aucune donnée du document">Télécharger le récapitulatif</button>
       </div>
       <p class="hint" id="nomSortie"></p>
+      <!-- Consigne pour l'IA : jamais dans le fichier produit -->
+      <div id="consigne">
+        <label class="opt si-texte" for="joindreConsigne"><input type="checkbox" id="joindreConsigne" checked>Joindre la consigne pour l'IA</label>
+        <p class="hint si-texte" id="consigneAide"></p>
+        <button type="button" class="secondary sm si-doc" id="copyConsigne">Copier la consigne pour l'IA</button>
+        <p class="hint si-doc">À coller dans votre conversation, avec le document.</p>
+      </div>
     </div>
   </section>
 
@@ -835,7 +901,9 @@
     <details><summary>Et mon document Word&nbsp;?</summary><div class="a">Un <b>.docx</b> déposé s'ouvre comme un PDF&nbsp;: aperçu page par page, détections à leur place, vues Original / Anonymisé / Côte à côte. Ce qui ressort est <b>votre fichier Word</b>, pas une copie reconstruite&nbsp;: styles, tableaux, images, en-têtes et pieds de page sont conservés, seul le texte est remplacé — y compris dans les notes, les commentaires, le texte supprimé en suivi des modifications, les liens et les métadonnées. L'<b>aperçu</b>, lui, est une interprétation de votre navigateur (polices de remplacement si Calibri n'est pas installée, pagination approchée)&nbsp;: la mise en page du fichier produit reste celle d'origine. Le contenu des <b>images et des objets incorporés</b> n'est pas analysé&nbsp;; l'outil vous le signale. Les anciens fichiers <b>.doc</b> doivent d'abord être enregistrés en .docx.</div></details>
     <details><summary>Et le nom du fichier&nbsp;?</summary><div class="a">C'est une fuite qu'on oublie&nbsp;: «&nbsp;Devis pour Dupont.pdf&nbsp;» reste parlant même quand le contenu est propre. L'outil <b>propose les mots du nom</b> comme termes à masquer, et <b>applique le même remplacement au nom du fichier produit</b>&nbsp;: vous récupérez «&nbsp;Devis pour [PERSONNE_1]-anonymise.pdf&nbsp;».</div></details>
     <details><summary>Comment savoir que le fichier produit ne contient vraiment plus rien&nbsp;?</summary><div class="a">L'outil <b>relit le fichier qu'il vient de produire</b> et y cherche chaque valeur anonymisée — dans le texte extrait <em>et</em> dans les octets bruts du document décompressé. Le résultat s'affiche, et si quelque chose subsiste, <b>le téléchargement est bloqué</b>. C'est important&nbsp;: dans un PDF, poser un rectangle noir ne supprime pas le texte en dessous, qui reste copiable. Ici, les données sont réellement retirées du fichier.</div></details>
-    <details><summary>Qu'est-ce qui est détecté&nbsp;?</summary><div class="a"><b>Par règles</b>, adaptées aux documents belges en français et en néerlandais&nbsp;: e-mails, téléphones (belges et étrangers), IBAN, n° national, n° d'entreprise, n° INAMI / RIZIV, n° de carte d'identité, plaques d'immatriculation, références de dossier (après «&nbsp;n°&nbsp;», «&nbsp;réf.&nbsp;», «&nbsp;dossier&nbsp;»…), cartes bancaires, dates, montants, codes postaux avec leur commune, rues et noms précédés d'un titre («&nbsp;Madame&nbsp;», «&nbsp;De heer&nbsp;»… le titre reste, le nom est masqué). Les suites de mots qui ressemblent à des noms sont <b>proposées</b>, jamais masquées d'office. <b>Avec la détection par IA</b> (optionnelle, dans votre navigateur)&nbsp;: noms, lieux et organisations, même sans format particulier. Et <b>ce que vous désignez vous-même</b>&nbsp;: un mot cliqué, une zone sélectionnée ou un terme saisi est masqué partout.</div></details>
+    <details><summary>Qu'est-ce qui est détecté&nbsp;?</summary><div class="a"><b>Par règles</b>, adaptées aux documents belges en français et en néerlandais&nbsp;: e-mails, téléphones (belges et étrangers), IBAN, n° national, n° d'entreprise, n° INAMI / RIZIV, n° de carte d'identité, plaques d'immatriculation, références de dossier (après «&nbsp;n°&nbsp;», «&nbsp;réf.&nbsp;», «&nbsp;dossier&nbsp;»…), cartes bancaires, n° de puce électronique d'un animal, dates de naissance («&nbsp;né le&nbsp;», «&nbsp;geboren op&nbsp;», «&nbsp;°&nbsp;»…), codes postaux avec leur commune, rues et noms précédés d'un titre («&nbsp;Madame&nbsp;», «&nbsp;De heer&nbsp;»… le titre reste, le nom est masqué). <b>Les montants et les dates ordinaires restent en clair par défaut</b>&nbsp;: seuls, ils n'identifient personne, et c'est souvent ce que vous voulez faire analyser. Cochez «&nbsp;Montant&nbsp;» ou «&nbsp;Date&nbsp;» dans les catégories s'ils sont eux-mêmes confidentiels. Le choix «&nbsp;Mon métier&nbsp;» ajuste ces réglages (comptabilité, RH, délégué·e syndical·e, soins de santé, vétérinaire)&nbsp;; l'adresse de la page le retient, rien n'est enregistré dans votre navigateur. Les suites de mots qui ressemblent à des noms sont <b>proposées</b>, jamais masquées d'office. <b>Avec la détection par IA</b> (optionnelle, dans votre navigateur)&nbsp;: noms, lieux et organisations, même sans format particulier. Et <b>ce que vous désignez vous-même</b>&nbsp;: un mot cliqué, une zone sélectionnée ou un terme saisi est masqué partout.</div></details>
+    <details><summary>Que dire à l'IA quand je lui donne le document&nbsp;?</summary><div class="a">L'outil vous fournit la phrase. Pour un texte collé, elle est jointe en tête de ce que vous copiez (case «&nbsp;Joindre la consigne pour l'IA&nbsp;»)&nbsp;; pour un document, le bouton «&nbsp;Copier la consigne pour l'IA&nbsp;» la met dans le presse-papiers, à coller dans la conversation. Elle demande à l'IA de reprendre les pseudonymes (<span class="tok">[PERSONNE_1]</span>) tels quels, sans chercher à les deviner&nbsp;: c'est ce qui permet ensuite de remettre vos données dans sa réponse. Elle n'entre jamais dans le fichier produit.</div></details>
+    <details><summary>Puis-je garder une trace de ce qui a été fait&nbsp;?</summary><div class="a">Oui&nbsp;: «&nbsp;Télécharger le récapitulatif&nbsp;» produit un fichier texte d'une page — date, réglages, nombre de valeurs masquées par catégorie, résultat de la vérification, et une ligne pour noter votre relecture. Il ne contient <b>aucune donnée du document</b>, pas même le nom du fichier d'origine. Ce n'est pas une attestation&nbsp;: il décrit un traitement, il ne garantit pas le résultat.</div></details>
     <details><summary>Pseudonymes ou pavés noirs&nbsp;?</summary><div class="a">La <b>pseudonymisation</b> remplace chaque donnée par un jeton cohérent (<span class="tok">[PERSONNE_1]</span>)&nbsp;: le document reste lisible et exploitable par l'IA. Le <b>caviardage</b> (pavés noirs) supprime réellement l'information&nbsp;: rien n'est récupérable.</div></details>
     <details><summary>C'est gratuit&nbsp;? Open source&nbsp;?</summary><div class="a">Oui — gratuit et <a href="https://github.com/REVOLia-be/anonymiseur" rel="noopener">open source (AGPL-3.0)</a>, pour que chacun puisse vérifier que rien ne sort.</div></details>
   </div>
@@ -872,6 +940,7 @@
 <script>window.docxPreview = window.docx; window.docx = window.docxGen;</script>
 <script src="js/anon-geom.js"></script>
 <script src="js/regles.js"></script>
+<script src="js/recapitulatif.js"></script>
 <script src="js/anon-docx.js"></script>
 <script src="js/apercu-docx.js"></script>
 <script>
@@ -951,7 +1020,7 @@ function oublierIndex(){
   chargement++;
   texteHorsApercu=''; hitsHorsApercu=[];
   if(moteur){ moteur.fermer(); moteur=null; }       // libère URL d'objet et conteneurs hors écran
-  pdfIndex=null; indexValide=false; nomDocument=''; derniereVerif=null; Visu.fermer();
+  pdfIndex=null; indexValide=false; nomDocument=''; derniereVerif=null; dernierRapport=null; Visu.fermer();
   tableJetons.vider();                               // nouveau document : nouveaux jetons
   majBoutonPdf();
 }
@@ -1338,7 +1407,8 @@ const Visu = (function(){
         if(g.page!==page) continue;
         for(const r of g.rects){
           const z=document.createElement('div');
-          z.className='zone'+(h.exclu?' off':'');
+          z.className='zone'+(h.exclu?' off':'')+
+            (!h.exclu && Date.now()<signalJusqua && signalCles.has(cle(h)) ? ' signal' : '');
           z.style.background=couleur+'3d';
           z.style.border='1px solid '+couleur+'99';
           z.style.left  =(r[0]/info.largeur*100)+'%';
@@ -1486,6 +1556,7 @@ const Visu = (function(){
       const valeurs=aTraiter.map(h=>h.value);
       const r=await m.produire(aTraiter, activeMode, valeurs, encore);
       if(!encore() || m!==moteur) return;
+      dernierRapport=r.vide ? null : r;
       if(r.vide){
         resultatPret=false;
         v.className='verif work'; v.textContent='Rien à anonymiser : aucune détection active.';
@@ -1529,7 +1600,7 @@ const Visu = (function(){
            get page(){ return page; } };
 })();
 
-let derniereVerif=null;
+let derniereVerif=null, dernierRapport=null;
 /* Mentions que l'utilisateur a explicitement acceptées malgré l'échec de la
    vérification. On ne débloque jamais en bloc : chacune doit être lue. */
 const fuitesAcceptees=new Set();
@@ -1929,20 +2000,33 @@ Et Monsieur Karim El Amrani, né le 03/07/1989, domicilié 27 avenue Louise, 105
 numéro national 89.07.03-145.62, joignable au +32 478 12 34 56 ou karim.elamrani@gmail.com.
 
 Rémunération mensuelle brute : 3 250,00 €, versée sur le compte BE71 0961 2345 6769.
-Le présent contrat prend effet le 1er septembre 2024.`;
+Le présent contrat prend effet le 1er septembre 2024.
+Pour toute question, le travailleur peut s'adresser à Nadia Collard, au service du personnel.`;
+
+/* Ce que les règles laissent passer dans CET exemple, exprès : l'encadré qui
+   suit « Essayer avec un exemple » les montre tant qu'ils restent en clair.
+   Le montant et la date d'effet ne sont PAS des ratés : ils restent en clair
+   volontairement (catégories décochées par défaut). */
+const RATES_EXEMPLE = [
+  { texte:'BelgaTech', montre:'BelgaTech SPRL', pourquoi:'un nom de société, qu\'aucune règle ne reconnaît' },
+  { texte:'Nadia Collard', montre:'Nadia Collard', pourquoi:'un nom sans «\u00a0Madame\u00a0» ni «\u00a0Monsieur\u00a0» devant' },
+];
 
 let activeMode = 'pseudo';
-let enabled = {}; CATS.forEach(c=>enabled[c.key]=true);
+/* Profil métier : lu dans l'adresse (?metier=…), jamais stocké dans le
+   navigateur. `profilPerso` : une case a été changée à la main depuis. */
+let profilBase = Regles.profilDepuisAdresse(location.search), profilPerso = false;
+let enabled = Regles.reglagesProfil(profilBase);
 
 /* ---------- UI : cases catégories ---------- */
 /* Une vingtaine de cases : rangées par famille, pour qu'on s'y retrouve. Une
    catégorie absente des familles (ajoutée plus tard dans js/regles.js) tombe
    dans « Autres ». */
 const FAMILLES_CATS = [
-  ['Personnes', ['PERSONNE','NISS','CARTE_ID','INAMI','DATE']],
+  ['Personnes', ['PERSONNE','NISS','DATE_NAISSANCE','CARTE_ID','INAMI']],
   ['Coordonnées', ['EMAIL','TEL','RUE','CP_VILLE','LIEU']],
   ['Argent et entreprises', ['IBAN','CARTE','MONTANT','TVA_BE','ORG']],
-  ['Autres', ['PLAQUE','REFERENCE','TERME']],
+  ['Autres', ['PUCE','PLAQUE','REFERENCE','DATE','TERME']],
 ];
 const catsEl = document.getElementById('cats');
 (function(){
@@ -1955,7 +2039,7 @@ const catsEl = document.getElementById('cats');
     if(!cats.length) continue;
     html+='<div class="cats-groupe">'+nom+'</div>';
     for(const c of cats)
-      html+=`<label class="opt"><input type="checkbox" checked data-cat="${c.key}">`+
+      html+=`<label class="opt"><input type="checkbox"${enabled[c.key]!==false?' checked':''} data-cat="${c.key}">`+
             `<span class="cat" style="background:${c.color}22;color:${c.color};border:1px solid ${c.color}55">${escapeHtml(c.label)}</span></label>`;
   }
   catsEl.innerHTML=html;
@@ -1968,12 +2052,120 @@ const catsEl = document.getElementById('cats');
     const b=e.target.closest('button[data-cats]'); if(!b) return;
     const coche=b.dataset.cats==='tout';
     catsEl.querySelectorAll('input[data-cat]').forEach(i=>{ i.checked=coche; enabled[i.dataset.cat]=coche; });
-    if(lastText) run(lastText);
+    apresChoixManuel();
   });
 })();
 catsEl.addEventListener('change',e=>{
-  if(e.target.dataset.cat){enabled[e.target.dataset.cat]=e.target.checked; if(lastText) run(lastText);}
+  if(e.target.dataset.cat){ enabled[e.target.dataset.cat]=e.target.checked; apresChoixManuel(); }
 });
+/* Une case changée à la main : le sélecteur dit « personnalisé » (sans rien
+   perdre), ou revient au profil si les cases lui correspondent de nouveau. */
+function apresChoixManuel(){
+  profilPerso = !Regles.memesReglages(enabled, profilBase);
+  majMetierUI();
+  document.querySelectorAll('[data-metier-retour]').forEach(r=>{ r.textContent=''; r.className='status'; });
+  if(lastText) run(lastText);
+}
+
+/* ---------- profil métier ---------- */
+function majMetierUI(){
+  const p=Regles.profil(profilBase);
+  document.querySelectorAll('select[data-metier]').forEach(sel=>{
+    if(!sel.options.length)
+      sel.innerHTML=Regles.PROFILS.map(x=>'<option value="'+x.id+'">'+escapeHtml(x.label)+'</option>').join('')+
+                    '<option value="perso" disabled>Personnalisé</option>';
+    sel.querySelector('option[value="perso"]').hidden=!profilPerso;
+    sel.value=profilPerso ? 'perso' : profilBase;
+  });
+  const phrase = profilPerso
+    ? 'Réglage personnalisé, à partir du profil «\u00a0'+p.label+'\u00a0». Choisissez un métier pour revenir à ses réglages.'
+    : p.phrase;
+  document.querySelectorAll('[data-metier-phrase]').forEach(e=>e.textContent=phrase);
+  document.getElementById('metierResume').textContent='· '+(profilPerso ? 'personnalisé' : p.label);
+  const enAvant=new Set(p.enAvant||[]);
+  catsEl.querySelectorAll('input[data-cat]').forEach(i=>{
+    i.checked = enabled[i.dataset.cat]!==false;
+    i.closest('label').classList.toggle('en-avant', enAvant.has(i.dataset.cat));
+  });
+}
+/* L'adresse retient le profil : un favori ou un lien partagé en formation
+   ouvre le bon réglage. « Général » est l'adresse nue. */
+function majAdresse(id){
+  try{
+    const u=new URL(location.href);
+    if(id==='general') u.searchParams.delete('metier'); else u.searchParams.set('metier', id);
+    history.replaceState(history.state, '', u);
+  }catch(e){ /* adresse non modifiable (aperçu) : sans conséquence */ }
+}
+/* Ce qui vient de changer se remarque : cases, zones et surlignages ajoutés. */
+let signalCles=new Set(), signalJusqua=0, minuterieSignal=null;
+function signaler(){
+  clearTimeout(minuterieSignal);
+  minuterieSignal=setTimeout(()=>{
+    signalCles=new Set();
+    document.querySelectorAll('.signal').forEach(e=>e.classList.remove('signal'));
+  }, 2200);
+}
+function changerProfil(id, select){
+  if(id==='perso') return;
+  const avant=Object.assign({}, enabled);
+  const occAvant=(k)=>lastHits.filter(h=>h.cat===k).length;
+  const comptesAvant={}; Regles.CATS.forEach(c=>comptesAvant[c.key]=occAvant(c.key));
+  const clesAvant=new Set(lastHits.map(h=>Visu.cle(h)));
+  profilBase=id; profilPerso=false;
+  enabled=Regles.reglagesProfil(id);
+  majAdresse(id); majMetierUI();
+  const changes=Regles.CATS.filter(c=>(avant[c.key]!==false)!==(enabled[c.key]!==false));
+  // les cases concernées changent à vue
+  for(const c of changes){
+    const i=catsEl.querySelector('input[data-cat="'+c.key+'"]');
+    if(i) i.closest('label').classList.add('signal');
+  }
+  const pli=document.getElementById('pliCats');
+  if(changes.length && pli && !pli.open) document.getElementById('metierResume').classList.add('signal');
+  if(lastText){
+    run(lastText);
+    signalCles=new Set(lastHits.map(h=>Visu.cle(h)).filter(k=>!clesAvant.has(k)));
+    signalJusqua=Date.now()+2200;
+    Visu.majZones(); renderAll(lastText, lastHits);
+  }
+  signaler();
+  // le retour, en clair et chiffré
+  const p=Regles.profil(id);
+  let msg='Profil '+p.label+' : ';
+  if(!changes.length) msg+='mêmes catégories qu\'avant'+(lastText ? ', rien ne change dans ce document.' : '.');
+  else{
+    msg+=changes.map(c=>{
+      const on=enabled[c.key]!==false;
+      let t='«\u00a0'+c.label+'\u00a0» '+(on?'cochée':'décochée');
+      if(lastText){
+        const n = on ? lastHits.filter(h=>h.cat===c.key).length : comptesAvant[c.key];
+        t+=' — '+(n===0 ? 'aucun élément concerné dans ce document'
+              : on ? pl(n,'élément de plus masqué','éléments de plus masqués')+' dans ce document'
+                   : pl(n,'élément n\'est plus masqué','éléments ne sont plus masqués')+' dans ce document');
+      }
+      return t;
+    }).join(' ; ')+(lastText ? '.' : '. S\'appliquera au prochain document.');
+  }
+  document.querySelectorAll('[data-metier-retour]').forEach(r=>{ r.textContent=''; r.className='status'; });
+  const zone=(select && select.closest('.metier') || document).querySelector('[data-metier-retour]');
+  if(zone){
+    zone.className='status ok'; zone.textContent=msg;
+    // dans le rail, le haut défile seul : le retour doit être lu sans chercher
+    if(zone.closest('.rail')) zone.scrollIntoView({ block:'nearest' });
+  }
+}
+/* Dans le rail, le haut (IA, mode, pli) a une hauteur bornée et défile seul :
+   à l'ouverture du pli, on l'amène en tête, sinon il s'ouvre hors de la vue. */
+document.getElementById('pliCats').addEventListener('toggle', e=>{
+  const pli=e.target, haut=pli.closest('.rail-haut');
+  if(!pli.open || !haut || haut.scrollHeight<=haut.clientHeight) return;
+  const dy=pli.getBoundingClientRect().top - haut.getBoundingClientRect().top - 4;
+  haut.scrollBy({ top: dy, behavior:'smooth' });
+});
+document.querySelectorAll('select[data-metier]').forEach(sel=>
+  sel.addEventListener('change', ()=>changerProfil(sel.value, sel)));
+majMetierUI();
 
 /* ---------- mode ---------- */
 document.getElementById('mode').addEventListener('click',e=>{
@@ -1984,6 +2176,7 @@ document.getElementById('mode').addEventListener('click',e=>{
     b.setAttribute('aria-pressed', b===e.target ? 'true' : 'false');
   });
   if(lastText) run(lastText);
+  majConsigne();
 });
 
 /* ---------- détection ---------- */
@@ -2037,6 +2230,7 @@ function run(text){
     Visu.majRail();
   }
   majBoutonPdf();                        // nom du fichier produit et état du bouton
+  majDemoExemple();
   majSuggestionsNoms();
   majTermes();                           // « introuvable » suit le texte courant
   if(indexValide){                       // document avec mise en page : visualiseur
@@ -2058,9 +2252,10 @@ function renderAll(text,hits){
     const col=catColor(h.cat);
     const tag = h.prio===1 ? ' · IA' : '';
     const k=escapeHtml(Visu.cle(h));
+    const sig = (!h.exclu && Date.now()<signalJusqua && signalCles.has(Visu.cle(h))) ? ' class="signal"' : '';
     prev+= h.exclu
       ? `<mark class="off" data-cle="${k}" title="Conservé tel quel — ${escapeHtml(catLabel(h.cat))}${tag} (cliquer pour masquer)">${escapeHtml(text.slice(h.start,h.end))}</mark>`
-      : `<mark data-cle="${k}" style="background:${col}33;color:${col};border:1px solid ${col}77" title="${escapeHtml(catLabel(h.cat))}${tag} → ${escapeHtml(h.token)} (cliquer pour conserver tel quel)">${escapeHtml(text.slice(h.start,h.end))}</mark>`;
+      : `<mark${sig} data-cle="${k}" style="background:${col}33;color:${col};border:1px solid ${col}77" title="${escapeHtml(catLabel(h.cat))}${tag} → ${escapeHtml(h.token)} (cliquer pour conserver tel quel)">${escapeHtml(text.slice(h.start,h.end))}</mark>`;
     j=h.end;
   });
   prev+=escapeHtml(text.slice(j));
@@ -2081,6 +2276,40 @@ function renderAll(text,hits){
      <div><b>${uniq}</b> valeur${s(uniq)} unique${s(uniq)}</div>
      <div><b>${nCat}</b> catégorie${s(nCat)}</div>`;
   renderTable(hits);
+  majConsigne();
+}
+
+/* ---------- l'exemple : ce qui est masqué, ce qui est passé ----------
+   Calculé sur l'état réel, à chaque analyse ; jamais pour un texte ou un
+   document de l'utilisateur. */
+function majDemoExemple(){
+  const z=document.getElementById('demoExemple');
+  if(pdfIndex || lastText!==SAMPLE){ z.hidden=true; z.innerHTML=''; return; }
+  const couvert=(debut,fin)=>lastHits.some(h=>h.start<=debut && h.end>=fin);
+  const restants=RATES_EXEMPLE.filter(r=>{
+    const re=Regles.motifTerme(r.texte); if(!re) return false;
+    let m, clair=false;
+    while((m=re.exec(lastText))){ if(!couvert(m.index, m.index+m[0].length)) clair=true; if(m.index===re.lastIndex) re.lastIndex++; }
+    return clair;
+  });
+  const n=new Set(lastHits.map(h=>h.token)).size;
+  const volontaires=[];
+  if(enabled.MONTANT===false) volontaires.push('le montant');
+  if(enabled.DATE===false) volontaires.push('la date d\'effet');
+  const note = volontaires.length
+    ? '<div class="pertes">'+volontaires.join(' et ').replace(/^./,c=>c.toUpperCase())+(volontaires.length>1?' restent':' reste')+
+      ' en clair volontairement&nbsp;: seul'+(volontaires.length>1?'s':'')+', ils n\'identifient personne.</div>' : '';
+  z.hidden=false;
+  if(!restants.length){
+    z.className='verif ok';
+    z.innerHTML='<b>Tout est masqué.</b> Sur vos documents, cette relecture reste à faire à chaque fois.'+note;
+    return;
+  }
+  z.className='verif';
+  z.innerHTML='<b>L\'outil a masqué '+pl(n,'élément','éléments')+'. Il en a laissé passer '+restants.length+'&nbsp;:</b>'+
+    '<ul class="rates">'+restants.map(r=>'<li>«&nbsp;'+escapeHtml(r.montre)+'&nbsp;» — '+escapeHtml(r.pourquoi)+'</li>').join('')+'</ul>'+
+    '<div class="pertes">Double-cliquez '+(restants.length>1?'chacun':'ce mot')+' dans le texte (ou sélectionnez-le) pour le masquer partout&nbsp;: '+
+    'c\'est le réflexe à prendre sur vos vrais documents.</div>'+note;
 }
 
 function resetBuild(){}  // conservé pour compatibilité (l'anonymisation est désormais locale au rendu)
@@ -2495,16 +2724,86 @@ document.getElementById('clear').addEventListener('click',()=>{
   document.getElementById('reidOut').innerHTML='<div class="empty">Le texte avec vos données apparaîtra ici.</div>';
   document.getElementById('mapInfo').textContent='table de la session en cours';
   const bilan=document.getElementById('reidBilan'); if(bilan) bilan.remove();
+  majDemoExemple();
 });
+/* ---------- consigne pour l'IA ----------
+   Jamais dans le fichier produit (PDF, Word) : seulement dans le texte copié et
+   le .txt d'un texte collé (case à cocher), ou copiée à part pour un document. */
+function exempleJeton(){
+  const h=lastHits.find(x=>x.cat==='PERSONNE') || lastHits[0];
+  return h && h.token;
+}
+function consigneActuelle(){ return Regles.consigneIA(activeMode, exempleJeton()); }
+function texteACopier(){
+  const joindre=!pdfIndex && lastHits.length && document.getElementById('joindreConsigne').checked;
+  return joindre ? consigneActuelle()+'\n\n'+lastAnon : lastAnon;
+}
+function majConsigne(){
+  const c=consigneActuelle();
+  document.getElementById('consigneAide').textContent = 'Placée en tête du texte copié et du .txt, elle demande à l\'IA '+
+    (activeMode==='redact' ? 'de ne pas chercher à deviner les passages noircis.' : 'de reprendre les pseudonymes tels quels.');
+  document.getElementById('consigneAide').title=c;
+  document.getElementById('copyConsigne').title=c;
+}
+/* Retour de copie : « Copié », puis le libellé d'origine (même sur double clic). */
+function copier(bouton, texte){
+  if(!bouton.dataset.libelle) bouton.dataset.libelle=bouton.textContent;
+  return navigator.clipboard.writeText(texte).then(()=>{
+    bouton.textContent='Copié';
+    clearTimeout(bouton._minuterie);
+    bouton._minuterie=setTimeout(()=>{ bouton.textContent=bouton.dataset.libelle; }, 1400);
+  }).catch(()=>alert('La copie a échoué : votre navigateur refuse l\'accès au presse-papiers.'));
+}
 document.getElementById('copy').addEventListener('click',()=>{
   if(!lastAnon){alert('Analysez d\'abord un texte.');return;}
-  navigator.clipboard.writeText(lastAnon).then(()=>{
-    const b=document.getElementById('copy'); const t=b.textContent; b.textContent='Copié'; setTimeout(()=>b.textContent=t,1400);
-  });
+  copier(document.getElementById('copy'), texteACopier());
+});
+document.getElementById('copyConsigne').addEventListener('click',()=>{
+  copier(document.getElementById('copyConsigne'), consigneActuelle());
+});
+
+/* ---------- récapitulatif d'anonymisation (js/recapitulatif.js) ----------
+   Des nombres et des réglages, aucune donnée du document, pas même le nom du
+   fichier d'origine. */
+function typeEntree(){
+  if(!pdfIndex) return 'texte';
+  if(moteur && moteur.nom==='docx') return 'word';
+  if(pdfIndex.image) return 'image';
+  return pdfIndex.ocr ? 'pdf-scanne' : 'pdf';
+}
+function etatVerification(){
+  if(!pdfIndex) return { etat:'sans-objet' };
+  if(!derniereVerif) return { etat:'en-attente' };
+  const f=derniereVerif.fuites||[];
+  if(f.length) return { etat:'echec', nMentions:f.length, nAcceptees:f.filter(x=>fuitesAcceptees.has(x)).length };
+  return { etat: pdfIndex.ocr ? 'non-verifiable' : 'verifie' };
+}
+document.getElementById('downloadRecap').addEventListener('click',()=>{
+  if(!lastText){alert('Analysez d\'abord un texte.');return;}
+  const r=dernierRapport||{};
+  const av=[];
+  if(pdfIndex && pdfIndex.ocr) av.push('texte reconnu par OCR : un mot mal lu n\'est pas détecté, donc pas masqué');
+  if(typeEntree()==='pdf' || typeEntree()==='pdf-scanne') av.push('le ré-encodage retire liens, formulaires, signets, signatures et métadonnées');
+  for(const a of (r.avertissements||[])) av.push(a);
+  if(hitsHorsApercu.length) av.push(pl(hitsHorsApercu.length,'valeur remplacée','valeurs remplacées')+' hors de l\'aperçu (commentaires, révisions, champs)');
+  const p=Regles.profil(profilBase);
+  const texte=Recapitulatif.generer({
+    date:new Date(), nomProduit:nomDeSortie(), entree:typeEntree(), mode:activeMode,
+    profil: profilPerso ? 'personnalisé (à partir de « '+p.label+' »)' : p.label,
+    ia:nerEnabled, hits:lastHits.concat(hitsHorsApercu), libelle:catLabel,
+    nEcartees:new Set(lastHitsTous.filter(h=>h.exclu).map(h=>Visu.cle(h))).size,
+    nTermes:termesManuels.size, verification:etatVerification(), avertissements:av,
+    interdits:[...lastHitsTous.map(h=>h.value), ...hitsHorsApercu.map(h=>h.value), ...termesManuels,
+               nomDocument, String(nomDocument||'').replace(/\.[a-z0-9]{1,5}$/i,'')] });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([texte],{type:'text/plain;charset=utf-8'}));
+  a.download=nomDeSortie('txt').replace(/-anonymise\.txt$/,'-recapitulatif.txt');
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 30000);
 });
 document.getElementById('download').addEventListener('click',()=>{
   if(!lastAnon){alert('Analysez d\'abord un texte.');return;}
-  const blob=new Blob([lastAnon],{type:'text/plain;charset=utf-8'});
+  const blob=new Blob([texteACopier()],{type:'text/plain;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nomDeSortie('txt'); a.click();
 });
 
@@ -2678,6 +2977,7 @@ function bilanReid(r){
   const liste=(a)=>a.slice(0,8).map(escapeHtml).join(', ')+(a.length>8?' … (+'+(a.length-8)+')':'');
   const lignes=['<b>'+pl(r.remplaces,'jeton remplacé','jetons remplacés')+'</b>'+
                 (r.variantes?' (dont '+pl(r.variantes,'écrit autrement','écrits autrement')+' par l\'IA)':'')+'.'];
+  if(r.consigneRetiree) lignes.push('La consigne pour l\'IA, en tête du texte, a été retirée.');
   if(r.inconnus.length) lignes.push(pl(r.inconnus.length,'jeton absent de la table','jetons absents de la table')+
                 ' : '+liste(r.inconnus)+' — laissé'+(r.inconnus.length>1?'s':'')+' tel'+(r.inconnus.length>1?'s':'')+' quel'+(r.inconnus.length>1?'s':'')+'.');
   if(r.absents.length) lignes.push(pl(r.absents.length,'jeton de la table n\'apparaît','jetons de la table n\'apparaissent')+
@@ -2689,9 +2989,7 @@ let reidLast='';
 document.getElementById('reidBtn').addEventListener('click',reidentify);
 document.getElementById('reidCopy').addEventListener('click',()=>{
   if(!reidLast){alert('Ré-identifiez d\'abord un texte.');return;}
-  navigator.clipboard.writeText(reidLast).then(()=>{
-    const b=document.getElementById('reidCopy'); const t=b.textContent; b.textContent='Copié'; setTimeout(()=>b.textContent=t,1400);
-  });
+  copier(document.getElementById('reidCopy'), reidLast);
 });
 </script>
 
