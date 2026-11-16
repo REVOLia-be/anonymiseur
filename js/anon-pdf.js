@@ -420,3 +420,51 @@ export function verifier(octetsResultat, valeurs) {
 export function ouvrir(octets) {
   return mupdf.PDFDocument.openDocument(octets, "application/pdf");
 }
+
+/* --- Image -> PDF d'une page ----------------------------------------------
+   MuPDF ouvre une image comme un document d'une page ; on la réécrit en PDF
+   pour que tout le reste de la chaîne (index OCR, caviardage, vérification)
+   la traite comme un PDF scanné. Les octets attendus sont ceux que le thread
+   principal a déjà normalisés (orientation EXIF appliquée, réduits, ré-encodés
+   en JPEG ou PNG), jamais le fichier brut.
+
+   La page est dimensionnée pour que son plus grand côté fasse au plus
+   `PAGE_MAX` pt (A4) : rendue à l'échelle OCR, une page de la taille native
+   d'une photo produirait un pixmap énorme.
+
+   ⚠ L'option "compress" du DocumentWriter est INDISPENSABLE : sans elle, les
+   pixels sont écrits bruts (PNG de 150 Ko -> PDF de 9 Mo ; 74 Mo pour une
+   photo de 4000 px).
+
+   Retourne { octets, echelleOcr } : `echelleOcr` est le nombre de pixels de
+   l'image par point de page, plafonné — l'échelle à laquelle rendre la page
+   pour retrouver (à peu près) la résolution de l'image. */
+const PAGE_MAX = 842;
+const ECHELLE_OCR_MAX = 3;
+
+export function imageEnPdf(octetsImage, mime) {
+  const src = mupdf.Document.openDocument(octetsImage, mime);
+  try {
+    const pg = src.loadPage(0);
+    try {
+      const [x0, y0, x1, y1] = pg.getBounds();
+      const w = x1 - x0, h = y1 - y0;
+      // Dimensions réelles en pixels (les bornes de la page, elles, dépendent
+      // de la densité déclarée par l'image : 72, 96, 300 dpi…).
+      const img = new mupdf.Image(octetsImage);
+      const pxL = img.getWidth(), pxH = img.getHeight();
+      img.destroy();
+      const f = Math.min(1, PAGE_MAX / Math.max(w, h));
+      const largeur = w * f, hauteur = h * f;
+      const buf = new mupdf.Buffer();
+      const ecr = new mupdf.DocumentWriter(buf, "pdf", "compress");
+      const dev = ecr.beginPage([0, 0, largeur, hauteur]);
+      pg.run(dev, mupdf.Matrix.concat(mupdf.Matrix.translate(-x0, -y0), mupdf.Matrix.scale(f, f)));
+      ecr.endPage();
+      ecr.close();
+      const octets = buf.asUint8Array().slice();      // règle nº1
+      const echelleOcr = Math.min(ECHELLE_OCR_MAX, Math.max(1, Math.max(pxL, pxH) / Math.max(largeur, hauteur)));
+      return { octets, echelleOcr };
+    } finally { pg.destroy(); }
+  } finally { src.destroy(); }
+}

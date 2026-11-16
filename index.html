@@ -232,6 +232,10 @@
   .lasso{position:absolute;border:1.5px dashed var(--accent-d);background:rgba(0,191,99,.14);
         pointer-events:none;border-radius:2px;z-index:3}
   .feuille.designable{cursor:crosshair}
+  /* Page Word : clone du DOM rendu, dans un Shadow DOM, mis à l'échelle ; les
+     zones et le lasso se posent par-dessus, en pourcentage. */
+  .feuille .apercu-docx{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;
+        user-select:none;-webkit-user-select:none}
   @media(max-width:900px){.corps-atelier{grid-template-columns:1fr}
     .rail{border-left:0;border-top:1px solid var(--line);height:auto;max-height:260px}}
   .scene-vide{margin:auto;color:var(--muted);font-size:13.5px;padding:50px 20px;text-align:center;
@@ -306,7 +310,7 @@
   <div class="trust">
     <span>🔒 <b>Aucune donnée envoyée</b></span>
     <span>💸 <b>Gratuit</b></span>
-    <span>📄 <b>PDF : mise en page préservée</b></span>
+    <span>📄 <b>PDF et Word : mise en page préservée</b></span>
     <span>🧩 <b>Open source</b></span>
     <span>✈️ Hors-ligne</span>
   </div>
@@ -317,11 +321,11 @@
   <p class="subtitle">Trois étapes, zéro envoi de données. Vous gardez le contrôle du début à la fin.</p>
   <div class="steps">
     <div class="step"><div class="n">1</div><h3>Déposez votre document</h3>
-      <p>PDF (même scanné), Word ou image — ou collez simplement du texte. Tout reste sur votre appareil.</p></div>
+      <p>PDF (même scanné), image (JPG, PNG…) ou Word — ou collez simplement du texte. Tout reste sur votre appareil.</p></div>
     <div class="step"><div class="n">2</div><h3>Vérifiez sur le document</h3>
       <p>Les détections sont surlignées <b>à leur place réelle</b> sur vos pages. Un clic écarte une valeur, un autre l'ajoute&nbsp;: <b>cliquez un mot oublié</b> et il sera masqué partout.</p></div>
     <div class="step"><div class="n">3</div><h3>Téléchargez</h3>
-      <p>Un PDF à la <b>mise en page identique</b>, avec les données en moins. L'outil relit le fichier produit et bloque le téléchargement s'il y trouve encore quelque chose.</p></div>
+      <p>Un PDF ou un Word à la <b>mise en page identique</b>, avec les données en moins. L'outil relit le fichier produit et bloque le téléchargement s'il y trouve encore quelque chose.</p></div>
   </div>
 </section>
 
@@ -332,14 +336,15 @@
     <div class="body">
       <div class="drop" id="drop">
         📄 <b>Glissez un PDF, un Word ou une image ici</b> ou cliquez pour choisir un fichier
-        <div class="small">PDF (texte ou scanné) · Word (.docx) · images JPG/PNG. Tout est lu dans votre navigateur — rien n'est envoyé. Les scans sont reconnus par OCR local.</div>
-        <input type="file" id="file" accept="application/pdf,image/*,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+        <div class="small">PDF (texte ou scanné) · Word (.docx) · images JPG, PNG, WebP, GIF, BMP. Tout est lu dans votre navigateur — rien n'est envoyé. Les scans sont reconnus par OCR local.</div>
+        <input type="file" id="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/gif,image/bmp,.jpg,.jpeg,.png,.webp,.gif,.bmp,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
       </div>
       <!-- Une fois un document chargé, ce bandeau remplace la grande zone de dépôt -->
       <div class="docinfo" id="docinfo" hidden>
         <div>
           <div class="nom" id="docnom"></div>
           <div class="meta" id="docmeta"></div>
+          <div class="meta" id="docnote" hidden></div>
         </div>
         <span class="pousse"></span>
         <button class="ghost" id="changerDoc">Changer de document</button>
@@ -439,7 +444,7 @@
             </label>
           </div>
           <div class="status" id="nerStatus"></div>
-          <div class="hint">Le modèle IA est servi <b>localement</b> (aucun téléchargement externe, fonctionne hors-ligne). <b>Votre document ne sort jamais.</b> 1ᵉʳ chargement un peu plus lent (mise en cache du modèle).</div>
+          <div class="hint">Le modèle (~135 Mo) est téléchargé une fois depuis le stockage de REVOLia, puis gardé en cache. <b>Votre document, lui, ne sort jamais.</b></div>
         </div>
       </details>
     </div>
@@ -488,9 +493,10 @@
   <p class="subtitle">Tout ce qu'il faut savoir avant d'anonymiser votre premier document.</p>
   <div class="faq">
     <details><summary>Mes documents sont-ils envoyés quelque part&nbsp;?</summary><div class="a">Non. Tout le traitement (lecture, OCR, détection, anonymisation) se fait dans votre navigateur. Le contenu de vos documents ne quitte jamais votre appareil — vérifiable dans l'onglet « réseau » de votre navigateur. Voir la <a href="confidentialite.html">politique de confidentialité</a>.</div></details>
-    <details><summary>Quels types de documents puis-je traiter&nbsp;?</summary><div class="a">PDF (y compris scannés, grâce à la reconnaissance de texte OCR), Word (.docx), images JPG/PNG, ou simplement du texte collé. Seul le <b>PDF</b> conserve sa mise en page&nbsp;; les autres formats passent par un rendu texte.</div></details>
-    <details><summary>Et les documents scannés&nbsp;?</summary><div class="a">Ils fonctionnent&nbsp;: la reconnaissance de texte (OCR) tourne localement et donne la position de chaque mot, ce qui permet d'effacer réellement les pixels concernés sur l'image. <b>Avec une réserve importante</b>&nbsp;: un mot mal reconnu n'est pas détecté, donc pas masqué — et comme la page est une image, la vérification automatique ne peut rien confirmer. Sur un scan, <b>parcourez les pages une à une</b> avant d'utiliser le document.</div></details>
+    <details><summary>Quels types de documents puis-je traiter&nbsp;?</summary><div class="a">PDF (y compris scannés, grâce à la reconnaissance de texte OCR), Word (.docx), images (JPG, PNG, WebP, GIF, BMP), ou simplement du texte collé. Le <b>PDF</b>, les <b>images</b> et le <b>Word</b> conservent leur mise en page&nbsp;: une image devient un PDF d'une page, un Word ressort en <b>.docx</b>. Seul le texte collé passe par un rendu texte.</div></details>
+    <details><summary>Et les documents scannés&nbsp;?</summary><div class="a">Ils fonctionnent&nbsp;: la reconnaissance de texte (OCR) tourne localement et donne la position de chaque mot, ce qui permet d'effacer réellement les pixels concernés sur l'image. <b>Avec une réserve importante</b>&nbsp;: un mot mal reconnu n'est pas détecté, donc pas masqué — et comme la page est une image, la vérification automatique ne peut rien confirmer. Sur un scan ou une image, <b>parcourez les pages une à une</b> avant d'utiliser le document.</div></details>
     <details><summary>Mon PDF garde-t-il sa mise en page&nbsp;?</summary><div class="a">Oui. Le document n'est pas reconstruit ni transformé en images&nbsp;: c'est votre PDF, avec ses polices, ses tableaux, son logo et son poids d'origine — les données en moins. En contrepartie, le ré-encodage retire <b>liens, formulaires, signets et signatures</b> en tant qu'éléments interactifs, ainsi que les métadonnées du fichier. L'outil vous le rappelle avant le téléchargement.</div></details>
+    <details><summary>Et mon document Word&nbsp;?</summary><div class="a">Un <b>.docx</b> déposé s'ouvre comme un PDF&nbsp;: aperçu page par page, détections à leur place, vues Original / Anonymisé / Côte à côte. Ce qui ressort est <b>votre fichier Word</b>, pas une copie reconstruite&nbsp;: styles, tableaux, images, en-têtes et pieds de page sont conservés, seul le texte est remplacé — y compris dans les notes, les commentaires, le texte supprimé en suivi des modifications, les liens et les métadonnées. L'<b>aperçu</b>, lui, est une interprétation de votre navigateur (polices de remplacement si Calibri n'est pas installée, pagination approchée)&nbsp;: la mise en page du fichier produit reste celle d'origine. Le contenu des <b>images et des objets incorporés</b> n'est pas analysé&nbsp;; l'outil vous le signale. Les anciens fichiers <b>.doc</b> doivent d'abord être enregistrés en .docx.</div></details>
     <details><summary>Et le nom du fichier&nbsp;?</summary><div class="a">C'est une fuite qu'on oublie&nbsp;: «&nbsp;Devis pour Dupont.pdf&nbsp;» reste parlant même quand le contenu est propre. L'outil <b>propose les mots du nom</b> comme termes à masquer, et <b>applique le même remplacement au nom du fichier produit</b> — vous récupérez «&nbsp;Devis pour [PERSONNE_1]-anonymise.pdf&nbsp;».</div></details>
     <details><summary>Comment savoir que le fichier produit ne contient vraiment plus rien&nbsp;?</summary><div class="a">L'outil <b>relit le fichier qu'il vient de produire</b> et y cherche chaque valeur anonymisée — dans le texte extrait <i>et</i> dans les octets bruts du document décompressé. Le résultat s'affiche, et si quelque chose subsiste, <b>le téléchargement est bloqué</b>. C'est important&nbsp;: dans un PDF, poser un rectangle noir ne supprime pas le texte en dessous, qui reste copiable. Ici, les données sont réellement retirées du fichier.</div></details>
     <details><summary>Qu'est-ce qui est détecté&nbsp;?</summary><div class="a">Par règles : e-mails, téléphones, IBAN, n° national belge, n° d'entreprise (TVA BE), cartes, dates, montants, codes postaux. Avec la détection IA locale (optionnelle) : noms, adresses, organisations — même sans format particulier. Et <b>ce que vous désignez vous-même</b> : cliquez un mot sur le document, ou faites glisser pour sélectionner une zone, et il sera masqué partout.</div></details>
@@ -519,7 +525,16 @@
 <script src="vendor/tesseract/tesseract.min.js"></script>
 <script src="vendor/mammoth.browser.min.js"></script>
 <script src="vendor/docx.umd.js"></script>
+<!-- docx.umd.js (génération du .docx d'export) et docx-preview (aperçu) installent
+     TOUS DEUX un global `docx` : on capture chacun juste après son <script>. -->
+<script>window.docxGen = window.docx;</script>
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/docx-preview.min.js"></script>
+<script>window.docxPreview = window.docx; window.docx = window.docxGen;</script>
 <script src="js/anon-geom.js"></script>
+<script src="js/regles.js"></script>
+<script src="js/anon-docx.js"></script>
+<script src="js/apercu-docx.js"></script>
 <script>
 /* ===========================================================
    Lecture de PDF — 100% local via MuPDF (WebAssembly), dans un
@@ -567,7 +582,9 @@ const PdfLocal = (function(){
   return {
     // Le tampon est TRANSFÉRÉ au worker : le thread principal n'en garde pas
     // de copie, c'est le worker qui détient le document.
-    charger: (octets)=>appel('charger', {octets}, [octets]),
+    // `image` (type MIME) : les octets sont ceux d'une image, que le worker
+    // convertit en PDF d'une page avant de la charger comme n'importe quel PDF.
+    charger: (octets, image)=>appel('charger', {octets, image}, [octets]),
     rendre:  (page, echelle, source)=>appel('rendre', {page, echelle, source}),
     anonymiser: (consignes, mode, valeurs)=>appel('anonymiser', {consignes, mode, valeurs}),
     verifier: (valeurs)=>appel('verifier', {valeurs}),
@@ -576,12 +593,213 @@ const PdfLocal = (function(){
   };
 })();
 
-/* Index texte ↔ positions du PDF en cours (null si l'entrée n'a pas de mise
-   en page : texte collé, Word, image, ou OCR). `indexValide` passe à faux dès
+/* Index texte ↔ positions du document en cours : PDF, image (OCR) ou Word
+   (construit depuis le DOM rendu) ; null pour du texte collé. `indexValide` passe à faux dès
    que l'utilisateur modifie le texte à la main : les offsets ne correspondent
    alors plus au document, et l'export fidèle doit être désactivé. */
 let pdfIndex=null, indexValide=false;
-function oublierIndex(){ pdfIndex=null; indexValide=false; nomDocument=''; Visu.fermer(); }
+/* Moteur du document ouvert (PDF ou Word) : voir « Moteurs de document » plus
+   bas. `chargement` change à chaque abandon ou nouveau document : un rendu
+   asynchrone qui se termine après coup compare sa valeur et se retire. */
+let moteur=null, chargement=0;
+/* Un Word contient du texte que l'aperçu ne montre pas : commentaires, texte
+   supprimé en suivi des modifications, champs. Il part pourtant avec le fichier.
+   On le lit donc aussi, et on y applique les mêmes règles : constaté sur un
+   contrat, « Monsieur Jean-Pierre Lambert », supprimé en révision, restait
+   intact dans le fichier produit parce que rien à l'écran ne le montrait. */
+let texteHorsApercu='', hitsHorsApercu=[];
+function oublierIndex(){
+  chargement++;
+  texteHorsApercu=''; hitsHorsApercu=[];
+  if(moteur){ moteur.fermer(); moteur=null; }       // libère URL d'objet et conteneurs hors écran
+  pdfIndex=null; indexValide=false; nomDocument=''; derniereVerif=null; Visu.fermer();
+  tableJetons.vider();                               // nouveau document : nouveaux jetons
+  majBoutonPdf();
+}
+
+/* ===========================================================
+   Moteurs de document. Le visualiseur ne sait pas ce qu'il montre : il
+   demande au moteur du document ouvert de remplir une feuille, de produire le
+   résultat, de le vérifier et d'en rendre les octets.
+
+     nom, mime, extension, libelle   identité et libellé du bouton de téléchargement
+     remplir(cadre, source, page, largeur, actif)   insère la page ; faux = abandon
+     dims('resultat', page)          dimensions de la page du résultat (ou null)
+     produire(hits, mode, valeurs, encore)   → rapport, ou { vide:true }
+     verifier(valeurs)               → { fuites, details, nVerifiees }
+     octets()                        → octets du fichier produit
+     bandeauOk(ver, rapport), notes(rapport)   textes du bandeau de vérification
+     invaliderResultat(), fermer()   libèrent ce qui doit l'être
+
+   · PDF (et image, convertie en PDF d'une page) : MuPDF dans un worker ;
+     une page = une image rendue à la demande.
+   · Word : docx-preview rend le .docx dans un conteneur hors écran ; une page =
+     un clone du DOM rendu ; le résultat est le .docx produit par AnonDocx,
+     rendu à son tour. Voir js/apercu-docx.js.
+   =========================================================== */
+const MoteurPdf = {
+  nom:'pdf', mime:'application/pdf', extension:'pdf', libelle:'Télécharger .pdf',
+  cache:new Map(),            // "source|page|largeurCible" -> URL d'objet
+  ouvrir(){ this.vider(); },
+  vider(){ for(const url of this.cache.values()) URL.revokeObjectURL(url); this.cache.clear(); },
+  fermer(){ this.vider(); },
+  invaliderResultat(){
+    for(const [k,url] of [...this.cache]) if(k.startsWith('resultat|')){ URL.revokeObjectURL(url); this.cache.delete(k); }
+  },
+  dims(){ return null; },
+  async remplir(cadre, source, page, largeur, actif){
+    const k = source+'|'+page+'|'+largeur;
+    let url = this.cache.get(k);
+    if(!url){
+      // on rend à la résolution de l'écran, pour une page nette
+      const ratio = Math.min(window.devicePixelRatio||1, 2);
+      const echelle = Math.min(4, largeur*ratio/pdfIndex.pages[page].largeur);
+      const { png } = await PdfLocal.rendre(page, echelle, source);
+      if(!actif()) return false;
+      url = URL.createObjectURL(new Blob([png],{type:'image/png'}));
+      this.cache.set(k, url);
+    }
+    if(!actif()) return false;
+    const img=new Image();
+    img.src=url; img.alt='page '+(page+1);
+    img.style.width='100%'; img.style.height='auto';
+    img.onload=()=>{ const a=cadre.querySelector('.attente'); if(a) a.remove(); };
+    cadre.insertBefore(img, cadre.firstChild);
+    return true;
+  },
+  async produire(hits, mode, valeurs){
+    const consignes=[];
+    for(const h of hits){
+      const anc=AnonGeom.ancrage(pdfIndex, h.start);
+      for(const g of AnonGeom.rectsGlobaux(pdfIndex, h.start, h.end))
+        consignes.push({ page:g.page, rects:g.rects, token:h.token,
+                         corps:anc&&anc.corps, origine:anc&&anc.origine,
+                         couleur:anc&&anc.couleur });
+    }
+    if(!consignes.length) return { vide:true };
+    return PdfLocal.anonymiser(consignes, mode, valeurs);
+  },
+  verifier(valeurs){ return PdfLocal.verifier(valeurs); },
+  async octets(){ return (await PdfLocal.recupererResultat()).octets; },
+  bandeauOk(ver, r){
+    const poids=(r.tailleOrigine/1024).toFixed(0)+' Ko → '+(r.taille/1024).toFixed(0)+' Ko';
+    if(pdfIndex && pdfIndex.ocr){
+      // Sur un scan, la page est une image : les pixels des zones ont bien
+      // été remplacés, mais aucune extraction de texte ne peut le confirmer.
+      // Le dire franchement vaut mieux qu'un ✅ qui ne prouve rien.
+      return { classe:'work', html:
+        '🔎 <b>'+(pdfIndex.image?'Image':'Document scanné')+'</b> — les zones repérées ont été effacées de l\'image, '+
+        'et '+ver.nVerifiees+' valeur(s) ont été recherchées dans le fichier produit sans rien trouver. '+
+        '<b>Mais ce contrôle ne prouve pas grand-chose ici</b> : la page étant une image, il n\'y a pas '+
+        'de texte à extraire. <span class="count">'+poids+'</span>'+
+        '<div class="pertes">Le vrai risque est ailleurs&nbsp;: <b>un mot mal reconnu par l\'OCR '+
+        'n\'est pas détecté, donc pas masqué</b>. Parcourez les pages une à une avant d\'utiliser '+
+        'ce document, et ajoutez à la main ce qui manque.</div>' };
+    }
+    return { classe:'ok', html:
+      '✅ <b>Vérifié</b> : aucune des '+ver.nVerifiees+
+      ' valeur(s) anonymisée(s) n\'est récupérable dans le fichier produit '+
+      '<span class="count">(texte extrait et octets bruts du document décompressé)</span>. '+
+      '<span class="count">'+poids+'</span>'+
+      '<div class="pertes">Mise en page préservée. En revanche, le ré-encodage retire '+
+      'liens, formulaires, signets et signatures'+
+      (r.liensRetires?' ('+r.liensRetires+' lien(s) exposant une donnée ont été neutralisés)':'')+
+      ', ainsi que les métadonnées du fichier. <b>Relisez toujours le résultat.</b></div>' };
+  },
+};
+
+const MIME_DOCX='application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+function creerMoteurDocx(doc, octetsOrigine){
+  let vueRes=null, octetsRes=null, apercuKo=false;
+  return {
+    nom:'docx', mime:MIME_DOCX, extension:'docx', libelle:'Télécharger le Word anonymisé',
+    invaliderResultat(){},
+    fermer(){
+      doc.vue.fermer(); if(vueRes) vueRes.fermer();
+      vueRes=null; octetsRes=null;
+    },
+    dims(source, page){
+      if(source!=='resultat' || !vueRes) return null;
+      return vueRes.dims(vueRes.pagePour(doc.vue, page).page);
+    },
+    async remplir(cadre, source, page, largeur, actif){
+      if(!actif()) return false;
+      let vue=doc.vue, p=page, differe=null;
+      if(source==='resultat'){
+        if(!vueRes) throw new Error(apercuKo ? 'aperçu du résultat indisponible' : 'pas de résultat');
+        vue=vueRes;
+        const m=vueRes.pagePour(doc.vue, page); p=m.page;
+        if(m.differe) differe='p. '+(p+1)+' / '+m.total;
+      }
+      if(!vue.monter(cadre, p, largeur)) return false;
+      const a=cadre.querySelector('.attente'); if(a) a.remove();
+      // Les jetons changent la longueur des lignes : le résultat n'a pas toujours
+      // le même nombre de pages. On le dit au lieu de décaler en silence.
+      if(differe){
+        let e=cadre.querySelector('.etiquette');
+        if(!e){ e=document.createElement('span'); e.className='etiquette'; e.textContent='anonymisé'; cadre.appendChild(e); }
+        e.textContent += ' · '+differe;
+        e.title='Le résultat compte '+vueRes.nPages+' page(s) contre '+doc.vue.nPages+' à l\'origine : les jetons changent la longueur des lignes.';
+      }
+      return true;
+    },
+    async produire(hits, mode, valeurs, encore){
+      const couples=[], vus=new Set();
+      for(const h of hits){
+        if(vus.has(h.value)) continue;
+        vus.add(h.value); couples.push({ valeur:h.value, jeton:h.token });
+      }
+      if(!couples.length) return { vide:true };
+      const rapport=await AnonDocx.anonymiser(octetsOrigine, couples, { mode });
+      if(!encore()) return rapport;
+      let nouvelle=null, ko=false;
+      try{ nouvelle=await ApercuDocx.ouvrirResultat(rapport.octets, { actif:encore }); }
+      catch(e){ if(!e.annule) ko=true; }          // l'aperçu peut échouer, pas le fichier
+      if(!encore()){ if(nouvelle) nouvelle.fermer(); return rapport; }
+      if(vueRes) vueRes.fermer();
+      vueRes=nouvelle; octetsRes=rapport.octets; apercuKo=ko;
+      rapport.apercuKo=ko; rapport.tailleOrigine=octetsOrigine.length; rapport.taille=rapport.octets.length;
+      return rapport;
+    },
+    async verifier(valeurs){
+      if(!octetsRes) throw new Error('aucun résultat à vérifier');
+      const ver=await AnonDocx.verifier(octetsRes, valeurs);
+      // Contrôle de l'écart détection ↔ fichier : ce que l'aperçu du résultat
+      // AFFICHE doit lui aussi être propre (champ, numérotation automatique…).
+      if(vueRes) for(const v of ApercuDocx.valeursAffichees(vueRes, valeurs)){
+        if(ver.fuites.includes(v)) continue;
+        ver.fuites.push(v);
+        ver.details.push({ valeur:v, pages:[], dansOctets:false, visible:true,
+                           objet:'texte affiché par l\'aperçu du résultat (champ ou numérotation générés)' });
+      }
+      return ver;
+    },
+    async octets(){ return octetsRes; },
+    bandeauOk(ver, r){
+      const poids=(r.tailleOrigine/1024).toFixed(0)+' Ko → '+(r.taille/1024).toFixed(0)+' Ko';
+      return { classe:'ok', html:
+        '✅ <b>Vérifié</b> : aucune des '+ver.nVerifiees+
+        ' valeur(s) anonymisée(s) n\'est récupérable dans le fichier Word produit '+
+        '<span class="count">(corps, en-têtes, pieds, notes, commentaires, révisions, champs, liens et métadonnées)</span>. '+
+        '<span class="count">'+poids+' · '+r.nRemplacements+' remplacement(s)</span>'+
+        '<div class="pertes">Mise en page conservée : seul le texte est remplacé. Les métadonnées'+
+        (r.liensNeutralises?', '+r.liensNeutralises+' lien(s) exposant une donnée':'')+
+        ' et les noms d\'auteurs sont neutralisés. Les commentaires et le texte supprimé en suivi des '+
+        'modifications ne figurent pas dans l\'aperçu : les mêmes règles leur sont appliquées, mais vous ne '+
+        'pouvez pas y désigner un nom d\'un clic — ajoutez-le comme terme. <b>Relisez toujours le résultat.</b></div>' };
+    },
+    notes(r){
+      const l=(r.avertissements||[]).slice();
+      if(r.apercuKo) l.push('l\'aperçu du résultat n\'a pas pu être affiché, mais le fichier a bien été produit et vérifié');
+      let h='';
+      if(hitsHorsApercu.length)
+        h+='<div class="pertes">Aussi remplacé, <b>hors de l\'aperçu</b> (commentaires, texte supprimé en suivi des modifications, notes, champs) : '+
+           hitsHorsApercu.map(x=>'« '+escapeHtml(String(x.value).replace(/\s+/g,' '))+' » → '+escapeHtml(x.token||'')).join(' ; ')+'.</div>';
+      if(l.length) h+='<div class="pertes">⚠️ À vérifier à la main : '+l.map(escapeHtml).join(' ; ')+'.</div>';
+      return h;
+    },
+  };
+}
 
 /* ===========================================================
    Visualiseur — le document à l'écran, les détections à leur
@@ -598,7 +816,6 @@ const Visu = (function(){
      des vignettes illisibles. */
   const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
   let generation = 0;          // annule les rendus devenus obsolètes
-  let cache = new Map();       // "source|page|largeurCible" -> URL d'objet
   let page = 0, vue = 'origine', izoom = 2;   // izoom : index dans ZOOMS
   let resultatPret = false, minuterie = null, calcul = 0;
 
@@ -606,19 +823,14 @@ const Visu = (function(){
   const cle = (h)=> h.cat+'::'+String(h.value).toLowerCase().replace(/\s+/g,' ').trim();
   const nPages = ()=> pdfIndex ? pdfIndex.nPages : 0;
 
-  function viderCache(){
-    for(const url of cache.values()) URL.revokeObjectURL(url);
-    cache.clear();
-  }
-
   function fermer(){
-    generation++;
+    generation++; calcul++;      // un calcul de résultat en vol n'a plus de raison d'aboutir
     clearTimeout(minuterie); minuterie=null;
-    viderCache();
     page=0; vue='origine'; izoom=2; resultatPret=false;
     document.querySelector('main').classList.remove('avec-doc');
     el('pAtelier').hidden=true;
     el('docinfo').hidden=true;
+    const note=el('docnote'); if(note){ note.hidden=true; note.textContent=''; }
     el('drop').hidden=false;
     el('input').hidden=false;
     el('preview').hidden=false;
@@ -631,17 +843,27 @@ const Visu = (function(){
   }
 
   function ouvrirPdf(idx, nomFichier){
-    generation++; viderCache();
+    generation++; calcul++;
     page=0; vue='origine'; izoom=2; resultatPret=false;
     majSeg('vue', vue);
     document.querySelector('main').classList.add('avec-doc');
     el('pAtelier').hidden=false;
     el('drop').hidden=true;                       // le bandeau le remplace
     el('docinfo').hidden=false;
-    el('docnom').textContent=nomFichier||'Document PDF';
-    el('docmeta').textContent=idx.nPages+' page'+(idx.nPages>1?'s':'')+
+    el('docnom').textContent=nomFichier||(idx.docx?'Document Word':'Document PDF');
+    el('docmeta').textContent=idx.nPages+' page'+(idx.nPages>1?'s':'')+(idx.docx?' (aperçu)':'')+
                               ' · '+idx.texte.length.toLocaleString('fr-BE')+' caractères'+
                               (idx.ocr?' · texte reconnu par OCR':'');
+    // Un Word n'a pas de pages « fixes » : l'aperçu est une interprétation du
+    // navigateur. On le dit, une fois, sobrement.
+    const note=el('docnote');
+    if(note){
+      note.hidden=!idx.docx;
+      note.textContent=idx.docx
+        ? 'Aperçu interprété par votre navigateur : polices de remplacement et pagination approchées. '+
+          'Le fichier produit garde la mise en page d\'origine, car seul le texte y est remplacé.'
+        : '';
+    }
     el('input').hidden=true;                      // consultable via « Voir le texte extrait »
     el('voirTexte').textContent='Voir le texte extrait';
     el('preview').hidden=true;                    // l'aperçu texte ne sert plus
@@ -675,7 +897,8 @@ const Visu = (function(){
   }
 
   function feuille(source, largeur){
-    const info = pdfIndex.pages[page];
+    // le résultat d'un Word peut avoir des pages d'une autre hauteur
+    const info = (source==='resultat' && moteur.dims && moteur.dims('resultat', page)) || pdfIndex.pages[page];
     const d = document.createElement('div');
     d.className = 'feuille'+(source==='resultat'?' resultat':' designable');
     d.style.width = largeur+'px';
@@ -692,31 +915,19 @@ const Visu = (function(){
     return d;
   }
 
+  /* Le contenu d'une feuille vient du moteur du document (image rendue pour un
+     PDF, clone du DOM rendu pour un Word). */
   async function remplir(cadre, source, largeur, gen){
-    const k = source+'|'+page+'|'+largeur;
-    let url = cache.get(k);
-    if(!url){
-      try{
-        // on rend à la résolution de l'écran, pour une page nette
-        const ratio = Math.min(window.devicePixelRatio||1, 2);
-        const echelle = Math.min(4, largeur*ratio/pdfIndex.pages[page].largeur);
-        const { png } = await PdfLocal.rendre(page, echelle, source);
-        if(gen!==generation) return;
-        url = URL.createObjectURL(new Blob([png],{type:'image/png'}));
-        cache.set(k, url);
-      }catch(e){
-        const att=cadre.querySelector('.attente');
-        if(att) att.textContent = source==='resultat' ? 'en attente du résultat…' : 'page illisible';
-        return;
-      }
+    const actif = ()=> gen===generation && cadre.isConnected && !!moteur;
+    try{
+      const ok = await moteur.remplir(cadre, source, page, largeur, actif);
+      if(!ok) return;
+    }catch(e){
+      const att=cadre.querySelector('.attente');
+      if(att) att.textContent = source==='resultat' ? 'en attente du résultat…' : 'page illisible';
+      return;
     }
-    if(gen!==generation || !cadre.isConnected) return;
-    const img=new Image();
-    img.src=url; img.alt='page '+(page+1);
-    img.style.width='100%'; img.style.height='auto';
-    img.onload=()=>{ const a=cadre.querySelector('.attente'); if(a) a.remove(); };
-    cadre.insertBefore(img, cadre.firstChild);
-    if(source==='origine') poserZones(cadre);
+    if(source==='origine' && actif()) poserZones(cadre);
   }
 
   /* Zones positionnées en POURCENTAGE de la page : indépendantes de l'échelle
@@ -857,71 +1068,48 @@ const Visu = (function(){
   }
 
   async function rafraichirResultat(){
-    if(!indexValide) return;
+    if(!indexValide || !moteur) return;
     const monCalcul = ++calcul;      // un calcul plus récent a toujours raison
+    const encore = ()=> monCalcul===calcul;
+    const m = moteur;                // le document peut être remplacé en cours de route
     const v=el('verif');
     try{
-      const consignes=[], valeurs=[];
-      for(const h of lastHits){
-        const anc=AnonGeom.ancrage(pdfIndex, h.start);
-        for(const g of AnonGeom.rectsGlobaux(pdfIndex, h.start, h.end))
-          consignes.push({ page:g.page, rects:g.rects, token:h.token,
-                           corps:anc&&anc.corps, origine:anc&&anc.origine,
-                           couleur:anc&&anc.couleur });
-        valeurs.push(h.value);
-      }
-      if(!consignes.length){
+      const aTraiter=lastHits.concat(hitsHorsApercu);   // Word : + ce que l'aperçu ne montre pas
+      const valeurs=aTraiter.map(h=>h.value);
+      const r=await m.produire(aTraiter, activeMode, valeurs, encore);
+      if(!encore() || m!==moteur) return;
+      if(r.vide){
         resultatPret=false;
         v.className='verif work'; v.textContent='Rien à anonymiser : aucune détection active.';
         if(vue!=='origine') dessiner();
         return;
       }
-      const r=await PdfLocal.anonymiser(consignes, activeMode, valeurs);
-      if(monCalcul!==calcul) return;
       // Le document anonymisé existe : il est affichable, quoi que dise la
       // vérification ensuite. C'est le TÉLÉCHARGEMENT qui est conditionné,
       // pas l'affichage — et quand la vérification échoue, c'est justement
       // là qu'il faut pouvoir regarder le résultat.
       resultatPret = true;
-      const ver=await PdfLocal.verifier(valeurs);
-      if(monCalcul!==calcul) return;
+      const ver=await m.verifier(valeurs);
+      if(!encore() || m!==moteur) return;
       derniereVerif=ver;
       majBoutonPdf();
 
       // le résultat a changé : les rendus mis en cache ne valent plus
-      for(const [k,url] of [...cache]) if(k.startsWith('resultat|')){ URL.revokeObjectURL(url); cache.delete(k); }
+      m.invaliderResultat();
       if(vue!=='origine') dessiner();
 
-      const poids=(r.tailleOrigine/1024).toFixed(0)+' Ko → '+(r.taille/1024).toFixed(0)+' Ko';
+      const notes=m.notes ? m.notes(r) : '';
       if(ver.fuites.length){
         v.className='verif ko';
-        v.innerHTML=bandeauFuites(ver);
+        v.innerHTML=bandeauFuites(ver)+notes;
         majBoutonPdf();
-      }else if(pdfIndex && pdfIndex.ocr){
-        // Sur un scan, la page est une image : les pixels des zones ont bien
-        // été remplacés, mais aucune extraction de texte ne peut le confirmer.
-        // Le dire franchement vaut mieux qu'un ✅ qui ne prouve rien.
-        v.className='verif work';
-        v.innerHTML='🔎 <b>Document scanné</b> — les zones repérées ont été effacées de l\'image, '+
-          'et '+ver.nVerifiees+' valeur(s) ont été recherchées dans le fichier produit sans rien trouver. '+
-          '<b>Mais ce contrôle ne prouve pas grand-chose ici</b> : la page étant une image, il n\'y a pas '+
-          'de texte à extraire. <span class="count">'+poids+'</span>'+
-          '<div class="pertes">Le vrai risque est ailleurs&nbsp;: <b>un mot mal reconnu par l\'OCR '+
-          'n\'est pas détecté, donc pas masqué</b>. Parcourez les pages une à une avant d\'utiliser '+
-          'ce document, et ajoutez à la main ce qui manque.</div>';
       }else{
-        v.className='verif ok';
-        v.innerHTML='✅ <b>Vérifié</b> : aucune des '+ver.nVerifiees+
-          ' valeur(s) anonymisée(s) n\'est récupérable dans le fichier produit '+
-          '<span class="count">(texte extrait et octets bruts du document décompressé)</span>. '+
-          '<span class="count">'+poids+'</span>'+
-          '<div class="pertes">Mise en page préservée. En revanche, le ré-encodage retire '+
-          'liens, formulaires, signets et signatures'+
-          (r.liensRetires?' ('+r.liensRetires+' lien(s) exposant une donnée ont été neutralisés)':'')+
-          ', ainsi que les métadonnées du fichier. <b>Relisez toujours le résultat.</b></div>';
+        const b=m.bandeauOk(ver, r);
+        v.className='verif '+b.classe;
+        v.innerHTML=b.html+notes;
       }
     }catch(e){
-      if(monCalcul!==calcul) return;
+      if(!encore()) return;
       resultatPret=false;
       v.className='verif ko'; v.textContent='Erreur lors de l\'anonymisation : '+(e.message||e);
       derniereVerif=null;
@@ -945,10 +1133,13 @@ function bandeauFuites(ver){
         ' masquer et n\'y est pas parvenu.</b>';
   h+='<ul class="fuites">';
   for(const d of (ver.details||ver.fuites.map(f=>({valeur:f,pages:[],dansOctets:true,visible:false})))){
-    const ou = d.visible
-      ? '<span class="lisible">lisible dans le texte de la page '+d.pages.join(', ')+'</span>'
-          + (d.dansOctets?' et dans les octets du fichier':'')
-      : 'ailleurs dans le fichier (pas dans le texte des pages)';
+    // PDF : numéros de page ; Word : `objet` (corps, en-tête, commentaire, image…)
+    const ou = (d.pages&&d.pages.length) || !d.objet
+      ? (d.visible
+          ? '<span class="lisible">lisible dans le texte de la page '+d.pages.join(', ')+'</span>'
+              + (d.dansOctets?' et dans les octets du fichier':'')
+          : 'ailleurs dans le fichier (pas dans le texte des pages)')
+      : (d.visible ? '<span class="lisible">lisible dans le texte</span> — ' : '')+escapeHtml(d.objet);
     h+='<li><input type="checkbox" data-fuite="'+escapeHtml(d.valeur)+'"'+
        (fuitesAcceptees.has(d.valeur)?' checked':'')+'>'+
        '<span><b>'+escapeHtml(d.valeur)+'</b>'+
@@ -966,9 +1157,14 @@ function majBoutonPdf(){
   const n=document.getElementById('nomSortie');
   if(n) n.textContent = indexValide ? 'Fichier produit : '+nomDeSortie() : '';
   const b=document.getElementById('downloadPdf');
+  // Avec un Word ouvert, le bouton principal livre déjà le .docx : l'export
+  // « texte reconstruit » serait un second bouton .docx ambigu.
+  const dx=document.getElementById('downloadDocx');
+  if(dx) dx.hidden = !!moteur && moteur.nom==='docx';
   const f=(derniereVerif&&derniereVerif.fuites)||[];
   const restantes=f.filter(x=>!fuitesAcceptees.has(x));
-  if(!indexValide || !f.length){ b.textContent='Télécharger .pdf'; b.disabled=false; b.title=''; return; }
+  const base=moteur ? moteur.libelle : 'Télécharger .pdf';
+  if(!indexValide || !f.length){ b.textContent=base; b.disabled=false; b.title=''; return; }
   if(restantes.length){
     b.textContent='Téléchargement bloqué — '+restantes.length+' mention(s) à accepter';
     b.disabled=true;
@@ -1004,19 +1200,73 @@ function setStatus(msg,type){
    dans la chaîne, sinon l'index texte ↔ page ne correspond plus. */
 async function readPdf(file){
   setStatus('Lecture de « '+file.name+' »…','work');
+  await chargerDocument(file, async()=>({ buf: await file.arrayBuffer(), image: null }));
+}
+
+/* Une image (JPG, PNG, WebP, GIF, BMP) s'ouvre comme un PDF scanné d'une page. */
+async function readImage(file){
+  setStatus('Lecture de l\'image « '+file.name+' »…','work');
+  await chargerDocument(file, async()=>{
+    const { octets, mime } = await normaliserImage(file);
+    return { buf: octets.buffer, image: mime };
+  });
+}
+
+/* Décode l'image dans le navigateur, la redessine et la ré-encode.
+   Un seul passage règle quatre problèmes :
+   - l'orientation EXIF est appliquée (les pixels sont réellement tournés) ;
+   - WebP / GIF / BMP, que MuPDF ne lit pas tous, deviennent JPEG ou PNG ;
+   - une photo de 12 Mpx est réduite (plus grand côté <= IMAGE_MAX_PX) ;
+   - CONFIDENTIALITÉ : le ré-encodage ne conserve AUCUNE métadonnée — position
+     GPS, appareil, date de prise de vue, logiciel — qui seraient restés dans
+     le fichier produit si l'image avait été embarquée telle quelle. */
+const IMAGE_MAX_PX = 3000;
+async function normaliserImage(file){
+  let bmp;
+  try{
+    bmp = await createImageBitmap(file, { imageOrientation:'from-image' });
+  }catch(e){
+    const heic = /hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+    throw new Error(heic
+      ? 'ce navigateur ne sait pas lire le format HEIC/HEIF : convertissez la photo en JPG ou PNG, puis déposez-la à nouveau'
+      : 'l\'image « '+file.name+' » n\'a pas pu être décodée (fichier corrompu ou format que ce navigateur ne lit pas)');
+  }
+  try{
+    const k = Math.min(1, IMAGE_MAX_PX/Math.max(bmp.width, bmp.height));
+    const l = Math.max(1, Math.round(bmp.width*k)), h = Math.max(1, Math.round(bmp.height*k));
+    const cv = document.createElement('canvas'); cv.width=l; cv.height=h;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,l,h);     // la transparence devient du blanc
+    ctx.drawImage(bmp, 0, 0, l, h);
+    const mime = (file.type==='image/png' || /\.png$/i.test(file.name)) ? 'image/png' : 'image/jpeg';
+    const blob = await new Promise(ok=>cv.toBlob(ok, mime, 0.92));
+    if(!blob) throw new Error('l\'image « '+file.name+' » n\'a pas pu être ré-encodée');
+    return { octets: new Uint8Array(await blob.arrayBuffer()), mime };
+  } finally { bmp.close(); }
+}
+
+/* Chemin commun PDF / image : `preparer` fournit les octets (et, pour une
+   image, son type MIME). Un PDF sans texte, et toute image, passent par l'OCR. */
+async function chargerDocument(file, preparer){
   oublierIndex();
   try{
-    const buf=await file.arrayBuffer();
-    const idx=await PdfLocal.charger(buf);
+    const { buf, image } = await preparer();
+    const idx=await PdfLocal.charger(buf, image);
     let out=idx.texte;
 
-    if(out.trim().length<15){
-      // PDF scanné (pages images, sans texte) → OCR local, qui fournit une
-      // boîte par mot : on obtient le même index qu'un PDF texte, donc le
-      // visualiseur et l'export fidèle fonctionnent aussi sur un scan.
-      setStatus('PDF scanné détecté — reconnaissance de texte (OCR) en cours…','work');
+    if(image || out.trim().length<15){
+      // Page(s) image, sans texte → OCR local, qui fournit une boîte par mot :
+      // on obtient le même index qu'un PDF texte, donc le visualiseur et
+      // l'export fidèle fonctionnent aussi sur un scan ou une image.
+      const quoi = image ? 'Image « '+file.name+' »' : 'PDF scanné détecté';
+      setStatus(quoi+' — reconnaissance de texte (OCR) en cours… (1ᵉʳ usage : initialisation du moteur local)','work');
       const idxOcr = await ocrPdfPages(idx);
-      if(idxOcr.texte.trim().length<5){ setStatus('Aucun texte reconnu dans ce PDF scanné.','err'); return; }
+      if(idxOcr.texte.trim().length<5){
+        setStatus(image ? 'Aucun texte reconnu dans cette image.' : 'Aucun texte reconnu dans ce PDF scanné.','err');
+        return;
+      }
+      idxOcr.image=!!image;
+      moteur=MoteurPdf; moteur.ouvrir();
       pdfIndex=idxOcr; indexValide=true;
       exclusionsValeurs.clear(); fuitesAcceptees.clear(); termesManuels.clear(); majTermes();
       out = idxOcr.texte;
@@ -1027,6 +1277,7 @@ async function readPdf(file){
       return;
     }
 
+    moteur=MoteurPdf; moteur.ouvrir();
     pdfIndex=idx; indexValide=true;
     exclusionsValeurs.clear(); fuitesAcceptees.clear(); termesManuels.clear(); majTermes();
     document.getElementById('input').value=out;
@@ -1070,9 +1321,13 @@ async function getOcrWorker(){
    une image, la vérification par extraction de texte ne peut rien
    confirmer — c'est dit explicitement dans l'interface.
    =========================================================== */
-const OCR_ECHELLE = 2;          // rendu des pages pour la reconnaissance
+const OCR_ECHELLE = 2;          // rendu des pages d'un PDF pour la reconnaissance
 
-function indexDepuisOcr(idxPdf, pages){
+/* `echelle` : pixels par point de page utilisés au rendu. Pour une image, c'est
+   celle que renvoie le worker (résolution de l'image réduite, plafonnée) ;
+   les boîtes de l'OCR sont reconverties en points avec CETTE même valeur. */
+function indexDepuisOcr(idxPdf, pages, echelle){
+  echelle = echelle || OCR_ECHELLE;
   const out = { texte:'', pages:[], bornes:[], nPages:idxPdf.nPages, ocr:true };
   for(let p=0; p<pages.length; p++){
     const info = idxPdf.pages[p];
@@ -1090,8 +1345,8 @@ function indexDepuisOcr(idxPdf, pages){
         premier=false;
         const b=mot.bbox;
         // pixels de l'image -> points de la page
-        const x0=b.x0/OCR_ECHELLE, y0=b.y0/OCR_ECHELLE;
-        const x1=b.x1/OCR_ECHELLE, y1=b.y1/OCR_ECHELLE;
+        const x0=b.x0/echelle, y0=b.y0/echelle;
+        const x1=b.x1/echelle, y1=b.y1/echelle;
         const lettres=[...mot.text];
         const pas=(x1-x0)/Math.max(1,lettres.length);
         const corps=(y1-y0)*1.2;            // hauteur de boîte ≈ hauteur de capitale
@@ -1123,11 +1378,12 @@ function indexDepuisOcr(idxPdf, pages){
 
 // Fait rendre chaque page par le worker PDF, puis l'OCR
 async function ocrPdfPages(idxPdf){
+  const echelle = idxPdf.echelleOcr || OCR_ECHELLE;
   const worker=await getOcrWorker();
   const pages=[];
   for(let p=0;p<idxPdf.nPages;p++){
     setStatus('Reconnaissance de texte — page '+(p+1)+' sur '+idxPdf.nPages+'…','work');
-    const { png } = await PdfLocal.rendre(p, OCR_ECHELLE);
+    const { png } = await PdfLocal.rendre(p, echelle);
     const { data } = await worker.recognize(new Blob([png],{type:'image/png'}), {}, { blocks:true, text:true });
     // regroupe les mots par ligne ; on retombe sur une ligne unique si besoin
     const lignes = (data.lines && data.lines.length)
@@ -1135,26 +1391,74 @@ async function ocrPdfPages(idxPdf){
       : [ (data.words||[]).filter(m=>m.text && m.text.trim()) ];
     pages.push(lignes.filter(l=>l.length));
   }
-  return indexDepuisOcr(idxPdf, pages);
+  return indexDepuisOcr(idxPdf, pages, echelle);
 }
 
-// OCR d'un fichier image (JPG/PNG)
-async function ocrImageFile(file){
-  if(!window.Tesseract){ setStatus("Moteur OCR non chargé.",'err'); return; }
-  setStatus('Image « '+file.name+' » — reconnaissance de texte (OCR) en cours… (1ᵉʳ usage : initialisation du moteur local)','work');
+/* Word (.docx) — chemin principal : l'atelier, comme un PDF.
+   docx-preview rend le document, js/apercu-docx.js en tire un index texte ↔
+   positions de la même forme que celui d'un PDF, et la sortie est un .docx
+   dont la mise en page est conservée (js/anon-docx.js). Tout est local.
+
+   Repli, dans l'ordre : si seul l'aperçu échoue mais que le texte est
+   lisible, on retombe sur le chemin « texte » (mammoth) en le disant ; si le
+   fichier n'est pas un .docx lisible, message clair. */
+const MSG_DOC_ANCIEN = 'Ce fichier est au format Word ancien (.doc), ou protégé par un mot de passe : '+
+  'ouvrez-le dans Word ou LibreOffice, enregistrez-le en .docx (sans mot de passe), puis déposez-le à nouveau.';
+
+async function readWord(file){
+  oublierIndex();
+  const mon=chargement, actif=()=>mon===chargement;
+  setStatus('Lecture de « '+file.name+' »…','work');
+  let octets;
+  try{ octets=new Uint8Array(await file.arrayBuffer()); }
+  catch(e){ setStatus('Erreur de lecture : '+(e.message||e),'err'); return; }
+  if(!actif()) return;
+  // Signatures : un .docx est un zip (« PK »). Un .doc ancien ou un Word chiffré
+  // est un conteneur OLE : on le reconnaît avant de laisser une bibliothèque s'y casser.
+  if(octets[0]===0xD0 && octets[1]===0xCF && octets[2]===0x11 && octets[3]===0xE0){
+    setStatus(MSG_DOC_ANCIEN,'err'); return;
+  }
+  if(!(octets[0]===0x50 && octets[1]===0x4B)){
+    setStatus('« '+file.name+' » n\'est pas un document Word valide (fichier corrompu ou d\'un autre format).','err'); return;
+  }
+  let ouvert=null;
   try{
-    const worker=await getOcrWorker();
-    const { data:{ text } } = await worker.recognize(file);
-    const out=text.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
-    if(out.length<2){ setStatus('Aucun texte reconnu dans cette image.','err'); return; }
-    document.getElementById('input').value=out;
-    setStatus('✓ OCR : '+out.length+' caractères reconnus. Analyse en cours…','ok');
-    resetBuild(); run(out);
-  }catch(e){ setStatus('Erreur OCR : '+(e.message||e),'err'); }
+    ouvert=await ApercuDocx.ouvrir(octets, { actif, statut:(m)=>{ if(actif()) setStatus(m,'work'); } });
+    if(!actif()){ ouvert.vue.fermer(); return; }
+    if(ouvert.index.texte.trim().length<2){
+      ouvert.vue.fermer();
+      setStatus('Aucun texte trouvé dans ce document Word (il ne contient peut-être que des images).','err'); return;
+    }
+  }catch(e){
+    if(e.annule || !actif()) return;
+    // Le fichier est-il au moins lisible comme texte ? Alors on garde l'ancien chemin.
+    let lisible=false;
+    try{ lisible=(await AnonDocx.extraireTexte(octets)).texte.trim().length>=2; }catch(_){ lisible=false; }
+    if(!actif()) return;
+    if(lisible){
+      await readDocx(file, 'L\'aperçu du document n\'a pas pu être construit ('+(e.message||e)+') : le texte seul est analysé.');
+    }else{
+      setStatus('Ce document Word n\'a pas pu être lu ('+(e.message||e)+'). Il est peut-être corrompu ou protégé par un mot de passe : '+
+                'enregistrez-le à nouveau en .docx sans mot de passe.','err');
+    }
+    return;
+  }
+  const { vue, index } = ouvert;
+  let cache='';
+  try{ cache=(await AnonDocx.extraireTexte(octets)).texte; }catch(_){ cache=''; }
+  if(!actif()){ vue.fermer(); return; }
+  texteHorsApercu=cache;
+  moteur=creerMoteurDocx({ vue, index }, octets);
+  pdfIndex=index; indexValide=true;
+  exclusionsValeurs.clear(); fuitesAcceptees.clear(); termesManuels.clear(); majTermes();
+  document.getElementById('input').value=index.texte;
+  nomDocument=file.name; Visu.ouvrirPdf(index, file.name);
+  resetBuild(); run(index.texte);
+  setStatus('');
 }
 
-// Lecture d'un Word (.docx) via mammoth — extraction du texte, 100% local
-async function readDocx(file){
+// Repli : lecture du texte seul d'un Word via mammoth (100 % local, sans mise en page)
+async function readDocx(file, note){
   if(!window.mammoth){ setStatus("Lecteur Word non chargé.",'err'); return; }
   setStatus('Lecture de « '+file.name+' »…','work');
   try{
@@ -1163,7 +1467,7 @@ async function readDocx(file){
     const out=(value||'').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
     if(out.length<2){ setStatus('Aucun texte trouvé dans ce document Word.','err'); return; }
     document.getElementById('input').value=out;
-    setStatus('✓ Word lu — '+out.length+' caractères extraits. Analyse en cours…','ok');
+    setStatus((note?note+' ':'')+'✓ Word lu — '+out.length+' caractères extraits. Analyse en cours…', note?'work':'ok');
     resetBuild(); run(out);
   }catch(e){ setStatus('Erreur de lecture Word : '+(e.message||e),'err'); }
 }
@@ -1172,12 +1476,15 @@ async function readDocx(file){
 function handleFile(f){
   if(!f) return;
   const isDocx = f.type==='application/vnd.openxmlformats-officedocument.wordprocessingml.document' || /\.docx$/i.test(f.name);
-  // Word, images et texte collé n'ont pas de mise en page à préserver :
-  // ils suivent le chemin « texte » et n'ont donc pas d'index.
+  const isDocAncien = f.type==='application/msword' || /\.doc$/i.test(f.name);
+  const isImage = (f.type && f.type.startsWith('image/')) || /\.(jpe?g|png|webp|gif|bmp|hei[cf])$/i.test(f.name);
+  // PDF, images (converties en PDF d'une page) et Word ont une page à montrer :
+  // ils s'ouvrent dans l'atelier. Seul le texte collé n'a pas d'index.
   if(f.type==='application/pdf') readPdf(f);
-  else if(isDocx){ oublierIndex(); readDocx(f); }
-  else if(f.type && f.type.startsWith('image/')){ oublierIndex(); ocrImageFile(f); }
-  else setStatus('Format non géré : déposez un PDF, un Word (.docx) ou une image (JPG/PNG).','err');
+  else if(isDocx) readWord(f);
+  else if(isDocAncien) setStatus(MSG_DOC_ANCIEN,'err');
+  else if(isImage) readImage(f);
+  else setStatus('Format non géré : déposez un PDF, un Word (.docx) ou une image (JPG, PNG, WebP, GIF, BMP).','err');
 }
 
 (function(){
@@ -1197,43 +1504,9 @@ function handleFile(f){
    - label affiché, couleur, et un motif.
    Ordre = priorité de détection (les plus spécifiques d'abord).
    =========================================================== */
-/* Validateurs : réduisent les faux positifs sur les documents remplis de
-   chiffres (comptes annuels, factures…). Une règle n'accepte un match que
-   si son éventuelle fonction `valid` renvoie true. */
-function luhn(v){                                   // vraie carte bancaire : checksum de Luhn
-  const d=v.replace(/\D/g,'');
-  if(d.length<13||d.length>19) return false;
-  let s=0, alt=false;
-  for(let i=d.length-1;i>=0;i--){ let n=+d[i]; if(alt){n*=2; if(n>9)n-=9;} s+=n; alt=!alt; }
-  return s%10===0;
-}
-function validTel(v){                               // format téléphone belge plausible
-  if(/\.\d{3}/.test(v)) return false;              // « .744 » = séparateur de milliers, pas un n°
-  let d=v.replace(/\D/g,'');
-  if(d.startsWith('0032')) d='0'+d.slice(4);
-  else if(d.startsWith('32') && v.trim().startsWith('+')) d='0'+d.slice(2);
-  if(d[0]!=='0') return false;
-  if(d.length===10) return d[1]==='4';             // mobile BE : 04xx xx xx xx
-  return d.length===9;                              // fixe BE : 0x xxx xx xx
-}
-
-const CATS = [
-  {key:'EMAIL',    label:'E-mail',        color:'#5b8def', re:/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g},
-  {key:'IBAN',     label:'IBAN',          color:'#0b9d63', re:/\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}\b/g},
-  {key:'NISS',     label:'N° national',   color:'#e5484d', re:/\b\d{2}[.\-]?\d{2}[.\-]?\d{2}[.\- ]?\d{3}[.\-]?\d{2}\b/g},
-  {key:'TVA_BE',   label:'N° entreprise (BE)', color:'#f2c14e', re:/\bBE\s?0\d{3}[.\s]?\d{3}[.\s]?\d{3}\b|\b0\d{3}\.\d{3}\.\d{3}\b/gi},
-  {key:'CARTE',    label:'Carte bancaire',color:'#e5484d', re:/\b\d{4}[ \-]\d{4}[ \-]\d{4}[ \-]\d{2,7}\b|\b\d{13,19}\b/g, valid:luhn},
-  {key:'TEL',      label:'Téléphone',     color:'#f0a020', re:/(?:\+|00)\s?\d{1,3}(?:[ .\-/]?\d){7,11}|\b0(?:[ .\-/]?\d){8,9}\b/g, valid:validTel},
-  {key:'DATE',     label:'Date',          color:'#b07cff', re:/\b\d{1,2}(?:er|ème|e)?[\/.\- ]+(?:\d{1,2}|janv(?:ier)?|f[ée]vr(?:ier)?|mars|avr(?:il)?|mai|juin|juil(?:let)?|ao[uû]t|sept(?:embre)?|oct(?:obre)?|nov(?:embre)?|d[ée]c(?:embre)?)[\/.\- ]+\d{2,4}\b/gi},
-  {key:'MONTANT',  label:'Montant',       color:'#0b9d63', re:/\b\d{1,3}(?:[ .]?\d{3})*(?:[,.]\d{1,2})?\s?(?:€|EUR|euros?)/gi},
-  {key:'CP_VILLE', label:'Code postal',   color:'#2693ce', re:/\b\d{4,5}[ ]+[A-ZÀ-Ÿ][a-zà-ÿ\-]+(?:[ \-][A-ZÀ-Ÿ][a-zà-ÿ\-]+)?\b/g},
-  {key:'PERSONNE', label:'Nom',          color:'#ff7eb6', re:/\b(?:M\.|Mme|Mlle|Mr|Monsieur|Madame|Mademoiselle|Dr|Me|Pr)\.?[ ]+[A-ZÀ-Ÿ][a-zà-ÿ'’\-]+(?:[ ]+[A-ZÀ-Ÿ][a-zà-ÿ'’\-]+){0,2}/g},
-  // Catégories alimentées par le modèle IA local (pas de regex) :
-  {key:'LIEU',     label:'Lieu / Adresse',color:'#2693ce', re:null, ner:true},
-  {key:'ORG',      label:'Organisation',  color:'#c4b5fd', re:null, ner:true},
-  // Termes désignés par l'utilisateur, sur le document ou au clavier :
-  {key:'TERME',    label:'Terme ajouté',  color:'#8b5cf6', re:null, manuel:true},
-];
+/* Les règles — catégories, validateurs, détection, jetons, ré-identification —
+   vivent dans js/regles.js : partie pure, testée sous Node (tests/regles.mjs). */
+const CATS = Regles.CATS;
 
 /* Termes que l'utilisateur a désignés lui-même — en cliquant un mot sur le
    document, en sélectionnant une zone, ou au clavier. Masqués PARTOUT. */
@@ -1277,133 +1550,50 @@ document.getElementById('mode').addEventListener('click',e=>{
 /* ---------- détection ---------- */
 function escapeRe(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 
-function detect(text){
-  const hits=[]; // {start,end,cat,value}
-  CATS.forEach(c=>{
-    if(!c.re || !enabled[c.key]) return;
-    let m; c.re.lastIndex=0;
-    while((m=c.re.exec(text))!==null){
-      const val=m[0];
-      if(val.trim().length<2 || (c.valid && !c.valid(val))){c.re.lastIndex=m.index+1;continue;}
-      hits.push({start:m.index,end:m.index+val.length,cat:c.key,value:val,prio:2});
-      if(m.index===c.re.lastIndex)c.re.lastIndex++;
-    }
-  });
-  // termes désignés par l'utilisateur : priorité 3, ils l'emportent sur tout
-  if(enabled.TERME) termesManuels.forEach(term=>{
-    const motif=term.trim().split(/\s+/).map(escapeRe).join('\\s+');   // tolère les sauts de ligne
-    if(!motif) return;
-    const re=new RegExp(motif,'gi'); let m;
-    while((m=re.exec(text))!==null){
-      hits.push({start:m.index,end:m.index+m[0].length,cat:'TERME',value:m[0],custom:true,prio:3});
-      if(m.index===re.lastIndex)re.lastIndex++;
-    }
-  });
-  // tri + suppression des chevauchements (on garde le plus long / premier)
-  hits.sort((a,b)=> a.start-b.start || (b.end-b.start)-(a.end-a.start));
-  const clean=[]; let lastEnd=-1;
-  hits.forEach(h=>{ if(h.start>=lastEnd){clean.push(h);lastEnd=h.end;} });
-  return clean;
-}
-
-/* ---------- correspondances cohérentes ---------- */
-function buildMapping(hits){
-  const counters={}, map=new Map(); // value(normalisée)->token
-  hits.forEach(h=>{
-    const k=h.cat+'::'+h.value.toLowerCase().replace(/\s+/g,' ').trim();
-    if(!map.has(k)){
-      counters[h.cat]=(counters[h.cat]||0)+1;
-      map.set(k, `[${h.cat}_${counters[h.cat]}]`);
-    }
-    h.token=map.get(k);
-  });
-  return map;
-}
+/* Jetons de SESSION : une fois attribué, [PERSONNE_1] désigne la même valeur
+   jusqu'au changement de document ou au bouton « Vider » (oublierIndex). Les
+   numéros peuvent sauter après une exclusion ; ils ne sont jamais réattribués. */
+let tableJetons=Regles.creerTable();
 
 /* ---------- rendu ---------- */
 let lastText='', lastHits=[], lastHitsTous=[], lastAnon='', lastMapping={}, importedMap=null;
 function catColor(key){return (CATS.find(c=>c.key===key)||{}).color||'#888';}
 function catLabel(key){return (CATS.find(c=>c.key===key)||{}).label||key;}
 
-// fusionne et supprime les chevauchements ; priorité : terme perso > regex > IA
-function dedup(hits){
-  hits.sort((a,b)=> a.start-b.start || (b.prio||1)-(a.prio||1) || (b.end-b.start)-(a.end-a.start));
-  const clean=[]; let lastEnd=-1;
-  hits.forEach(h=>{ if(h.start>=lastEnd){clean.push(h);lastEnd=h.end;} });
-  return clean.sort((a,b)=>a.start-b.start);
-}
-
-// Mots à NE JAMAIS anonymiser (faux positifs fréquents : formes juridiques, sigles, fonctions)
-const EXCLUDE = new Set(['rh','sa','sprl','srl','scrl','scs','snc','asbl','gie','sc','sca',
-  'tva','iban','bce','direction','directrice','directeur','service','département','contrat']);
-
-// Rattache un numéro de voirie au nom de rue (« 27 avenue Louise » et non « avenue Louise »)
-const VOIES = /^(rue|avenue|av\.?|boulevard|bd\.?|chauss[ée]e|place|chemin|quai|impasse|all[ée]e|route|rte|dr[èe]ve|clos|square|sentier|venelle|galerie|parvis|cour)\b/i;
-function extendAddresses(text, hits){
-  hits.forEach(h=>{
-    if(h.cat!=='LIEU' || !VOIES.test(h.value)) return;
-    const before=text.slice(Math.max(0,h.start-10), h.start);
-    const m=before.match(/(\d{1,4}(?:\s?(?:bis|ter))?)[ ,]+$/i);
-    if(m){ h.start -= m[0].length; h.value=text.slice(h.start, h.end); }
-  });
-}
-
-/* Une valeur qu'on décide d'anonymiser doit l'être PARTOUT dans le document.
-   Les règles trouvent déjà chaque occurrence (expressions régulières
-   globales), mais l'IA, elle, en rate : sur un devis réel elle a reconnu
-   « Adminova » à certains endroits et pas à d'autres. On ne masquait alors
-   qu'une partie des occurrences, et la valeur restait lisible ailleurs.
-
-   La recherche tolère les sauts de ligne : un PDF coupe volontiers
-   « Claire\nHanssen » en fin de ligne. */
-function completerOccurrences(text, hits){
-  const parValeur=new Map();
-  for(const h of hits){
-    if(h.exclu) continue;
-    const k=Visu.cle(h);
-    if(!parValeur.has(k)) parValeur.set(k,h);
-  }
-  const ajouts=[];
-  for(const modele of parValeur.values()){
-    const v=modele.value.trim();
-    if(v.length<3) continue;                    // trop court : trop de faux positifs
-    const motif=v.split(/\s+/).map(escapeRe).join('\\s+');
-    const re=new RegExp(motif,'g');
-    let m;
-    while((m=re.exec(text))!==null){
-      const debut=m.index, fin=debut+m[0].length;
-      // on n'ajoute que ce qui n'est pas déjà couvert par une détection
-      if(!hits.some(h=>h.start<fin && debut<h.end))
-        ajouts.push({cat:modele.cat, start:debut, end:fin, value:m[0],
-                     prio:modele.prio, exclu:false, complete:true});
-      if(m.index===re.lastIndex) re.lastIndex++;
-    }
-  }
-  return ajouts.length ? dedup(hits.concat(ajouts)) : hits;
-}
-
 function run(text){
   lastText=text;
-  let hits=detect(text);                                   // regex + termes perso
-  if(nerEnabled && nerText===text)                          // ajoute le NER en cache
-    hits=hits.concat(nerHits.filter(h=>enabled[h.cat]));
-  extendAddresses(text, hits);                              // numéro de rue rattaché
-  hits=dedup(hits);
-  hits=hits.filter(h=>!EXCLUDE.has(h.value.trim().toLowerCase())); // retire les faux positifs
-  // Valeurs écartées à la main (clic sur une zone) : on les GARDE dans la
-  // liste, marquées, pour qu'elles restent visibles et re-cliquables.
-  hits.forEach(h=>{ h.exclu = exclusionsValeurs.has(Visu.cle(h)); });
-  if(indexValide) hits=completerOccurrences(text, hits);
-  lastHitsTous=hits;
-  hits=hits.filter(h=>!h.exclu);
-  buildMapping(hits);
+  const r=Regles.analyser(text,{
+    actives:enabled, termes:termesManuels,
+    ner:(nerEnabled && nerText===text) ? nerHits : null,    // modèle IA, s'il a déjà analysé ce texte
+    // Valeurs écartées à la main (clic sur une zone) : on les GARDE dans la
+    // liste, marquées, pour qu'elles restent visibles et re-cliquables.
+    exclusions:exclusionsValeurs,
+    completer:true,                                          // toutes les occurrences d'une valeur retenue
+    table:tableJetons });
+  lastHitsTous=r.tous;
+  const hits=r.actifs;
   lastHits=hits;
-  // table de correspondances de la session : jeton -> vraie valeur
-  lastMapping={};
-  hits.forEach(h=>{ if(h.token && !(h.token in lastMapping)) lastMapping[h.token]=h.value; });
+  // Word : mêmes règles sur le texte que l'aperçu ne montre pas. On ne garde
+  // que les valeurs absentes de la page — celles-là n'ont pas de zone à l'écran.
+  hitsHorsApercu=[];
+  if(indexValide && moteur && moteur.nom==='docx' && texteHorsApercu){
+    const norm=(v)=>String(v).replace(/\s+/g,' ').trim();
+    const vues=new Set(r.tous.map(h=>norm(h.value)));
+    const rc=Regles.analyser(texteHorsApercu,{ actives:enabled, termes:termesManuels,
+      exclusions:exclusionsValeurs, completer:true, table:tableJetons });
+    for(const h of rc.actifs){
+      const k=norm(h.value);
+      if(vues.has(k)) continue;
+      vues.add(k); hitsHorsApercu.push(h);
+    }
+  }
+  // table de correspondances de la SESSION : jeton -> vraie valeur, y compris les
+  // jetons de valeurs écartées depuis (une réponse d'IA déjà obtenue les contient)
+  lastMapping=tableJetons.correspondances();
   renderAll(text,hits);
   majBoutonPdf();                        // nom du fichier produit et état du bouton
   majSuggestionsNoms();
+  majTermes();                           // « introuvable » suit le texte courant
   if(indexValide){                       // document avec mise en page : visualiseur
     Visu.majZones();
     Visu.planifierResultat();
@@ -1498,23 +1688,8 @@ function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&
    On ne masque RIEN d'office : « Haute École » ou « Utiliser Canva » sortent
    aussi, et masquer de travers abîme le document. Ce sont des suggestions,
    validées d'un clic. */
-const MOT_CAPITALISE = String.raw`\p{Lu}[\p{Ll}]+(?:[-’']\p{Lu}?[\p{Ll}]+)*`;
-const RE_NOMS = new RegExp(String.raw`\b(${MOT_CAPITALISE}(?:[ ]${MOT_CAPITALISE}){1,2})\b`, 'gu');
-
 function suggestionsDeNoms(){
-  if(!lastText) return [];
-  const norm=(x)=>String(x).toLowerCase().replace(/\s+/g,' ').trim();
-  // déjà couvert par une détection active, ou déjà ajouté à la main ?
-  const connus=[...lastHits.map(h=>norm(h.value)), ...[...termesManuels].map(norm)];
-  const comptes=new Map();
-  RE_NOMS.lastIndex=0;
-  let m;
-  while((m=RE_NOMS.exec(lastText))) comptes.set(m[1], (comptes.get(m[1])||0)+1);
-  return [...comptes.entries()]
-    .filter(([v])=>{ const n=norm(v); return !connus.some(c=>c.includes(n) || n.includes(c)); })
-    .sort((a,b)=>b[1]-a[1])
-    .slice(0,10)
-    .map(([v,n])=>({v,n}));
+  return Regles.suggestionsDeNoms(lastText, lastHits, termesManuels);
 }
 
 function majSuggestionsNoms(){
@@ -1586,7 +1761,7 @@ document.getElementById('nomFichierPropo').addEventListener('click', e=>{
 /* Nom du fichier produit. Le nom d'origine est souvent la dernière fuite :
    « Devis pour Dupont.pdf » reste parlant même quand le contenu est propre.
    On y applique donc le même remplacement que dans le document. */
-function nomDeSortie(){
+function nomDeSortie(ext){                 // `ext` : pour les exports .txt / .docx du texte
   let base=String(nomDocument||'document').replace(/\.[a-z0-9]{1,5}$/i,'');
   const valeurs=[...new Set(lastHits.map(h=>h.value))].sort((a,b)=>b.length-a.length);
   for(const v of valeurs){
@@ -1597,7 +1772,7 @@ function nomDeSortie(){
     try{ base=base.replace(new RegExp(motif,'gi'), jeton); }catch(e){ /* motif inattendu */ }
   }
   base=base.replace(/[^\p{L}\p{N}\[\]_ -]+/gu,' ').replace(/\s+/g,' ').trim();
-  return (base||'document')+'-anonymise.pdf';
+  return (base||'document')+'-anonymise.'+(ext || (moteur ? moteur.extension : 'pdf'));
 }
 
 /* ---------- termes désignés par l'utilisateur ---------- */
@@ -1605,9 +1780,14 @@ function majTermes(){
   const z=document.getElementById('termesListe');
   if(!z) return;
   if(!termesManuels.size){ z.innerHTML=''; majPropositionsNom(); return; }
-  z.innerHTML=[...termesManuels].map(t=>
-    '<span class="puce-terme">'+escapeHtml(t)+
-    '<button data-terme="'+escapeHtml(t)+'" title="Retirer ce terme">×</button></span>').join('');
+  // Un terme qui n'apparaît nulle part (faute de frappe, mot coupé…) se dit
+  // « introuvable », en grisé : sinon on croit l'avoir masqué.
+  z.innerHTML=[...termesManuels].map(t=>{
+    const introuvable=!!lastText && Regles.occurrencesTerme(lastText,t)===0;
+    return '<span class="puce-terme"'+(introuvable?' style="opacity:.55" title="Ce terme n\'apparaît nulle part dans le document : vérifiez l\'orthographe."':'')+'>'+
+      escapeHtml(t)+(introuvable?' <i style="font-size:.85em">· introuvable</i>':'')+
+      '<button data-terme="'+escapeHtml(t)+'" title="Retirer ce terme">×</button></span>';
+  }).join('');
   majPropositionsNom();
 }
 
@@ -1809,6 +1989,7 @@ document.getElementById('clear').addEventListener('click',()=>{
   document.getElementById('reidInput').value='';
   document.getElementById('reidOut').innerHTML='<div class="empty">Le texte ré-identifié apparaîtra ici.</div>';
   document.getElementById('mapInfo').textContent='table de la session en cours';
+  const bilan=document.getElementById('reidBilan'); if(bilan) bilan.remove();
 });
 document.getElementById('copy').addEventListener('click',()=>{
   if(!lastAnon){alert('Analysez d\'abord un texte.');return;}
@@ -1819,7 +2000,7 @@ document.getElementById('copy').addEventListener('click',()=>{
 document.getElementById('download').addEventListener('click',()=>{
   if(!lastAnon){alert('Analysez d\'abord un texte.');return;}
   const blob=new Blob([lastAnon],{type:'text/plain;charset=utf-8'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='document-anonymise.txt'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nomDeSortie('txt'); a.click();
 });
 
 /* ---------- export PDF (100% local, via jsPDF) ----------
@@ -1838,17 +2019,18 @@ function buildSegments(){
 }
 
 /* Téléchargement du PDF.
-   · Document avec mise en page → on livre le VRAI document anonymisé produit
-     par le moteur, après avoir vérifié qu'il ne contient plus les données.
+   · Document avec mise en page (PDF, image ou Word) → on livre le VRAI document
+     anonymisé produit par le moteur, après avoir vérifié qu'il ne contient plus les données.
      Une vérification en échec BLOQUE le téléchargement : mieux vaut pas de
      fichier qu'un fichier qui fuit.
-   · Texte collé, Word, image → ancien rendu reconstruit (sans mise en page). */
+   · Word → le VRAI .docx anonymisé (mise en page conservée), mêmes règles.
+   · Texte collé → ancien rendu reconstruit (sans mise en page). */
 document.getElementById('downloadPdf').addEventListener('click', async ()=>{
-  if(indexValide) return telechargerPdfFidele();
+  if(indexValide) return telechargerFidele();
   rendreTxtEnPdf();
 });
 
-async function telechargerPdfFidele(){
+async function telechargerFidele(){   // PDF ou Word : le moteur dit quoi livrer
   const b=document.getElementById('downloadPdf'), libelle=b.textContent;
   try{
     if(!lastHits.length){ alert('Aucune détection active : il n\'y a rien à anonymiser.'); return; }
@@ -1856,7 +2038,8 @@ async function telechargerPdfFidele(){
     // On s'assure que le document affiché est à jour, puis on le re-vérifie.
     await Visu.rafraichirResultat();
     const valeurs=lastHits.map(h=>h.value);
-    const ver=await PdfLocal.verifier(valeurs);
+    const m=moteur;
+    const ver=await m.verifier(valeurs);
     derniereVerif=ver; majBoutonPdf();
     const restantes=ver.fuites.filter(x=>!fuitesAcceptees.has(x));
     if(restantes.length){
@@ -1866,14 +2049,14 @@ async function telechargerPdfFidele(){
             'qu\'elles restent, ou masquez-les à la main en les désignant sur le document.');
       return;
     }
-    const { octets }=await PdfLocal.recupererResultat();
+    const octets=await m.octets();
     const a=document.createElement('a');
-    a.href=URL.createObjectURL(new Blob([octets],{type:'application/pdf'}));
+    a.href=URL.createObjectURL(new Blob([octets],{type:m.mime}));
     a.download=nomDeSortie();
     a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href), 30000);
   }catch(e){
-    alert('Erreur pendant la préparation du PDF : '+(e.message||e));
+    alert('Erreur pendant la préparation du fichier : '+(e.message||e));
   }finally{ b.disabled=false; b.textContent=libelle; }
 }
 
@@ -1914,7 +2097,7 @@ function rendreTxtEnPdf(){
     }
   });
   footer();
-  doc.save('document-anonymise.pdf');
+  doc.save(nomDeSortie('pdf'));
 }
 
 /* ---------- export Word (.docx, 100% local via docx) ----------
@@ -1940,7 +2123,7 @@ document.getElementById('downloadDocx').addEventListener('click', async ()=>{
   flush();
   const docu=new Document({ sections:[{ children: paras }] });
   const blob=await Packer.toBlob(docu);
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='document-anonymise.docx'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nomDeSortie('docx'); a.click();
 });
 
 /* ---------- ré-identification (réinjecter les vraies données) ---------- */
@@ -1973,17 +2156,29 @@ function reidentify(){
   const src=document.getElementById('reidInput').value;
   if(!src.trim()){ document.getElementById('reidOut').innerHTML='<div class="empty">Collez d\'abord la réponse de l\'IA.</div>'; return; }
   if(!Object.keys(map).length){ alert('Aucune table de correspondances disponible (analysez un document ou importez une table).'); return; }
-  let count=0;
-  // remplace chaque jeton [TYPE_n] par sa vraie valeur (jetons longs d'abord)
-  const tokens=Object.keys(map).sort((a,b)=>b.length-a.length);
-  let out=src;
-  tokens.forEach(tok=>{
-    const re=new RegExp(escapeRe(tok),'g');
-    out=out.replace(re,()=>{ count++; return map[tok]; });
-  });
-  document.getElementById('reidOut').textContent=out;
-  reidLast=out;
-  document.getElementById('reidOut').setAttribute('data-n',count);
+  // Une passe : jetons exacts, mais aussi « PERSONNE_1 » sans crochets, « [ personne_1 ] »…
+  // — uniquement pour les jetons de la table. Les autres sont comptés, jamais devinés.
+  const r=Regles.reidentifier(src,map);
+  document.getElementById('reidOut').textContent=r.texte;
+  reidLast=r.texte;
+  document.getElementById('reidOut').setAttribute('data-n',r.remplaces);
+  bilanReid(r);
+}
+/* Compte rendu : l'utilisateur doit voir ce qui n'a PAS été remplacé. */
+function bilanReid(r){
+  const sortie=document.getElementById('reidOut');
+  let b=document.getElementById('reidBilan');
+  if(!b){ b=document.createElement('div'); b.id='reidBilan'; sortie.insertAdjacentElement('beforebegin',b); }
+  const pl=(n,un,plusieurs)=>n+' '+(n>1?plusieurs:un);
+  const liste=(a)=>a.slice(0,8).map(escapeHtml).join(', ')+(a.length>8?' … (+'+(a.length-8)+')':'');
+  const lignes=['<b>'+pl(r.remplaces,'jeton remplacé','jetons remplacés')+'</b>'+
+                (r.variantes?' (dont '+pl(r.variantes,'écrit autrement','écrits autrement')+' par l\'IA)':'')+'.'];
+  if(r.inconnus.length) lignes.push('⚠️ '+pl(r.inconnus.length,'jeton absent de la table','jetons absents de la table')+
+                ' : '+liste(r.inconnus)+' — laissé'+(r.inconnus.length>1?'s':'')+' tel'+(r.inconnus.length>1?'s':'')+' quel'+(r.inconnus.length>1?'s':'')+'.');
+  if(r.absents.length) lignes.push(pl(r.absents.length,'jeton de la table n\'apparaît','jetons de la table n\'apparaissent')+
+                ' pas dans la réponse : '+liste(r.absents)+' — l\'IA les a peut-être réécrits autrement.');
+  b.className='status '+(r.inconnus.length||r.absents.length?'work':'ok');
+  b.innerHTML=lignes.join('<br>');
 }
 let reidLast='';
 document.getElementById('reidBtn').addEventListener('click',reidentify);
