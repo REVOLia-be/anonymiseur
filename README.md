@@ -13,7 +13,7 @@ Un outil web gratuit qui repère les informations identifiantes d'un document (c
 - **Entrées** : PDF (texte **et scanné**), Word (`.docx`), images (JPG, PNG, WebP, GIF, BMP — HEIC seulement si le navigateur sait le décoder), ou texte collé.
 - **OCR local** des documents scannés et images (Tesseract.js, français).
 - **Détection** combinée :
-  - règles (e-mail, téléphone, IBAN, **n° national belge**, **n° d'entreprise/TVA BE**, carte, dates, montants, code postal…) ;
+  - règles belges FR/NL, dans `js/regles.js` (testées sous Node) : e-mail (y compris écrit « x (at) exemple.org »), téléphone (belge et étranger : +33, +31, +352, +49, +44…), IBAN (tous pays, clé modulo 97), **n° national** et **n° d'entreprise BE** (clé de contrôle, ou mot de contexte si la clé est fausse), n° **INAMI / RIZIV**, carte d'identité, plaque, référence de dossier (après « n°, réf., dossier, matricule »), carte bancaire (Luhn), dates (mois FR et NL, format ISO), montants, **code postal + commune** (composées entières : « Woluwe-Saint-Lambert »), **rue** française (par mot-clé) et néerlandaise (par suffixe : « -straat », « -laan »…), noms derrière un titre FR/NL (« Mme Van den Broeck », « De heer Pieter De Smet ») ;
   - **IA locale** optionnelle (noms, lieux/adresses, organisations) via un modèle de reconnaissance d'entités tournant dans le navigateur.
 - **PDF : mise en page préservée.** Le document s'affiche page par page, les détections sont surlignées **à leur place réelle**, et le PDF produit est le document d'origine — mêmes polices, même mise en page, même poids — avec les données en moins. Pas de rasterisation.
 - **Images** : une image déposée s'ouvre dans le même atelier qu'un PDF scanné d'une page (aperçu, zones, côte à côte, gestes, vérification) et ressort en PDF d'une page dont les pixels masqués sont réellement effacés. Elle est d'abord décodée et ré-encodée dans le navigateur : orientation EXIF appliquée, réduite à 3000 px au plus, et **métadonnées EXIF (GPS, appareil, date) retirées**.
@@ -24,7 +24,8 @@ Un outil web gratuit qui repère les informations identifiantes d'un document (c
 - **Deux modes** : pseudonymisation cohérente (`[PERSONNE_1]`, écrite dans la couleur du texte remplacé) ou **caviardage réel** (les données sont supprimées, pas seulement masquées).
 - **Vérification avant téléchargement** : l'outil relit le fichier qu'il vient de produire et cherche chaque valeur anonymisée dans le texte extrait **et** dans les octets bruts du document décompressé. Une vérification en échec **bloque** le téléchargement, en indiquant pour chaque mention restante **où** elle subsiste (texte d'une page, ou ailleurs dans le fichier). Le blocage se lève mention par mention, par une acceptation explicite — jamais en bloc.
 - **Exports** : `.txt`, `.pdf`, `.docx`.
-- **Ré-identification** : réinjectez les vraies données dans la réponse de l'IA, en local.
+- **Jetons stables** : une fois attribué, `[PERSONNE_1]` désigne la même valeur jusqu'au changement de document ou au bouton « Vider », même si l'on écarte ou ajoute d'autres détections. Les numéros peuvent donc sauter (`PERSONNE_1`, `PERSONNE_3`) : une réponse d'IA déjà obtenue reste ré-identifiable avec le bon nom.
+- **Ré-identification** : réinjectez les vraies données dans la réponse de l'IA, en local. L'outil tolère les variantes courantes des jetons de la table (`PERSONNE_1` sans crochets, `[ personne_1 ]`) et rend des comptes : jetons remplacés, jetons `[XXX_n]` inconnus de la table, jetons de la table absents de la réponse.
 - **100 % hors-ligne** : aucune ressource tierce chargée au runtime.
 
 > Le ré-encodage d'un PDF retire **liens, formulaires, signets et signatures** en tant qu'éléments interactifs,
@@ -58,12 +59,15 @@ ce qu'un fichier ouvert en `file://` ne permet pas.
 
 ```bash
 cd tests && node chaine.mjs fiche-reelle.pdf pseudo
+cd tests && node regles.mjs                      # règles : couverture, faux positifs, cas unitaires
 ```
 
 Éprouve la chaîne complète (positions → caviardage → vérification) hors navigateur, contre les modules
 de production et le moteur vendoré — **sans `npm install`**. Le code de sortie vaut 1 en cas de fuite.
 [`tests/README.md`](tests/README.md) documente les **pièges connus** et pourquoi le code est écrit ainsi :
 plusieurs échouent en silence, et chacun a été constaté sur un document réel.
+
+`regles.mjs` mesure les règles sur un corpus **synthétique** belge FR/NL (103 valeurs sensibles) : 80 sont masquées en entier, aucune à moitié, et le code de sortie vaut 1 sous les seuils. Un texte sans donnée personnelle plafonne les faux positifs.
 
 > La police de marque **iBrand** (`vendor/fonts/ibrand.otf`) est sous licence commerciale et n'est **pas** incluse.
 > Sans elle, le mot-symbole « revolia » s'affiche en Poppins. Placez votre fichier licencié à cet emplacement pour

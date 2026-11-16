@@ -444,7 +444,7 @@
             </label>
           </div>
           <div class="status" id="nerStatus"></div>
-          <div class="hint">Le modèle IA est servi <b>localement</b> (aucun téléchargement externe, fonctionne hors-ligne). <b>Votre document ne sort jamais.</b> 1ᵉʳ chargement un peu plus lent (mise en cache du modèle).</div>
+          <div class="hint">Le modèle (~135 Mo) est téléchargé une fois depuis le stockage de REVOLia, puis gardé en cache. <b>Votre document, lui, ne sort jamais.</b></div>
         </div>
       </details>
     </div>
@@ -532,6 +532,7 @@
 <script src="vendor/docx-preview.min.js"></script>
 <script>window.docxPreview = window.docx; window.docx = window.docxGen;</script>
 <script src="js/anon-geom.js"></script>
+<script src="js/regles.js"></script>
 <script src="js/anon-docx.js"></script>
 <script src="js/apercu-docx.js"></script>
 <script>
@@ -605,6 +606,7 @@ function oublierIndex(){
   chargement++;
   if(moteur){ moteur.fermer(); moteur=null; }       // libère URL d'objet et conteneurs hors écran
   pdfIndex=null; indexValide=false; nomDocument=''; derniereVerif=null; Visu.fermer();
+  tableJetons.vider();                               // nouveau document : nouveaux jetons
   majBoutonPdf();
 }
 
@@ -1487,43 +1489,9 @@ function handleFile(f){
    - label affiché, couleur, et un motif.
    Ordre = priorité de détection (les plus spécifiques d'abord).
    =========================================================== */
-/* Validateurs : réduisent les faux positifs sur les documents remplis de
-   chiffres (comptes annuels, factures…). Une règle n'accepte un match que
-   si son éventuelle fonction `valid` renvoie true. */
-function luhn(v){                                   // vraie carte bancaire : checksum de Luhn
-  const d=v.replace(/\D/g,'');
-  if(d.length<13||d.length>19) return false;
-  let s=0, alt=false;
-  for(let i=d.length-1;i>=0;i--){ let n=+d[i]; if(alt){n*=2; if(n>9)n-=9;} s+=n; alt=!alt; }
-  return s%10===0;
-}
-function validTel(v){                               // format téléphone belge plausible
-  if(/\.\d{3}/.test(v)) return false;              // « .744 » = séparateur de milliers, pas un n°
-  let d=v.replace(/\D/g,'');
-  if(d.startsWith('0032')) d='0'+d.slice(4);
-  else if(d.startsWith('32') && v.trim().startsWith('+')) d='0'+d.slice(2);
-  if(d[0]!=='0') return false;
-  if(d.length===10) return d[1]==='4';             // mobile BE : 04xx xx xx xx
-  return d.length===9;                              // fixe BE : 0x xxx xx xx
-}
-
-const CATS = [
-  {key:'EMAIL',    label:'E-mail',        color:'#5b8def', re:/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g},
-  {key:'IBAN',     label:'IBAN',          color:'#0b9d63', re:/\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}\b/g},
-  {key:'NISS',     label:'N° national',   color:'#e5484d', re:/\b\d{2}[.\-]?\d{2}[.\-]?\d{2}[.\- ]?\d{3}[.\-]?\d{2}\b/g},
-  {key:'TVA_BE',   label:'N° entreprise (BE)', color:'#f2c14e', re:/\bBE\s?0\d{3}[.\s]?\d{3}[.\s]?\d{3}\b|\b0\d{3}\.\d{3}\.\d{3}\b/gi},
-  {key:'CARTE',    label:'Carte bancaire',color:'#e5484d', re:/\b\d{4}[ \-]\d{4}[ \-]\d{4}[ \-]\d{2,7}\b|\b\d{13,19}\b/g, valid:luhn},
-  {key:'TEL',      label:'Téléphone',     color:'#f0a020', re:/(?:\+|00)\s?\d{1,3}(?:[ .\-/]?\d){7,11}|\b0(?:[ .\-/]?\d){8,9}\b/g, valid:validTel},
-  {key:'DATE',     label:'Date',          color:'#b07cff', re:/\b\d{1,2}(?:er|ème|e)?[\/.\- ]+(?:\d{1,2}|janv(?:ier)?|f[ée]vr(?:ier)?|mars|avr(?:il)?|mai|juin|juil(?:let)?|ao[uû]t|sept(?:embre)?|oct(?:obre)?|nov(?:embre)?|d[ée]c(?:embre)?)[\/.\- ]+\d{2,4}\b/gi},
-  {key:'MONTANT',  label:'Montant',       color:'#0b9d63', re:/\b\d{1,3}(?:[ .]?\d{3})*(?:[,.]\d{1,2})?\s?(?:€|EUR|euros?)/gi},
-  {key:'CP_VILLE', label:'Code postal',   color:'#2693ce', re:/\b\d{4,5}[ ]+[A-ZÀ-Ÿ][a-zà-ÿ\-]+(?:[ \-][A-ZÀ-Ÿ][a-zà-ÿ\-]+)?\b/g},
-  {key:'PERSONNE', label:'Nom',          color:'#ff7eb6', re:/\b(?:M\.|Mme|Mlle|Mr|Monsieur|Madame|Mademoiselle|Dr|Me|Pr)\.?[ ]+[A-ZÀ-Ÿ][a-zà-ÿ'’\-]+(?:[ ]+[A-ZÀ-Ÿ][a-zà-ÿ'’\-]+){0,2}/g},
-  // Catégories alimentées par le modèle IA local (pas de regex) :
-  {key:'LIEU',     label:'Lieu / Adresse',color:'#2693ce', re:null, ner:true},
-  {key:'ORG',      label:'Organisation',  color:'#c4b5fd', re:null, ner:true},
-  // Termes désignés par l'utilisateur, sur le document ou au clavier :
-  {key:'TERME',    label:'Terme ajouté',  color:'#8b5cf6', re:null, manuel:true},
-];
+/* Les règles — catégories, validateurs, détection, jetons, ré-identification —
+   vivent dans js/regles.js : partie pure, testée sous Node (tests/regles.mjs). */
+const CATS = Regles.CATS;
 
 /* Termes que l'utilisateur a désignés lui-même — en cliquant un mot sur le
    document, en sélectionnant une zone, ou au clavier. Masqués PARTOUT. */
@@ -1567,133 +1535,36 @@ document.getElementById('mode').addEventListener('click',e=>{
 /* ---------- détection ---------- */
 function escapeRe(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 
-function detect(text){
-  const hits=[]; // {start,end,cat,value}
-  CATS.forEach(c=>{
-    if(!c.re || !enabled[c.key]) return;
-    let m; c.re.lastIndex=0;
-    while((m=c.re.exec(text))!==null){
-      const val=m[0];
-      if(val.trim().length<2 || (c.valid && !c.valid(val))){c.re.lastIndex=m.index+1;continue;}
-      hits.push({start:m.index,end:m.index+val.length,cat:c.key,value:val,prio:2});
-      if(m.index===c.re.lastIndex)c.re.lastIndex++;
-    }
-  });
-  // termes désignés par l'utilisateur : priorité 3, ils l'emportent sur tout
-  if(enabled.TERME) termesManuels.forEach(term=>{
-    const motif=term.trim().split(/\s+/).map(escapeRe).join('\\s+');   // tolère les sauts de ligne
-    if(!motif) return;
-    const re=new RegExp(motif,'gi'); let m;
-    while((m=re.exec(text))!==null){
-      hits.push({start:m.index,end:m.index+m[0].length,cat:'TERME',value:m[0],custom:true,prio:3});
-      if(m.index===re.lastIndex)re.lastIndex++;
-    }
-  });
-  // tri + suppression des chevauchements (on garde le plus long / premier)
-  hits.sort((a,b)=> a.start-b.start || (b.end-b.start)-(a.end-a.start));
-  const clean=[]; let lastEnd=-1;
-  hits.forEach(h=>{ if(h.start>=lastEnd){clean.push(h);lastEnd=h.end;} });
-  return clean;
-}
-
-/* ---------- correspondances cohérentes ---------- */
-function buildMapping(hits){
-  const counters={}, map=new Map(); // value(normalisée)->token
-  hits.forEach(h=>{
-    const k=h.cat+'::'+h.value.toLowerCase().replace(/\s+/g,' ').trim();
-    if(!map.has(k)){
-      counters[h.cat]=(counters[h.cat]||0)+1;
-      map.set(k, `[${h.cat}_${counters[h.cat]}]`);
-    }
-    h.token=map.get(k);
-  });
-  return map;
-}
+/* Jetons de SESSION : une fois attribué, [PERSONNE_1] désigne la même valeur
+   jusqu'au changement de document ou au bouton « Vider » (oublierIndex). Les
+   numéros peuvent sauter après une exclusion ; ils ne sont jamais réattribués. */
+let tableJetons=Regles.creerTable();
 
 /* ---------- rendu ---------- */
 let lastText='', lastHits=[], lastHitsTous=[], lastAnon='', lastMapping={}, importedMap=null;
 function catColor(key){return (CATS.find(c=>c.key===key)||{}).color||'#888';}
 function catLabel(key){return (CATS.find(c=>c.key===key)||{}).label||key;}
 
-// fusionne et supprime les chevauchements ; priorité : terme perso > regex > IA
-function dedup(hits){
-  hits.sort((a,b)=> a.start-b.start || (b.prio||1)-(a.prio||1) || (b.end-b.start)-(a.end-a.start));
-  const clean=[]; let lastEnd=-1;
-  hits.forEach(h=>{ if(h.start>=lastEnd){clean.push(h);lastEnd=h.end;} });
-  return clean.sort((a,b)=>a.start-b.start);
-}
-
-// Mots à NE JAMAIS anonymiser (faux positifs fréquents : formes juridiques, sigles, fonctions)
-const EXCLUDE = new Set(['rh','sa','sprl','srl','scrl','scs','snc','asbl','gie','sc','sca',
-  'tva','iban','bce','direction','directrice','directeur','service','département','contrat']);
-
-// Rattache un numéro de voirie au nom de rue (« 27 avenue Louise » et non « avenue Louise »)
-const VOIES = /^(rue|avenue|av\.?|boulevard|bd\.?|chauss[ée]e|place|chemin|quai|impasse|all[ée]e|route|rte|dr[èe]ve|clos|square|sentier|venelle|galerie|parvis|cour)\b/i;
-function extendAddresses(text, hits){
-  hits.forEach(h=>{
-    if(h.cat!=='LIEU' || !VOIES.test(h.value)) return;
-    const before=text.slice(Math.max(0,h.start-10), h.start);
-    const m=before.match(/(\d{1,4}(?:\s?(?:bis|ter))?)[ ,]+$/i);
-    if(m){ h.start -= m[0].length; h.value=text.slice(h.start, h.end); }
-  });
-}
-
-/* Une valeur qu'on décide d'anonymiser doit l'être PARTOUT dans le document.
-   Les règles trouvent déjà chaque occurrence (expressions régulières
-   globales), mais l'IA, elle, en rate : sur un devis réel elle a reconnu
-   « Adminova » à certains endroits et pas à d'autres. On ne masquait alors
-   qu'une partie des occurrences, et la valeur restait lisible ailleurs.
-
-   La recherche tolère les sauts de ligne : un PDF coupe volontiers
-   « Claire\nHanssen » en fin de ligne. */
-function completerOccurrences(text, hits){
-  const parValeur=new Map();
-  for(const h of hits){
-    if(h.exclu) continue;
-    const k=Visu.cle(h);
-    if(!parValeur.has(k)) parValeur.set(k,h);
-  }
-  const ajouts=[];
-  for(const modele of parValeur.values()){
-    const v=modele.value.trim();
-    if(v.length<3) continue;                    // trop court : trop de faux positifs
-    const motif=v.split(/\s+/).map(escapeRe).join('\\s+');
-    const re=new RegExp(motif,'g');
-    let m;
-    while((m=re.exec(text))!==null){
-      const debut=m.index, fin=debut+m[0].length;
-      // on n'ajoute que ce qui n'est pas déjà couvert par une détection
-      if(!hits.some(h=>h.start<fin && debut<h.end))
-        ajouts.push({cat:modele.cat, start:debut, end:fin, value:m[0],
-                     prio:modele.prio, exclu:false, complete:true});
-      if(m.index===re.lastIndex) re.lastIndex++;
-    }
-  }
-  return ajouts.length ? dedup(hits.concat(ajouts)) : hits;
-}
-
 function run(text){
   lastText=text;
-  let hits=detect(text);                                   // regex + termes perso
-  if(nerEnabled && nerText===text)                          // ajoute le NER en cache
-    hits=hits.concat(nerHits.filter(h=>enabled[h.cat]));
-  extendAddresses(text, hits);                              // numéro de rue rattaché
-  hits=dedup(hits);
-  hits=hits.filter(h=>!EXCLUDE.has(h.value.trim().toLowerCase())); // retire les faux positifs
-  // Valeurs écartées à la main (clic sur une zone) : on les GARDE dans la
-  // liste, marquées, pour qu'elles restent visibles et re-cliquables.
-  hits.forEach(h=>{ h.exclu = exclusionsValeurs.has(Visu.cle(h)); });
-  if(indexValide) hits=completerOccurrences(text, hits);
-  lastHitsTous=hits;
-  hits=hits.filter(h=>!h.exclu);
-  buildMapping(hits);
+  const r=Regles.analyser(text,{
+    actives:enabled, termes:termesManuels,
+    ner:(nerEnabled && nerText===text) ? nerHits : null,    // modèle IA, s'il a déjà analysé ce texte
+    // Valeurs écartées à la main (clic sur une zone) : on les GARDE dans la
+    // liste, marquées, pour qu'elles restent visibles et re-cliquables.
+    exclusions:exclusionsValeurs,
+    completer:indexValide,                                   // toutes les occurrences d'une valeur retenue
+    table:tableJetons });
+  lastHitsTous=r.tous;
+  const hits=r.actifs;
   lastHits=hits;
-  // table de correspondances de la session : jeton -> vraie valeur
-  lastMapping={};
-  hits.forEach(h=>{ if(h.token && !(h.token in lastMapping)) lastMapping[h.token]=h.value; });
+  // table de correspondances de la SESSION : jeton -> vraie valeur, y compris les
+  // jetons de valeurs écartées depuis (une réponse d'IA déjà obtenue les contient)
+  lastMapping=tableJetons.correspondances();
   renderAll(text,hits);
   majBoutonPdf();                        // nom du fichier produit et état du bouton
   majSuggestionsNoms();
+  majTermes();                           // « introuvable » suit le texte courant
   if(indexValide){                       // document avec mise en page : visualiseur
     Visu.majZones();
     Visu.planifierResultat();
@@ -1788,23 +1659,8 @@ function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&
    On ne masque RIEN d'office : « Haute École » ou « Utiliser Canva » sortent
    aussi, et masquer de travers abîme le document. Ce sont des suggestions,
    validées d'un clic. */
-const MOT_CAPITALISE = String.raw`\p{Lu}[\p{Ll}]+(?:[-’']\p{Lu}?[\p{Ll}]+)*`;
-const RE_NOMS = new RegExp(String.raw`\b(${MOT_CAPITALISE}(?:[ ]${MOT_CAPITALISE}){1,2})\b`, 'gu');
-
 function suggestionsDeNoms(){
-  if(!lastText) return [];
-  const norm=(x)=>String(x).toLowerCase().replace(/\s+/g,' ').trim();
-  // déjà couvert par une détection active, ou déjà ajouté à la main ?
-  const connus=[...lastHits.map(h=>norm(h.value)), ...[...termesManuels].map(norm)];
-  const comptes=new Map();
-  RE_NOMS.lastIndex=0;
-  let m;
-  while((m=RE_NOMS.exec(lastText))) comptes.set(m[1], (comptes.get(m[1])||0)+1);
-  return [...comptes.entries()]
-    .filter(([v])=>{ const n=norm(v); return !connus.some(c=>c.includes(n) || n.includes(c)); })
-    .sort((a,b)=>b[1]-a[1])
-    .slice(0,10)
-    .map(([v,n])=>({v,n}));
+  return Regles.suggestionsDeNoms(lastText, lastHits, termesManuels);
 }
 
 function majSuggestionsNoms(){
@@ -1876,7 +1732,7 @@ document.getElementById('nomFichierPropo').addEventListener('click', e=>{
 /* Nom du fichier produit. Le nom d'origine est souvent la dernière fuite :
    « Devis pour Dupont.pdf » reste parlant même quand le contenu est propre.
    On y applique donc le même remplacement que dans le document. */
-function nomDeSortie(){
+function nomDeSortie(ext){                 // `ext` : pour les exports .txt / .docx du texte
   let base=String(nomDocument||'document').replace(/\.[a-z0-9]{1,5}$/i,'');
   const valeurs=[...new Set(lastHits.map(h=>h.value))].sort((a,b)=>b.length-a.length);
   for(const v of valeurs){
@@ -1887,7 +1743,7 @@ function nomDeSortie(){
     try{ base=base.replace(new RegExp(motif,'gi'), jeton); }catch(e){ /* motif inattendu */ }
   }
   base=base.replace(/[^\p{L}\p{N}\[\]_ -]+/gu,' ').replace(/\s+/g,' ').trim();
-  return (base||'document')+'-anonymise.'+(moteur ? moteur.extension : 'pdf');
+  return (base||'document')+'-anonymise.'+(ext || (moteur ? moteur.extension : 'pdf'));
 }
 
 /* ---------- termes désignés par l'utilisateur ---------- */
@@ -1895,9 +1751,14 @@ function majTermes(){
   const z=document.getElementById('termesListe');
   if(!z) return;
   if(!termesManuels.size){ z.innerHTML=''; majPropositionsNom(); return; }
-  z.innerHTML=[...termesManuels].map(t=>
-    '<span class="puce-terme">'+escapeHtml(t)+
-    '<button data-terme="'+escapeHtml(t)+'" title="Retirer ce terme">×</button></span>').join('');
+  // Un terme qui n'apparaît nulle part (faute de frappe, mot coupé…) se dit
+  // « introuvable », en grisé : sinon on croit l'avoir masqué.
+  z.innerHTML=[...termesManuels].map(t=>{
+    const introuvable=!!lastText && Regles.occurrencesTerme(lastText,t)===0;
+    return '<span class="puce-terme"'+(introuvable?' style="opacity:.55" title="Ce terme n\'apparaît nulle part dans le document : vérifiez l\'orthographe."':'')+'>'+
+      escapeHtml(t)+(introuvable?' <i style="font-size:.85em">· introuvable</i>':'')+
+      '<button data-terme="'+escapeHtml(t)+'" title="Retirer ce terme">×</button></span>';
+  }).join('');
   majPropositionsNom();
 }
 
@@ -2099,6 +1960,7 @@ document.getElementById('clear').addEventListener('click',()=>{
   document.getElementById('reidInput').value='';
   document.getElementById('reidOut').innerHTML='<div class="empty">Le texte ré-identifié apparaîtra ici.</div>';
   document.getElementById('mapInfo').textContent='table de la session en cours';
+  const bilan=document.getElementById('reidBilan'); if(bilan) bilan.remove();
 });
 document.getElementById('copy').addEventListener('click',()=>{
   if(!lastAnon){alert('Analysez d\'abord un texte.');return;}
@@ -2109,7 +1971,7 @@ document.getElementById('copy').addEventListener('click',()=>{
 document.getElementById('download').addEventListener('click',()=>{
   if(!lastAnon){alert('Analysez d\'abord un texte.');return;}
   const blob=new Blob([lastAnon],{type:'text/plain;charset=utf-8'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='document-anonymise.txt'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nomDeSortie('txt'); a.click();
 });
 
 /* ---------- export PDF (100% local, via jsPDF) ----------
@@ -2206,7 +2068,7 @@ function rendreTxtEnPdf(){
     }
   });
   footer();
-  doc.save('document-anonymise.pdf');
+  doc.save(nomDeSortie('pdf'));
 }
 
 /* ---------- export Word (.docx, 100% local via docx) ----------
@@ -2232,7 +2094,7 @@ document.getElementById('downloadDocx').addEventListener('click', async ()=>{
   flush();
   const docu=new Document({ sections:[{ children: paras }] });
   const blob=await Packer.toBlob(docu);
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='document-anonymise.docx'; a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nomDeSortie('docx'); a.click();
 });
 
 /* ---------- ré-identification (réinjecter les vraies données) ---------- */
@@ -2265,17 +2127,29 @@ function reidentify(){
   const src=document.getElementById('reidInput').value;
   if(!src.trim()){ document.getElementById('reidOut').innerHTML='<div class="empty">Collez d\'abord la réponse de l\'IA.</div>'; return; }
   if(!Object.keys(map).length){ alert('Aucune table de correspondances disponible (analysez un document ou importez une table).'); return; }
-  let count=0;
-  // remplace chaque jeton [TYPE_n] par sa vraie valeur (jetons longs d'abord)
-  const tokens=Object.keys(map).sort((a,b)=>b.length-a.length);
-  let out=src;
-  tokens.forEach(tok=>{
-    const re=new RegExp(escapeRe(tok),'g');
-    out=out.replace(re,()=>{ count++; return map[tok]; });
-  });
-  document.getElementById('reidOut').textContent=out;
-  reidLast=out;
-  document.getElementById('reidOut').setAttribute('data-n',count);
+  // Une passe : jetons exacts, mais aussi « PERSONNE_1 » sans crochets, « [ personne_1 ] »…
+  // — uniquement pour les jetons de la table. Les autres sont comptés, jamais devinés.
+  const r=Regles.reidentifier(src,map);
+  document.getElementById('reidOut').textContent=r.texte;
+  reidLast=r.texte;
+  document.getElementById('reidOut').setAttribute('data-n',r.remplaces);
+  bilanReid(r);
+}
+/* Compte rendu : l'utilisateur doit voir ce qui n'a PAS été remplacé. */
+function bilanReid(r){
+  const sortie=document.getElementById('reidOut');
+  let b=document.getElementById('reidBilan');
+  if(!b){ b=document.createElement('div'); b.id='reidBilan'; sortie.insertAdjacentElement('beforebegin',b); }
+  const pl=(n,un,plusieurs)=>n+' '+(n>1?plusieurs:un);
+  const liste=(a)=>a.slice(0,8).map(escapeHtml).join(', ')+(a.length>8?' … (+'+(a.length-8)+')':'');
+  const lignes=['<b>'+pl(r.remplaces,'jeton remplacé','jetons remplacés')+'</b>'+
+                (r.variantes?' (dont '+pl(r.variantes,'écrit autrement','écrits autrement')+' par l\'IA)':'')+'.'];
+  if(r.inconnus.length) lignes.push('⚠️ '+pl(r.inconnus.length,'jeton absent de la table','jetons absents de la table')+
+                ' : '+liste(r.inconnus)+' — laissé'+(r.inconnus.length>1?'s':'')+' tel'+(r.inconnus.length>1?'s':'')+' quel'+(r.inconnus.length>1?'s':'')+'.');
+  if(r.absents.length) lignes.push(pl(r.absents.length,'jeton de la table n\'apparaît','jetons de la table n\'apparaissent')+
+                ' pas dans la réponse : '+liste(r.absents)+' — l\'IA les a peut-être réécrits autrement.');
+  b.className='status '+(r.inconnus.length||r.absents.length?'work':'ok');
+  b.innerHTML=lignes.join('<br>');
 }
 let reidLast='';
 document.getElementById('reidBtn').addEventListener('click',reidentify);

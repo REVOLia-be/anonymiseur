@@ -128,11 +128,13 @@
     }
     for (const e of sec.querySelectorAll("img,svg,canvas")) {
       const r = e.getBoundingClientRect();
-      if (r.height > 0) iv.push([r.top - hautSec, r.bottom - hautSec]);
+      if (r.height > 0) iv.push([r.top - hautSec + 0.5, r.bottom - hautSec - 0.5]);
     }
+    // Deux rangées voisines se touchent : sans rognage de 1 px, aucun creux entre
+    // elles et la coupe tombait AU MILIEU d'une rangée (voir tests/README, W15).
     for (const tr of sec.querySelectorAll("tr")) {
       const r = tr.getBoundingClientRect();
-      if (r.height > 0 && r.height <= hautContenu) iv.push([r.top - hautSec, r.bottom - hautSec]);
+      if (r.height > 2 && r.height <= hautContenu) iv.push([r.top - hautSec + 1, r.bottom - hautSec - 1]);
     }
     iv.sort((a, b) => a[0] - b[0]);
     const trous = [];

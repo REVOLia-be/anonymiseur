@@ -162,6 +162,9 @@
   const MOIS = "janv(?:ier)?|f[ée]vr(?:ier)?|mars|avr(?:il)?|mai|juin|juil(?:let)?|ao[uû]t|sept(?:embre)?|oct(?:obre)?|nov(?:embre)?|d[ée]c(?:embre)?" +
                "|januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december";
 
+  // année : 4 chiffres plausibles (19xx, 20xx) ou 2 chiffres — « janvier. 4000 » n'est pas une date
+  const AN = "(?:(?:19|20)\\d{2}|\\d{2})";
+
   // Nom de personne : prénoms composés, particules, NOM en capitales.
   // « le » / « la » ne sont PAS des particules : « Madame la Présidente » n'est pas un nom.
   const NOM_MOT = `(?:${L}${l}+(?:(?:['’-])?${L}${l}+|['’]${l}+)*|${L}{2,}(?:-${L}{2,})*)`;
@@ -202,7 +205,7 @@
     // Dates : jamais l'espace comme séparateur entre trois nombres (« +33 6 12 34 56 78 »
     // n'est pas deux dates) ; mois en toutes lettres FR et NL ; format ISO.
     { key: "DATE", label: "Date", color: "#b07cff",
-      re: new RegExp(`${G}(?:\\d{1,2}[\\/.\\-]\\d{1,2}[\\/.\\-]\\d{2,4}|\\d{1,2}(?:er|ème|e)?[\\/.\\- ]+(?:${MOIS})[\\/.\\- ]+\\d{2,4}|(?:19|20)\\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01]))${D}`, "giu") },
+      re: new RegExp(`${G}(?:\\d{1,2}[\\/.\\-]\\d{1,2}[\\/.\\-]${AN}|\\d{1,2}(?:er|ème|e)?[\\/.\\- ]+(?:${MOIS})(?:\\.[ ]?|[\\/\\- ])${AN}|(?:19|20)\\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01]))${D}`, "giu") },
     // « euros » AVANT « EUR » : sous le drapeau i, EUR l'emporterait et laisserait « os ».
     { key: "MONTANT", label: "Montant", color: "#0b9d63",
       re: new RegExp(`${G}\\d{1,3}(?:[ .\\u00a0\\u202f]?\\d{3})*(?:[,.]\\d{1,2})?\\s?(?:euros?|EUR|€)(?![\\p{L}])|${G}(?:€|EUR)[ \\u00a0]?\\d{1,3}(?:[ .\\u00a0\\u202f]?\\d{3})*(?:,\\d{1,2})?(?![\\p{N}])`, "giu") },
@@ -218,7 +221,7 @@
       // rue française : mot-clé + nom propre (« dans la rue » n'en est pas une)
       re: new RegExp(`(?:${G}\\d{1,4}(?:[ ]?(?:bis|ter|[A-Za-z]))?,?[ ]+)?${G}(?:${VOIES_FR})[ ]+(?:${PARTICULES_RUE}[ ]?)?${L}[\\p{L}'’\\-]*(?:[ ](?:(?:du|de la|de|des|d['’]|la|le|l['’])[ ]?)?${L}[\\p{L}'’\\-]*){0,4}(?:,?[ ]+${NUM_RUE})?`, "gu"),
       // rue néerlandaise : suffixe, et le numéro est exigé
-      aussi: [new RegExp(`${G}(?:(?:Lange|Korte|Grote|Kleine|Nieuwe|Oude|Groot|Klein|Sint|Onze-Lieve-Vrouw|Burgemeester)[ ])?(?:${L}[\\p{L}'’\\-]*?(?:${SUFFIXES_NL})|Markt|Plein|Kaai|Lei|Dreef|Steenweg|Vest)[ ]+${NUM_RUE}`, "gu")] },
+      aussi: [new RegExp(`${G}(?:(?:Lange|Korte|Grote|Kleine|Nieuwe|Oude|Groot|Klein|Sint|Onze-Lieve-Vrouw|Burgemeester|Koning|Koningin|Prins|Prinses|Kardinaal|Generaal|Pastoor|Dokter)[ ])?(?:${L}[\\p{L}'’\\-]{0,25}?(?:${SUFFIXES_NL})|Markt|Plein|Kaai|Lei|Dreef|Steenweg|Vest)[ ]+${NUM_RUE}`, "gu")] },
     { key: "PERSONNE", label: "Nom", color: "#ff7eb6",
       re: new RegExp(`${G}${TITRE}${SP}+(?:${PARTICULE}${SP}?)?${NOM_MOT}(?:${SP}+(?:${PARTICULE}${SP}?)?${NOM_MOT}){0,3}`, "gu") },
     // Catégories alimentées par le modèle IA local (pas de regex) :
@@ -378,7 +381,8 @@
     if (o.ner && o.ner.length) hits = hits.concat(o.ner.filter(h => actif(h.cat)).map(h => Object.assign({}, h)));
     extendAddresses(text, hits);
     hits = dedup(hits);
-    hits = hits.filter(h => !EXCLUDE.has(h.value.trim().toLowerCase().replace(/\./g, "")));
+    // un terme désigné par l'utilisateur n'est jamais « exclu » : il l'a demandé (« Directrice »)
+    hits = hits.filter(h => h.custom || !EXCLUDE.has(h.value.trim().toLowerCase().replace(/\./g, "")));
     const ecartees = o.exclusions || new Set();
     hits.forEach(h => { h.exclu = ecartees.has(cle(h)); });
     if (o.completer) hits = completerOccurrences(text, hits);

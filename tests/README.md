@@ -19,6 +19,28 @@ en cas de fuite — utilisable tel quel dans un script.
 > La détection du harnais est volontairement minimale : il éprouve la
 > **plomberie PDF**, pas la qualité des règles ni l'IA locale du site.
 
+**Règles de détection** (`js/regles.js`)
+
+Partie pure (sans DOM), chargée telle quelle par le site et par Node. Aucun
+`npm install`, aucun PDF :
+
+```bash
+cd tests
+node regles.mjs          # couverture sur le corpus, faux positifs, cas unitaires
+```
+
+`corpus-regles.mjs` est un corpus **synthétique** belge FR/NL (10 documents,
+103 valeurs sensibles repérées par `[[valeur|ÉTIQUETTE]]`). Le compte rendu
+donne, par type de valeur, combien sont masquées **en entier**, **à moitié**
+(le pire cas : une zone colorée donne l'impression d'avoir masqué) ou pas du
+tout, puis les faux positifs sur des textes sans donnée personnelle. Le code
+de sortie vaut 1 sous les seuils inscrits en tête de `regles.mjs` : on les
+relève quand les règles progressent, jamais l'inverse.
+
+> Ne jamais coller dans ce corpus un extrait d'un vrai document : le dépôt est
+> **public**. Noms courants combinés au hasard, numéros d'exemple, domaines
+> « exemple ».
+
 **Word (`.docx`)**
 
 Même principe pour `js/anon-docx.js` : on édite le XML du Word, on ne le
@@ -332,6 +354,130 @@ résultat : `extraireTexte`, mammoth, et LibreOffice (conversion en PDF, dont le
 texte est ensuite vérifié sans fuite). Le contrôle d'équilibrage des balises et
 le décompte des paragraphes attrapent les erreurs d'édition avant eux. Un
 `<w:r></w:r>` vide reste là où un `<w:tab/>` a été supprimé : valide.
+
+---
+
+## Règles : les pièges
+
+Mesurés sur le corpus de `regles.mjs` (47 valeurs sur 103 masquées en entier
+avant les corrections, 80 après) ou sur un cas reproduit à la main. Plusieurs
+échouent **sans bruit** : l'outil colore une zone, le document paraît traité,
+et une partie de la donnée reste lisible.
+
+### R1. `\b` ne voit que l'ASCII : « Liège » et « Genappé » sont coupés au mauvais endroit
+
+Avec le drapeau `u`, `\b` considère `é` comme une non-lettre : `/Genappé\b/u`
+ne reconnaît pas « Genappé 1 ». Les limites de mot s'écrivent
+`(?<![\p{L}\p{N}])…(?![\p{L}\p{N}])`. Même limite pour les **termes ajoutés
+à la main** et pour la complétion des occurrences : sans elle, « Anne » devenait
+`[TERME_1]xe` dans « annexe » et « Marc » `[TERME_2]hé` dans « marché ».
+« REVOLia » reste reconnu dans « REVOLia.be » et dans une adresse e-mail :
+le point et l'arobase ne sont pas des lettres.
+
+### R2. Sous `iu`, `\p{Lu}` reconnaît aussi les minuscules
+
+`/\p{Lu}/iu.test("a")` vaut `true` (`false` sans `i`). Les règles qui comptent
+sur la majuscule (noms, rues, communes) s'écrivent donc **sans** `i`. À
+l'inverse, `REFERENCE` a besoin de `i` pour ses mots-clés (« Dossier », « RÉF. »)
+et le paie : sa valeur `[A-Z0-9]…` accepte alors « en-cours » dans « dossier
+en-cours ». Le validateur exige un chiffre et aucune minuscule.
+
+### R3. L'ordre des alternatives compte : `euros|EUR`, pas `EUR|euros`
+
+Sous `i`, `(?:€|EUR|euros?)` reconnaît « EUR » au début de « euros » et laisse
+« os » : `300 euros` donnait `[MONTANT_1]os`. L'alternative longue d'abord.
+
+### R4. L'espace n'est pas un séparateur de date
+
+Avec `[\/.\- ]` entre trois nombres, `+33 6 12 34 56 78` devenait **deux dates**
+(`+[DATE_1] [DATE_2]`, texte illisible) et `+31 6 1234 5678` en laissait un
+morceau lisible. Les dates entièrement numériques n'acceptent que `/ . -`. Le
+même mécanisme prenait « 15 janvier. 4000 » pour une date : l'année doit
+valoir 19xx, 20xx ou deux chiffres.
+
+### R5. Un nom ou une commune composés se masquent à moitié
+
+Une classe `[a-zà-ÿ'’\-]+` s'arrête au premier tiret ou à la première
+majuscule : `M. Jean-Luc Dehaene` → seul `M. Jean-` masqué ; `Mme Van den
+Broeck` → `Mme Van` ; `1200 Woluwe-Saint-Lambert` → `1200 Woluwe-`. Prénoms
+composés, particules (`Van den`, `De`, `El`…) et chaînes à tirets sont décrits
+explicitement. **Ne pas** mettre « le » / « la » parmi les particules :
+« Madame la Présidente » et « Monsieur le Directeur » seraient pris pour des
+noms.
+
+### R6. Une commune suivie d'un espace, d'un mot en minuscule ou d'une majuscule avale la suite
+
+Autoriser « espace + particule » après la commune donne `1000 Bruxelles le`
+(dans « Fait à 1000 Bruxelles le 15 janvier ») et « espace + mot capitalisé »,
+`4000 Liège Tél`. Seuls le tiret et l'apostrophe prolongent une commune
+(`Louvain-la-Neuve`, `Braine-l'Alleud`), plus quelques préfixes avec espace
+(`Sint Niklaas`, `Mont Saint-Guibert`).
+
+Sans la liste des codes postaux (décision séparée), les évidences sont
+écartées à la main : `1382 Code`, `2023 Rapport`, `2025 Wallonie`, un mois,
+et `2024 Bruxelles` (Bruxelles n'est pas au-delà de 1299). Ne pas rejeter
+d'après le seul nombre : 1900 à 2099 sont aussi des codes d'Anvers.
+
+### R7. Un numéro de maison de quatre chiffres avale le code postal
+
+`Avenue Louise, 1050 Ixelles` : un numéro `\d{1,4}` prend « 1050 », la rue
+devient `Avenue Louise, 1050`, et `dedup` (le plus long qui commence en
+premier) élimine le code postal : **« Ixelles » reste en clair**. Numéro de rue
+limité à 3 chiffres et `(?!\d)`. Même idée pour le préfixe néerlandais d'une
+rue (« Lange Kievitstraat ») : une liste d'adjectifs, pas « n'importe quel mot
+capitalisé », sinon « Adres Kerkstraat 52 » est pris en entier.
+
+### R8. Un validateur par clé évite les faux positifs, mais une coquille ne doit pas laisser passer la valeur
+
+Sans validation, `12345678901` (une référence produit) était un n° national.
+Avec la clé seule, un vrai numéro avec une faute de frappe échapperait. Le
+motif est donc : clé juste (modulo 97, NISS avant et après 2000, BCE, IBAN),
+**ou** un mot de contexte juste devant (`NISS`, `rijksregister`, `TVA`,
+`ondernemingsnummer`, `IBAN`, `compte`, `rekening`…), **ou** le préfixe « BE »
+pour un n° d'entreprise. Un IBAN invalide (`BE43 0682 4417 9301` dans le
+corpus) n'est masqué qu'avec son mot de contexte.
+
+### R9. Un motif gourmand avale un mot voisin ; le validateur peut raccourcir
+
+`BE68 5390 0754 7034 ET voilà` : le motif IBAN prend « ET » (groupe de 1 à 3
+caractères en capitales), le modulo 97 de l'ensemble échoue, et l'IBAN entier
+serait rejeté. Un validateur peut renvoyer **un entier** — la longueur à
+garder — ; on coupe à la longueur du pays (BE 16, FR 27, NL 18…) puis on
+vérifie la clé.
+
+### R10. Un terme désigné à la main ne passe pas par `EXCLUDE`
+
+La liste d'exclusion (formes juridiques `srl`, `bvba`, `vzw`…, mais aussi
+« directrice », « service ») sert à écarter les faux positifs des règles et de
+l'IA. Appliquée à un terme que l'utilisateur vient de cliquer, elle faisait
+disparaître sa demande sans un mot : « Directrice » cliqué sur un PDF ne
+produisait rien. Les termes ajoutés y échappent.
+
+### R11. Les jetons ne se renumérotent pas
+
+Renuméroter à chaque recalcul faisait désigner à `[PERSONNE_1]` une autre
+personne après avoir écarté une détection : une réponse d'IA déjà obtenue était
+ré-identifiée avec le **mauvais nom**, sans avertissement. La table de session
+(`catégorie::valeur normalisée → jeton`) vit jusqu'au changement de document ou
+au bouton « Vider », ses compteurs n'avancent que, et la table exportée contient
+**tous** les jetons attribués, y compris ceux de valeurs écartées depuis. Les
+numéros peuvent donc sauter (`PERSONNE_1`, `PERSONNE_3`).
+
+### R12. La ré-identification n'invente rien
+
+Elle tolère `PERSONNE_1` sans crochets, `[ personne_1 ]` et le markdown
+`\[PERSONNE\_1\]`, mais **seulement pour les jetons de la table** : `PERSONNE_12`
+n'est pas `PERSONNE_1` suivi d'un 2, `rapport_1` n'est pas un jeton. Les jetons
+de la forme `[XXX_n]` qui n'y figurent pas sont signalés, jamais devinés, tout
+comme ceux de la table que la réponse ne contient pas.
+
+### Ce que les règles ne font pas encore
+
+Noms **sans titre** (« Marc Wauters », « Julie », « Pieter ») et raisons
+sociales (« Boulangerie Dewolf ») : 23 des 103 valeurs, presque toutes. Ce sont
+des suggestions à valider d'un clic, jamais un masquage d'office : « Haute
+École » ou « Cher Confrère » en font partie. Villes seules (« Gand »,
+« Brugge ») et n° de mutuelle hors mot-clé échappent aussi.
 
 ---
 
