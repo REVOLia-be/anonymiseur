@@ -252,6 +252,8 @@
   .docinfo .meta{font-size:var(--t-13);color:var(--encre-3)}
   .docinfo .pousse{flex:1 1 auto}
   .docinfo .docnote{margin-top:2px;max-width:70ch;line-height:1.45}
+  .docinfo .langue-ocr{display:flex;align-items:center;flex-wrap:wrap;gap:var(--e-2);margin-top:var(--e-1)}
+  .docinfo .langue-ocr select{min-height:32px;font-size:var(--t-13)}
   main.avec-doc #pDepot>h2{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   main.avec-doc #pDepot .body{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e-2) var(--e-3);padding:var(--e-3) var(--e-4)}
   main.avec-doc #pDepot .docinfo{flex:1 1 320px}
@@ -351,7 +353,14 @@
   .avertissement-table{display:flex;gap:var(--e-2);align-items:flex-start;margin-top:var(--e-3);padding:var(--e-3);
        font-size:var(--t-13);line-height:1.5;color:var(--encre-2);background:var(--alerte-fond);border:1px solid var(--alerte-bord);border-radius:var(--r-2)}
   .avertissement-table .ico{width:18px;height:18px;color:var(--alerte);margin-top:1px}
-  main:has(#table-wrap>.empty) #pTable{display:none}
+  main:has(#table-wrap>.empty):not(:has(#gardeTable:checked)) #pTable{display:none}
+  /* Table partagée entre plusieurs documents d'un dossier */
+  .table-partagee{margin-bottom:var(--e-3);padding-bottom:var(--e-3);border-bottom:1px solid var(--bord)}
+  .table-partagee label.opt{min-height:28px;font-weight:600}
+  .table-partagee .hint{max-width:75ch;margin-top:var(--e-1)}
+  .table-partagee .etat-table{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e-2) var(--e-3);margin-top:var(--e-2);font-size:var(--t-14);color:var(--encre)}
+  .table-partagee .etat-table[hidden]{display:none}
+  @media (max-width:640px){ .table-partagee label.opt{min-height:44px;align-items:flex-start} .table-partagee .etat-table .sm{min-height:44px} }
 
   /* Réglages (details.reglages) — panneau texte ET rail de l'atelier */
   details.reglages{margin-top:var(--e-4);border:1px solid var(--bord);border-radius:var(--r-3);background:var(--surface)}
@@ -718,6 +727,15 @@
           <div class="nom" id="docnom"></div>
           <div class="meta" id="docmeta"></div>
           <div class="meta docnote" id="docnote" hidden></div>
+          <div class="meta langue-ocr" id="langueOcrBloc" hidden>
+            <label for="langueOcr">Langue du texte à lire</label>
+            <select id="langueOcr" aria-describedby="langueOcrAide">
+              <option value="fra">Français</option>
+              <option value="nld">Néerlandais</option>
+              <option value="fra+nld">Français et néerlandais</option>
+            </select>
+            <span id="langueOcrAide">La page est relue quand vous changez.</span>
+          </div>
         </div>
         <span class="pousse"></span>
         <button type="button" class="secondary sm" id="changerDoc">Changer de document</button>
@@ -876,6 +894,14 @@
     <p class="sous-titre si-doc">Pour écarter une valeur, cliquez-la sur le document.</p>
     <p class="sous-titre si-texte">Pour écarter une valeur, cliquez-la dans le texte surligné.</p>
     <div class="body">
+      <div class="table-partagee">
+        <label class="opt" for="gardeTable"><input type="checkbox" id="gardeTable" aria-describedby="gardeTableAide">Garder la même table pour le document suivant</label>
+        <p class="hint" id="gardeTableAide">Pour un dossier de plusieurs documents&nbsp;: la même personne garde le même jeton d'un document à l'autre, et la table exportée couvre tout le dossier. La table reste en mémoire dans cet onglet (rien n'est enregistré dans le navigateur) et disparaît à la fermeture de l'onglet ou avec «&nbsp;Tout effacer&nbsp;».</p>
+        <div class="etat-table" id="tableEtat" role="status" aria-live="polite" hidden>
+          <span id="tableEtatTexte"></span>
+          <button type="button" id="tableVider" class="secondary sm">Repartir d'une table vide</button>
+        </div>
+      </div>
       <div id="table-wrap"><div class="empty">Aucune détection pour l'instant.</div></div>
       <div class="controls">
         <button type="button" id="exportMap" class="secondary sm"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg>Exporter la table (.json)</button>
@@ -947,7 +973,7 @@
     <details><summary>Mes documents sont-ils envoyés quelque part&nbsp;?</summary><div class="a">Non. Tout le traitement (lecture, OCR, détection, anonymisation) se fait dans votre navigateur. Le contenu de vos documents ne quitte jamais votre appareil — vérifiable dans l'onglet « réseau » de votre navigateur. Voir la <a href="confidentialite.html">politique de confidentialité</a>.</div></details>
     <details><summary>Est-ce une anonymisation «&nbsp;garantie&nbsp;»&nbsp;?</summary><div class="a">Non, c'est une <b>aide</b>. Aucune détection automatique n'est parfaite, et les identifiants indirects (recoupements de contexte) lui échappent. <b>Relisez toujours</b> le résultat. La pseudonymisation n'est pas une anonymisation au sens du RGPD.</div></details>
     <details><summary>Quels types de documents puis-je traiter&nbsp;?</summary><div class="a">PDF (y compris scannés, grâce à la reconnaissance de texte OCR), Word (.docx), images (JPG, PNG, WebP, GIF, BMP), ou simplement du texte collé. Le <b>PDF</b>, les <b>images</b> et le <b>Word</b> conservent leur mise en page&nbsp;: une image devient un PDF d'une page, un Word ressort en <b>.docx</b>. Seul le texte collé passe par un rendu texte.</div></details>
-    <details><summary>Et les documents scannés&nbsp;?</summary><div class="a">Ils fonctionnent&nbsp;: la reconnaissance de texte (OCR) tourne localement et donne la position de chaque mot, ce qui permet d'effacer réellement les pixels concernés sur l'image. <b>Avec une réserve importante</b>&nbsp;: un mot mal reconnu n'est pas détecté, donc pas masqué — et comme la page est une image, la vérification automatique ne peut rien confirmer. Sur un scan ou une image, <b>parcourez les pages une à une</b> avant d'utiliser le document.</div></details>
+    <details><summary>Et les documents scannés&nbsp;?</summary><div class="a">Ils fonctionnent&nbsp;: la reconnaissance de texte (OCR) tourne localement et donne la position de chaque mot, ce qui permet d'effacer réellement les pixels concernés sur l'image. Elle lit le <b>français</b> par défaut ; pour un document en <b>néerlandais</b>, choisissez la langue dans le bandeau du document (le français et le néerlandais sont les seules langues reconnues). <b>Avec une réserve importante</b>&nbsp;: un mot mal reconnu n'est pas détecté, donc pas masqué — et comme la page est une image, la vérification automatique ne peut rien confirmer. Sur un scan ou une image, <b>parcourez les pages une à une</b> avant d'utiliser le document.</div></details>
     <details><summary>Mon PDF garde-t-il sa mise en page&nbsp;?</summary><div class="a">Oui. Le document n'est pas reconstruit ni transformé en images&nbsp;: c'est votre PDF, avec ses polices, ses tableaux, son logo et son poids d'origine — les données en moins. En contrepartie, le ré-encodage retire <b>liens, formulaires, signets et signatures</b> en tant qu'éléments interactifs, ainsi que les métadonnées du fichier. L'outil vous le rappelle avant le téléchargement.</div></details>
     <details><summary>Et mon document Word&nbsp;?</summary><div class="a">Un <b>.docx</b> déposé s'ouvre comme un PDF&nbsp;: aperçu page par page, détections à leur place, vues Original / Anonymisé / Côte à côte. Ce qui ressort est <b>votre fichier Word</b>, pas une copie reconstruite&nbsp;: styles, tableaux, images, en-têtes et pieds de page sont conservés, seul le texte est remplacé — y compris dans les notes, les commentaires, le texte supprimé en suivi des modifications, les liens et les métadonnées. L'<b>aperçu</b>, lui, est une interprétation de votre navigateur (polices de remplacement si Calibri n'est pas installée, pagination approchée)&nbsp;: la mise en page du fichier produit reste celle d'origine. Le contenu des <b>images et des objets incorporés</b> n'est pas analysé&nbsp;; l'outil vous le signale. Les anciens fichiers <b>.doc</b> doivent d'abord être enregistrés en .docx.</div></details>
     <details><summary>Et le nom du fichier&nbsp;?</summary><div class="a">C'est une fuite qu'on oublie&nbsp;: «&nbsp;Devis pour Dupont.pdf&nbsp;» reste parlant même quand le contenu est propre. L'outil <b>propose les mots du nom</b> comme termes à masquer, et <b>applique le même remplacement au nom du fichier produit</b>&nbsp;: vous récupérez «&nbsp;Devis pour [PERSONNE_1]-anonymise.pdf&nbsp;».</div></details>
@@ -1068,12 +1094,42 @@ let moteur=null, chargement=0;
    contrat, « Monsieur Jean-Pierre Lambert », supprimé en révision, restait
    intact dans le fichier produit parce que rien à l'écran ne le montrait. */
 let texteHorsApercu='', hitsHorsApercu=[];
+/* Table partagée (option « Garder la même table pour le document suivant »).
+   La table de jetons ne vit qu'en mémoire. Décochée, un nouveau document la vide
+   (comportement d'origine). Cochée, elle suit le dossier ; « Tout effacer » la
+   vide toujours. Sont propres au DOCUMENT (vidés à chaque changement) : valeurs
+   écartées à la main — un faux positif ici peut être une vraie donnée ailleurs —
+   et mentions acceptées malgré la vérification — elles portent sur un fichier
+   produit. Sont propres au DOSSIER (gardés) : les termes ajoutés. */
+let tableNbDocs=0;
+function tablePartagee(){ const c=document.getElementById('gardeTable'); return !!(c && c.checked); }
+function viderTable(){ tableJetons.vider(); tableNbDocs=0; majTableEtat(); }
+/* Un document de plus contribue à la table (appelé quand il est prêt). */
+function declarerDocument(){ tableNbDocs++; majTableEtat(); }
+/* Réinitialise ce qui est propre au document ; les termes ajoutés ne sont vidés que hors dossier. */
+function reinitialiserDocument(){
+  exclusionsValeurs.clear(); fuitesAcceptees.clear();
+  if(!tablePartagee()) termesManuels.clear();
+  majTermes();
+}
+function majTableEtat(){
+  const zone=document.getElementById('tableEtat'); if(!zone) return;
+  const nv=Object.keys(tableJetons.correspondances()).length;
+  const partagee=tablePartagee();
+  zone.hidden = !(partagee || tableNbDocs>1);
+  if(zone.hidden) return;
+  const t=document.getElementById('tableEtatTexte');
+  t.textContent = partagee
+    ? 'Table partagée : '+pl(tableNbDocs,'document','documents')+', '+pl(nv,'valeur','valeurs')+'.'
+    : 'La table couvre encore '+pl(tableNbDocs,'document','documents')+' ('+pl(nv,'valeur','valeurs')+') : elle sera vidée au prochain document.';
+  document.getElementById('tableVider').disabled = (nv===0 && tableNbDocs===0);
+}
 function oublierIndex(){
   chargement++;
   texteHorsApercu=''; hitsHorsApercu=[];
   if(moteur){ moteur.fermer(); moteur=null; }       // libère URL d'objet et conteneurs hors écran
   pdfIndex=null; indexValide=false; nomDocument=''; derniereVerif=null; dernierRapport=null; Visu.fermer();
-  tableJetons.vider();                               // nouveau document : nouveaux jetons
+  if(!tablePartagee()) viderTable();                 // nouveau document : nouveaux jetons, sauf table partagée
   majBoutonPdf();
 }
 
@@ -1152,7 +1208,7 @@ const MoteurPdf = {
         'et '+pl(ver.nVerifiees,'valeur a été recherchée','valeurs ont été recherchées')+' dans le fichier produit sans rien trouver. '+
         '<b>Mais ce contrôle ne prouve pas grand-chose ici</b> : la page étant une image, il n\'y a pas '+
         'de texte à extraire. <span class="count">'+poids+'</span>'+
-        '<div class="pertes">Le vrai risque est ailleurs&nbsp;: <b>un mot mal reconnu par l\'OCR '+
+        '<div class="pertes">Le vrai risque est ailleurs&nbsp;: <b>un mot mal reconnu par l\'OCR ('+(OCR_LANGUES[pdfIndex.langueOcr]||OCR_LANGUES.fra)+') '+
         'n\'est pas détecté, donc pas masqué</b>. Parcourez les pages une à une avant d\'utiliser '+
         'ce document, et ajoutez à la main ce qui manque.</div>' };
     }
@@ -1319,7 +1375,7 @@ const Visu = (function(){
     el('docnom').textContent=nomFichier||(idx.docx?'Document Word':'Document PDF');
     el('docmeta').textContent=idx.nPages+' page'+(idx.nPages>1?'s':'')+(idx.docx?' (aperçu)':'')+
                               ' · '+idx.texte.length.toLocaleString('fr-BE')+' caractères'+
-                              (idx.ocr?' · texte reconnu par OCR':'');
+                              (idx.ocr?' · texte reconnu par OCR ('+(OCR_LANGUES[idx.langueOcr]||OCR_LANGUES.fra)+')':'');
     // Un Word n'a pas de pages « fixes » : l'aperçu est une interprétation du
     // navigateur. On le dit, une fois, sobrement.
     const note=el('docnote');
@@ -1778,7 +1834,8 @@ async function normaliserImage(file){
 
 /* Chemin commun PDF / image : `preparer` fournit les octets (et, pour une
    image, son type MIME). Un PDF sans texte, et toute image, passent par l'OCR. */
-async function chargerDocument(file, preparer){
+let dernierScan=null;      // { file, preparer } du dernier document lu par OCR : pour le relire dans une autre langue
+async function chargerDocument(file, preparer, relecture){
   oublierIndex();
   try{
     const { buf, image } = await preparer();
@@ -1799,10 +1856,13 @@ async function chargerDocument(file, preparer){
       idxOcr.image=!!image;
       moteur=MoteurPdf; moteur.ouvrir();
       pdfIndex=idxOcr; indexValide=true;
-      exclusionsValeurs.clear(); fuitesAcceptees.clear(); termesManuels.clear(); majTermes();
+      reinitialiserDocument();
       out = idxOcr.texte;
       document.getElementById('input').value=out;
       nomDocument=file.name; Visu.ouvrirPdf(idxOcr, file.name);
+      dernierScan={ file, preparer };
+      majLangueOcr(idxOcr);
+      if(!relecture) declarerDocument();
       resetBuild(); run(out);
       setStatus('');
       return;
@@ -1810,9 +1870,11 @@ async function chargerDocument(file, preparer){
 
     moteur=MoteurPdf; moteur.ouvrir();
     pdfIndex=idx; indexValide=true;
-    exclusionsValeurs.clear(); fuitesAcceptees.clear(); termesManuels.clear(); majTermes();
+    reinitialiserDocument();
     document.getElementById('input').value=out;
     nomDocument=file.name; Visu.ouvrirPdf(idx, file.name);
+    dernierScan=null; majLangueOcr(null);
+    declarerDocument();
     resetBuild(); run(out);
     setStatus('');            // le bandeau du document porte déjà l'information
   }catch(e){
@@ -1825,20 +1887,55 @@ async function chargerDocument(file, preparer){
    OCR local — Tesseract.js (français). L'image ne sort jamais
    du navigateur ; seule la librairie/le modèle sont chargés.
    =========================================================== */
-let ocrWorker=null, ocrLoading=null;
-async function getOcrWorker(){
-  if(ocrWorker) return ocrWorker;
-  if(!ocrLoading){
-    // URL absolue (les workers blob ne résolvent pas les chemins relatifs)
-    const base = location.origin + location.pathname.replace(/[^/]*$/, '') + 'vendor/tesseract/';
-    ocrLoading = Tesseract.createWorker('fra', 1, {
-      workerPath: base + 'worker.min.js',
-      corePath: base,
-      langPath: base,
-      logger: m => { if(m.status==='recognizing text') setStatus('OCR en cours… '+Math.round(m.progress*100)+'%','work'); }
-    }).then(w=>{ ocrWorker=w; return w; });
+/* Langues reconnues : français (par défaut) et néerlandais, au choix de
+   l'utilisateur. Mesuré sur des scans synthétiques (voir tests/README.md) :
+   « français + néerlandais » ne lit pas mieux les noms, adresses et numéros,
+   et ralentit de 10 à 90 % ; il n'est donc pas le réglage par défaut. */
+const OCR_LANGUES = { 'fra':'français', 'nld':'néerlandais', 'fra+nld':'français et néerlandais' };
+let ocrLangue='fra';                                   // choix courant
+let ocrWorker=null, ocrLoading=null, ocrWorkerLangue=null;
+// URL absolue (les workers blob ne résolvent pas les chemins relatifs)
+function ocrBase(){ return location.origin + location.pathname.replace(/[^/]*$/, '') + 'vendor/tesseract/'; }
+
+/* Le fichier de langue est-il servi ? Un clone sans fetch-assets.sh n'a pas
+   nld.traineddata.gz ; un hébergeur peut aussi répondre par une page HTML. */
+async function langueInstallee(code){
+  try{
+    const r=await fetch(ocrBase()+code+'.traineddata.gz', { method:'HEAD' });
+    return r.ok && !/html/i.test(r.headers.get('content-type')||'');
+  }catch(e){ return false; }
+}
+function creerWorkerOcr(langue){
+  const base=ocrBase();
+  return Tesseract.createWorker(langue, 1, {
+    workerPath: base + 'worker.min.js',
+    corePath: base,
+    langPath: base,
+    logger: m => { if(m.status==='recognizing text') setStatus('OCR en cours… '+Math.round(m.progress*100)+'%','work'); }
+  });
+}
+/* Renvoie { worker, langue, repli } : `repli` vaut vrai quand la langue
+   demandée n'a pas pu être chargée et que l'on lit en français à la place
+   (l'appelant le dit à l'utilisateur : jamais d'échec silencieux). */
+async function getOcrWorker(demandee){
+  let langue = OCR_LANGUES[demandee] ? demandee : 'fra', repli=false;
+  if(langue!=='fra' && !(await langueInstallee('nld'))){ langue='fra'; repli=true; }
+  if(ocrWorker && ocrWorkerLangue===langue) return { worker:ocrWorker, langue, repli };
+  if(ocrWorker){ try{ await ocrWorker.terminate(); }catch(e){} ocrWorker=null; ocrLoading=null; ocrWorkerLangue=null; }
+  if(!ocrLoading || ocrLoading.langue!==langue){
+    const promesse=creerWorkerOcr(langue).then(w=>{ ocrWorker=w; ocrWorkerLangue=langue; return w; });
+    ocrLoading={ langue, promesse };
   }
-  return ocrLoading;
+  try{
+    return { worker: await ocrLoading.promesse, langue, repli };
+  }catch(e){
+    ocrLoading=null;
+    if(langue==='fra') throw e;
+    // le néerlandais est annoncé mais ne se charge pas : repli sur le français
+    const w=await creerWorkerOcr('fra'); ocrWorker=w; ocrWorkerLangue='fra';
+    ocrLoading={ langue:'fra', promesse:Promise.resolve(w) };
+    return { worker:w, langue:'fra', repli:true };
+  }
 }
 
 /* ===========================================================
@@ -1910,7 +2007,7 @@ function indexDepuisOcr(idxPdf, pages, echelle){
 // Fait rendre chaque page par le worker PDF, puis l'OCR
 async function ocrPdfPages(idxPdf){
   const echelle = idxPdf.echelleOcr || OCR_ECHELLE;
-  const worker=await getOcrWorker();
+  const { worker, langue, repli } = await getOcrWorker(ocrLangue);
   const pages=[];
   for(let p=0;p<idxPdf.nPages;p++){
     setStatus('Reconnaissance de texte — page '+(p+1)+' sur '+idxPdf.nPages+'…','work');
@@ -1922,7 +2019,9 @@ async function ocrPdfPages(idxPdf){
       : [ (data.words||[]).filter(m=>m.text && m.text.trim()) ];
     pages.push(lignes.filter(l=>l.length));
   }
-  return indexDepuisOcr(idxPdf, pages, echelle);
+  const idx=indexDepuisOcr(idxPdf, pages, echelle);
+  idx.langueOcr=langue; idx.repliLangue=repli;
+  return idx;
 }
 
 /* Word (.docx) — chemin principal : l'atelier, comme un PDF.
@@ -1981,9 +2080,11 @@ async function readWord(file){
   texteHorsApercu=cache;
   moteur=creerMoteurDocx({ vue, index }, octets);
   pdfIndex=index; indexValide=true;
-  exclusionsValeurs.clear(); fuitesAcceptees.clear(); termesManuels.clear(); majTermes();
+  reinitialiserDocument();
   document.getElementById('input').value=index.texte;
   nomDocument=file.name; Visu.ouvrirPdf(index, file.name);
+  dernierScan=null; majLangueOcr(null);
+  declarerDocument();
   resetBuild(); run(index.texte);
   setStatus('');
 }
@@ -1998,6 +2099,8 @@ async function readDocx(file, note){
     const out=(value||'').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
     if(out.length<2){ setStatus('Aucun texte trouvé dans ce document Word.','err'); return; }
     document.getElementById('input').value=out;
+    dernierScan=null; majLangueOcr(null);
+    declarerDocument();
     setStatus((note?note+' ':'')+'Word lu — '+out.length+' caractères extraits. Analyse en cours…', note?'work':'ok');
     resetBuild(); run(out);
   }catch(e){ setStatus('Erreur de lecture Word : '+(e.message||e),'err'); }
@@ -2274,6 +2377,7 @@ function run(text){
   // table de correspondances de la SESSION : jeton -> vraie valeur, y compris les
   // jetons de valeurs écartées depuis (une réponse d'IA déjà obtenue les contient)
   lastMapping=tableJetons.correspondances();
+  majTableEtat();
   renderAll(text,hits);
   // Texte collé : le même atelier que pour un document (aperçu surligné à la
   // place de la scène, même rail). Il reste masqué tant qu'il n'y a rien.
@@ -2773,14 +2877,25 @@ document.getElementById('voirTexte').addEventListener('click', ()=>{
 });
 
 /* ---------- actions ---------- */
-function analyze(){ resetBuild(); run(document.getElementById('input').value); }
+function analyze(){
+  const t=document.getElementById('input').value;
+  // texte collé (ou exemple) différent du précédent : un document de plus pour la table partagée
+  if(!pdfIndex && t.trim() && t!==lastText) declarerDocument();
+  resetBuild(); run(t);
+}
 document.getElementById('analyze').addEventListener('click',analyze);
 document.getElementById('sample').addEventListener('click',()=>{
   oublierIndex();
   document.getElementById('input').value=SAMPLE; resetBuild(); analyze();
 });
 document.getElementById('clear').addEventListener('click',()=>{
+  const dossier=tablePartagee() || tableNbDocs>1;
   oublierIndex(); PdfLocal.fermer().catch(()=>{});   // libère le document côté worker
+  // « Tout effacer » vide TOUJOURS la table, même partagée, ainsi que les valeurs
+  // écartées, les mentions acceptées et les termes ajoutés (de vraies données).
+  viderTable(); document.getElementById('gardeTable').checked=false; majTableEtat();
+  exclusionsValeurs.clear(); fuitesAcceptees.clear(); termesManuels.clear(); majTermes();
+  dernierScan=null; majLangueOcr(null);
   document.getElementById('input').value=''; document.getElementById('preview').innerHTML='<div class="empty">Le texte apparaîtra ici, chaque donnée repérée surlignée.</div>';
   document.getElementById('table-wrap').innerHTML='<div class="empty">Aucune détection pour l\'instant.</div>';
   document.getElementById('stats').innerHTML=''; lastText=''; lastAnon='';
@@ -2792,6 +2907,36 @@ document.getElementById('clear').addEventListener('click',()=>{
   document.getElementById('mapInfo').textContent='table de la session en cours';
   const bilan=document.getElementById('reidBilan'); if(bilan) bilan.remove();
   majDemoExemple();
+  setStatus(dossier ? 'Tout est effacé, y compris la table partagée du dossier (l\'option est décochée).' : '');
+});
+
+/* ---------- table partagée : l'option, l'état, le retour à une table vide ---------- */
+document.getElementById('gardeTable').addEventListener('change', majTableEtat);
+document.getElementById('tableVider').addEventListener('click', ()=>{
+  viderTable();
+  if(lastText){ tableNbDocs=1; resetBuild(); run(lastText); }   // le document affiché repart de [..._1]
+  majTableEtat();
+});
+
+/* ---------- langue de l'OCR (bandeau du document numérisé) ---------- */
+function majLangueOcr(idx){
+  const bloc=document.getElementById('langueOcrBloc'); if(!bloc) return;
+  bloc.hidden=!(idx && idx.ocr);
+  const note=document.getElementById('docnote');
+  if(idx && idx.ocr){
+    document.getElementById('langueOcr').value = idx.langueOcr || 'fra';
+    if(idx.repliLangue && note){
+      note.hidden=false;
+      note.textContent='Le néerlandais n\'est pas disponible sur cette copie du site : le texte a été lu en français seulement.';
+    }
+  }
+}
+document.getElementById('langueOcr').addEventListener('change', e=>{
+  if(!dernierScan) return;
+  ocrLangue=e.target.value;
+  const { file, preparer }=dernierScan;
+  setStatus('Relecture de « '+file.name+' » en '+OCR_LANGUES[ocrLangue]+'…','work');
+  chargerDocument(file, preparer, true);
 });
 /* ---------- consigne pour l'IA ----------
    Jamais dans le fichier produit (PDF, Word) : seulement dans le texte copié et
@@ -2849,7 +2994,7 @@ document.getElementById('downloadRecap').addEventListener('click',()=>{
   if(!lastText){alert('Analysez d\'abord un texte.');return;}
   const r=dernierRapport||{};
   const av=[];
-  if(pdfIndex && pdfIndex.ocr) av.push('texte reconnu par OCR : un mot mal lu n\'est pas détecté, donc pas masqué');
+  if(pdfIndex && pdfIndex.ocr) av.push('texte reconnu par OCR ('+(OCR_LANGUES[pdfIndex.langueOcr]||OCR_LANGUES.fra)+') : un mot mal lu n\'est pas détecté, donc pas masqué');
   if(typeEntree()==='pdf' || typeEntree()==='pdf-scanne') av.push('le ré-encodage retire liens, formulaires, signets, signatures et métadonnées');
   for(const a of (r.avertissements||[])) av.push(a);
   if(hitsHorsApercu.length) av.push(pl(hitsHorsApercu.length,'valeur remplacée','valeurs remplacées')+' hors de l\'aperçu (commentaires, révisions, champs)');
@@ -2861,6 +3006,7 @@ document.getElementById('downloadRecap').addEventListener('click',()=>{
     nEcartees:new Set(lastHitsTous.filter(h=>h.exclu).map(h=>Visu.cle(h))).size,
     nTermes:termesManuels.size, verification:etatVerification(), avertissements:av,
     interdits:[...lastHitsTous.map(h=>h.value), ...hitsHorsApercu.map(h=>h.value), ...termesManuels,
+               ...Object.values(tableJetons.correspondances()),   // table partagée : valeurs des autres documents aussi
                nomDocument, String(nomDocument||'').replace(/\.[a-z0-9]{1,5}$/i,'')] });
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([texte],{type:'text/plain;charset=utf-8'}));

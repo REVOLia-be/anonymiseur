@@ -38,7 +38,7 @@ else
   get "$B/onnx/model_quantized.onnx" "$M/onnx/model_quantized.onnx"
 fi
 
-say "Moteur OCR (Tesseract.js — cœurs WASM + français)"
+say "Moteur OCR (Tesseract.js — cœurs WASM + français + néerlandais)"
 T="vendor/tesseract"; C="https://cdn.jsdelivr.net/npm/tesseract.js-core@5"
 get "$C/tesseract-core-simd.wasm"        "$T/tesseract-core-simd.wasm"
 get "$C/tesseract-core-simd.wasm.js"     "$T/tesseract-core-simd.wasm.js"
@@ -49,6 +49,8 @@ get "$C/tesseract-core-simd-lstm.wasm.js" "$T/tesseract-core-simd-lstm.wasm.js"
 get "$C/tesseract-core-lstm.wasm"        "$T/tesseract-core-lstm.wasm"
 get "$C/tesseract-core-lstm.wasm.js"     "$T/tesseract-core-lstm.wasm.js"
 get "https://tessdata.projectnaptha.com/4.0.0/fra.traineddata.gz" "$T/fra.traineddata.gz"
+# Néerlandais : même source et même version que le français (~10 Mo, sous la limite 25 Mo de Pages)
+get "https://tessdata.projectnaptha.com/4.0.0/nld.traineddata.gz" "$T/nld.traineddata.gz"
 
 say "Terminé ✅  — lancez ensuite :  python3 -m http.server 4599"
 echo "Puis ouvrez http://localhost:4599"

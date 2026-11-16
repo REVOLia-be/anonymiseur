@@ -605,6 +605,34 @@ des suggestions à valider d'un clic, jamais un masquage d'office : « Haute
 
 ---
 
+## OCR : `fra` suffit sur nos mesures, `fra+nld` coûte du temps
+
+Mesuré (Tesseract.js, même source `tessdata.projectnaptha.com/4.0.0/`, `fra`
+6,3 Mo, `nld` 10,2 Mo compressés) sur deux pages synthétiques, une française et
+une flamande (24 valeurs sensibles chacune : noms à particule, rues en
+« -straat », IBAN, e-mail…), à trois niveaux de dégradation (propre, flou +
+JPEG 50, flou + inclinaison + JPEG 30). Valeurs lues en entier, médiane de 3
+passes :
+
+| scan, qualité | `fra` | `fra+nld` | temps `fra` → `fra+nld` |
+|---|---|---|---|
+| nl propre | 23/24 | 22/24 | 438 → 537 ms |
+| nl moyen | 23/24 | 23/24 | 335 → 483 ms |
+| nl dégradé | 13/24 | 15/24 | 262 → 494 ms |
+| fr propre | 24/24 | 24/24 | 423 → 466 ms |
+| fr moyen | 24/24 | 24/24 | 323 → 395 ms |
+| fr dégradé | 21/24 | 20/24 | 264 → 480 ms |
+
+Le gain sur le flamand est dans le bruit (`nld` seul : 22, 23, 14) alors que le
+temps monte de 10 à 90 % : noms, adresses et numéros se lisent pareil dans les
+deux langues, le facteur limitant est la qualité de l'image. `nld` corrige
+surtout les mots courants (« Wijksregisternummer » lu pour « Rijksregister… »),
+utiles quand ils servent de mot de contexte à une règle. D'où : `fra` par
+défaut, néerlandais au choix dans le bandeau du document.
+
+Piège : un hébergeur peut répondre **200 + page HTML** pour un fichier absent ;
+`langueInstallee()` regarde donc aussi le type de contenu avant de charger.
+
 ## Licence du moteur
 
 MuPDF.js est en **AGPL-3.0 ou licence commerciale**. Le dépôt étant en
