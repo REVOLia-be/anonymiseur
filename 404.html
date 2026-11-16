@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Page introuvable — Anonymiseur REVOLia</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  /* ── Polices (servies en local) ── */
+  @font-face{font-family:'Poppins';font-weight:400;font-display:swap;src:url('/vendor/fonts/poppins-400.woff2') format('woff2');}
+  @font-face{font-family:'Poppins';font-weight:500;font-display:swap;src:url('/vendor/fonts/poppins-500.woff2') format('woff2');}
+  @font-face{font-family:'Poppins';font-weight:600;font-display:swap;src:url('/vendor/fonts/poppins-600.woff2') format('woff2');}
+  /* iBrand — licence commerciale ; absente en local : Poppins 600 prend le relais */
+  @font-face{font-family:'iBrand';font-weight:400;font-display:swap;src:url('/vendor/fonts/ibrand.otf') format('opentype');}
+
+  /* ── 1. Jetons ── */
+  :root{
+    /* Marque */
+    --vert:#00824d; --vert-survol:#006e41; --vert-actif:#005c37;
+    --vert-vif:#00bf63;            /* décoratif uniquement : 2,4:1 sur blanc, jamais du texte */
+    --vert-profond:#004d3d; --vert-pastel:#80bf9e;
+    --vert-teinte:#eaf5ef; --vert-bord:#b3d9c4;
+    /* Neutres (teinte bleu nuit) */
+    --encre:#131323;   /* texte principal      18,3:1 sur blanc */
+    --encre-2:#3e3e50; /* texte courant second 10,5:1 */
+    --encre-3:#5f5f70; /* texte discret         6,3:1 (5,4:1 sur --surface-3) */
+    --encre-4:#9a9aab; /* décor, désactivé — jamais pour du texte utile */
+    --surface:#ffffff; --surface-2:#f6f6f8; --surface-3:#eeeef2;
+    --bord:#e4e4ea;      /* séparateurs, contours de cartes */
+    --bord-moyen:#c9c9d3;/* contours de boutons secondaires, zone de dépôt */
+    --bord-fort:#8e8ea0; /* contours de champs : 3,2:1 sur blanc */
+    /* Sémantiques (texte / fond / bord) */
+    --succes:#006e41; --succes-fond:#eaf5ef; --succes-bord:#b3d9c4;
+    --alerte:#8a4b00; --alerte-fond:#fff4e0; --alerte-bord:#f0cf93;
+    --erreur:#b3261e; --erreur-survol:#962019; --erreur-fond:#fdeeec; --erreur-bord:#f3c1bc;
+    --info:#131323;   --info-fond:#f0f0f5;   --info-bord:#d9d9e1;
+    /* Typographie */
+    --police:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --police-titre:'iBrand','Poppins',system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --t-12:12px; --t-13:13px; --t-14:14px; --t-16:16px; --t-18:18px; --t-20:20px;
+    --t-28:clamp(24px,2.4vw,28px); --t-h1:clamp(32px,4.2vw,48px);
+    /* Espacement (base 4) */
+    --e-1:4px; --e-2:8px; --e-3:12px; --e-4:16px; --e-5:24px; --e-6:32px; --e-7:48px; --e-8:64px; --e-9:96px;
+    /* Rayons */
+    --r-0:2px; --r-1:6px; --r-2:8px; --r-3:12px; --r-rond:999px;
+    /* Ombres */
+    --o-1:0 1px 2px rgba(19,19,35,.06);
+    --o-2:0 1px 2px rgba(19,19,35,.06),0 4px 16px rgba(19,19,35,.08);
+    --o-page:0 1px 3px rgba(19,19,35,.10),0 8px 28px rgba(19,19,35,.10);
+    /* Mise en page */
+    --conteneur:1200px; --conteneur-texte:720px; --gouttiere:24px; --entete:64px;
+    /* Mouvement */
+    --d-1:120ms; --d-2:200ms; --courbe:cubic-bezier(.2,0,0,1);
+    /* Atelier : tient dans la fenêtre (en-tête + 32 px de marge + titre 53 + barre 57) */
+    --h-atelier:max(440px,calc(100vh - var(--entete) - 142px));
+    /* Icônes (masques SVG, trait 1,75, 24×24) */
+  --i-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  --i-check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+  --i-shield:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l7.5 3v5.5c0 4.6-3.2 8.3-7.5 9.5-4.3-1.2-7.5-4.9-7.5-9.5V6z'/%3E%3Cpath d='M8.75 12.25l2.25 2.25 4.25-4.5'/%3E%3C/svg%3E");
+  --i-octagon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8.2 3h7.6L21 8.2v7.6L15.8 21H8.2L3 15.8V8.2z'/%3E%3Cpath d='M12 8v5M12 16.5h.01'/%3E%3C/svg%3E");
+  --i-info:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5.5M12 7.5h.01'/%3E%3C/svg%3E");
+  --i-eye:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+  --i-lock:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E");
+  --i-alerte:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.3 4.1L2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 4.1a2 2 0 0 0-3.4 0z'/%3E%3Cpath d='M12 9.5v4M12 17h.01'/%3E%3C/svg%3E");
+  --i-download:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v11M7 10.5l5 5 5-5M5 19.5h14'/%3E%3C/svg%3E");
+  --i-copy:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='11' height='11' rx='2'/%3E%3Cpath d='M5 15V6a2 2 0 0 1 2-2h8'/%3E%3C/svg%3E");
+  }
+  @supports (height:100svh){ :root{ --h-atelier:max(440px,calc(100svh - var(--entete) - 142px)); } }
+  @media (max-width:640px){ :root{ --gouttiere:16px; --entete:56px; } }
+
+  /* ── 2. Base ── */
+  *,*::before,*::after{box-sizing:border-box}
+  /* L'attribut `hidden` doit l'emporter sur tout display d'auteur : NE PAS RETIRER */
+  [hidden]{display:none!important}
+  html{-webkit-text-size-adjust:100%;scroll-padding-top:calc(var(--entete) + 16px)}
+  body{margin:0;font-family:var(--police);font-size:var(--t-16);line-height:1.6;color:var(--encre);
+       background:var(--surface);-webkit-font-smoothing:antialiased;font-synthesis:style}
+  b,strong{font-weight:600}
+  h1,h2,h3{margin:0;font-weight:600;line-height:1.2;color:var(--encre)}
+  p{margin:0}
+  a{color:var(--vert);text-decoration-thickness:1px;text-underline-offset:.18em}
+  a:hover{color:var(--vert-survol)}
+  ::selection{background:#cfe8da;color:var(--encre)}
+  :focus-visible{outline:2px solid var(--vert);outline-offset:2px}
+  .ico{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;
+       stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+  button svg,.btn svg,summary svg{pointer-events:none} /* les gestionnaires lisent e.target.dataset */
+  .vh{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+      clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  .evitement{position:absolute;left:16px;top:-48px;z-index:50;background:var(--encre);color:#fff;
+      padding:8px 16px;border-radius:var(--r-2);font-size:var(--t-14);font-weight:600;text-decoration:none}
+  .evitement:focus{top:12px;color:#fff}
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{transition-duration:0s!important;animation-duration:0s!important;scroll-behavior:auto!important}
+  }
+
+  /* ── 3. Boutons ──
+     <button> nu = primaire. Variantes : .secondary, .ghost. Tailles : .sm, .lg.
+     <a class="btn …"> pour un lien qui a l'air d'un bouton. */
+  button,.btn{--bh:40px;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+       min-height:var(--bh);padding:6px 16px;font:inherit;font-size:var(--t-14);font-weight:600;line-height:1.25;
+       text-align:center;text-decoration:none;border:1px solid transparent;border-radius:var(--r-2);
+       background:var(--vert);color:#fff;cursor:pointer;
+       transition:background-color var(--d-1) var(--courbe),border-color var(--d-1) var(--courbe),color var(--d-1) var(--courbe)}
+  button:hover,.btn:hover{background:var(--vert-survol);color:#fff}
+  button:active,.btn:active{background:var(--vert-actif)}
+  button.secondary,.btn.secondary{background:var(--surface);color:var(--encre);border-color:var(--bord-moyen)}
+  button.secondary:hover,.btn.secondary:hover{background:var(--surface-2);border-color:var(--bord-fort);color:var(--encre)}
+  button.secondary:active,.btn.secondary:active{background:var(--surface-3)}
+  button.ghost,.btn.ghost{background:transparent;color:var(--encre-2);border-color:transparent;font-weight:500}
+  button.ghost:hover,.btn.ghost:hover{background:var(--surface-3);color:var(--encre)}
+  button.sm,.btn.sm{--bh:32px;padding:4px 12px;font-size:var(--t-13)}
+  button.lg,.btn.lg{--bh:48px;padding:10px 24px;font-size:var(--t-16)}
+  button:disabled,button:disabled:hover{background:var(--surface-3);color:var(--encre-3);border-color:transparent;cursor:not-allowed}
+  button .ico,.btn .ico{width:18px;height:18px}
+  @media (pointer:coarse){ button,.btn{min-height:max(var(--bh),44px)} }
+
+  /* ── 6. En-tête ── */
+  .entete{position:sticky;top:0;z-index:20;height:var(--entete);background:var(--surface);border-bottom:1px solid var(--bord)}
+  .entete .inner{height:100%;max-width:var(--conteneur);margin:0 auto;padding:0 var(--gouttiere);
+       display:flex;align-items:center;gap:var(--e-5)}
+  .brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;border-radius:var(--r-1)}
+  .brand .logo-mark{height:30px;width:auto;display:block}
+  .brand .wm{font-family:var(--police-titre);font-size:24px;font-weight:500;line-height:1;color:var(--vert)}
+  .nav{margin-left:auto;display:flex;align-items:center;gap:var(--e-5)}
+  .nav .navlink{color:var(--encre-2);font-size:var(--t-14);font-weight:500;text-decoration:none;padding:8px 0}
+  .nav .navlink:hover{color:var(--encre)}
+  @media (max-width:760px){ .nav .navlink{display:none} }
+  @media (max-width:640px){ .brand .logo-mark{height:26px} .brand .wm{font-size:21px} }
+
+    .avertissement-table{display:flex;gap:var(--e-2);align-items:flex-start;margin-top:var(--e-3);padding:var(--e-3);
+       font-size:var(--t-13);line-height:1.5;color:var(--encre-2);background:var(--alerte-fond);border:1px solid var(--alerte-bord);border-radius:var(--r-2)}
+  .avertissement-table .ico{width:18px;height:18px;color:var(--alerte);margin-top:1px}
+/* ── 13. Pied de page (fond vert profond uni) ── */
+  .pied{background:var(--vert-profond);color:#fff}
+  .pied .inner{max-width:var(--conteneur);margin:0 auto;padding:var(--e-7) var(--gouttiere) var(--e-6)}
+  .pied .brand .wm{color:#fff}
+  .pied .avertissement{display:flex;gap:var(--e-3);margin-top:var(--e-5);max-width:72ch;font-size:var(--t-14);line-height:1.6;color:rgba(255,255,255,.88)}
+  .pied .avertissement .ico{width:20px;height:20px;color:var(--vert-pastel);margin-top:1px}
+  .pied .avertissement b{color:#fff}
+  .footlinks{display:flex;flex-wrap:wrap;align-items:center;gap:var(--e-2) var(--e-5);margin-top:var(--e-6);padding-top:var(--e-5);
+       border-top:1px solid rgba(255,255,255,.18);font-size:var(--t-14)}
+  .footlinks a{color:#fff;font-weight:500;text-decoration:none}
+  .footlinks a:hover{color:#fff;text-decoration:underline}
+  .footbrand{margin-left:auto;color:rgba(255,255,255,.75)}
+  .pied :focus-visible{outline-color:#fff}
+  @media (max-width:640px){ .footbrand{margin-left:0;flex:1 1 100%} }
+    /* ── Page de texte (mentions légales, confidentialité) ── */
+  .page-texte{max-width:var(--conteneur-texte);margin:0 auto;padding:var(--e-8) var(--gouttiere) var(--e-8)}
+  .page-texte h1{font-family:var(--police-titre);font-size:var(--t-28);line-height:1.2;letter-spacing:-.01em}
+  .page-texte .sub{margin-top:var(--e-2);font-size:var(--t-13);color:var(--encre-3)}
+  .page-texte h2{margin:var(--e-7) 0 var(--e-3);font-size:var(--t-18);line-height:1.35}
+  .page-texte p,.page-texte li{color:var(--encre-2);font-size:var(--t-16);line-height:1.65}
+  .page-texte p{margin:0 0 var(--e-3)}
+  .page-texte ul{margin:0 0 var(--e-3);padding-left:var(--e-5)}
+  .page-texte li{margin-bottom:var(--e-1)}
+  .page-texte b{color:var(--encre)}
+  .page-texte code{font-family:inherit;font-size:.9375em;padding:1px 6px;color:var(--encre);background:var(--surface-3);border-radius:var(--r-1)}
+  .encadre{margin:var(--e-6) 0;padding:var(--e-4) var(--e-5);font-size:var(--t-16);line-height:1.65;color:var(--encre-2);
+       background:var(--succes-fond);border:1px solid var(--succes-bord);border-radius:var(--r-3)}
+  .page-texte .avertissement-table{margin:var(--e-4) 0;font-size:var(--t-14)}
+  .page-texte .avertissement-table code{background:var(--surface)}
+  .todo{color:var(--alerte);font-weight:600}
+  .nav .retour{display:inline-flex}
+  .page-texte .btn{margin-top:var(--e-3)}
+  @media (max-width:640px){ .page-texte{padding:var(--e-6) var(--gouttiere) var(--e-7)} }
+</style>
+</head>
+<body>
+<a class="evitement" href="#contenu">Aller au contenu</a>
+<header class="entete">
+  <div class="inner">
+    <a class="brand" href="/" aria-label="Anonymiseur REVOLia — accueil">
+      <img class="logo-mark" src="/vendor/brand/revolia-mark-green.png" alt="" width="35" height="30">
+      <span class="wm" aria-hidden="true">revolia</span>
+    </a>
+    <nav class="nav" aria-label="Navigation principale">
+      <a class="navlink retour" href="/">← Retour à l'outil</a>
+    </nav>
+  </div>
+</header>
+<main class="page-texte" id="contenu">
+  <h1>Page introuvable</h1>
+  <p class="sub">Erreur 404</p>
+  <p>L'adresse demandée n'existe pas ou a été déplacée.</p>
+  <p><a class="btn lg" href="/">Retour à l'Anonymiseur</a></p>
+</main>
+<footer class="pied">
+  <div class="inner">
+    <a class="brand" href="/" aria-label="Anonymiseur REVOLia — accueil">
+      <img class="logo-mark" src="/vendor/brand/revolia-mark.png" alt="" width="35" height="30">
+      <span class="wm" aria-hidden="true">revolia</span>
+    </a>
+    <div class="avertissement">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10.3 4.1L2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 4.1a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 17h.01"/></svg>
+      <p><b>Une aide, pas une garantie.</b> La détection (règles et IA optionnelle) n'est jamais parfaite, et les identifiants indirects (recoupements de contexte) lui échappent. <b>Relisez toujours le résultat</b> avant de l'utiliser&nbsp;: vous restez responsable du document produit.</p>
+    </div>
+    <nav class="footlinks" aria-label="Liens légaux">
+      <a href="/confidentialite.html">Confidentialité</a>
+      <a href="/mentions-legales.html">Mentions légales</a>
+      <a href="https://github.com/REVOLia-be/anonymiseur" target="_blank" rel="noopener noreferrer">Code source (AGPL-3.0)</a>
+      <a href="https://tally.so/r/NqXrQN" target="_blank" rel="noopener noreferrer">Le même outil pour mon entreprise&nbsp;?</a>
+      <span class="footbrand">REVOLia · traitement 100 % local</span>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>
