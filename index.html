@@ -561,11 +561,28 @@
     main.atelier-commun:not(.avec-doc) #pSortie .body{grid-template-areas:"stats actions" "stats nom"}
   }
   .rail li:focus-visible{outline-offset:-2px}
-  .ia-note{margin-top:var(--e-2)}
-  .rail .ia-note{font-size:var(--t-12)}
   .puce-terme.introuvable{color:var(--encre-3);background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--bord)}
   .introuvable-note{margin-left:4px;font-size:var(--t-12)}
   .puce-propo .n{color:var(--encre-3);font-weight:400}
+  /* Rien à effacer tant que rien n'est analysé ni ouvert */
+  main:not(.avec-doc):has(#preview>.empty) #clear{display:none}
+  /* Bandeau du document sur mobile : nom sur toute la largeur, actions dessous */
+  @media (max-width:640px){
+    main.avec-doc #pDepot .docinfo{display:contents}
+    main.avec-doc #pDepot .docinfo>div{flex:1 1 calc(100% - 40px);min-width:0}
+    main.avec-doc #pDepot .docinfo .pousse{display:none}
+    main.avec-doc #pDepot .docinfo .nom{overflow-wrap:anywhere}
+  }
+  /* Cibles tactiles : 44 px au moins sur mobile (et à tout pointeur grossier) */
+  @media (max-width:640px),(pointer:coarse){
+    button,.btn,.seg button,.pager button{min-height:44px}
+    .pager button{width:44px}
+    input[type=text]{min-height:44px}
+    .brand,.lien-fleche,.evitement,.footlinks a{display:inline-flex;align-items:center;min-height:44px}
+    details.reglages>summary,details.pli>summary,.ia-ligne{min-height:44px}
+    details.pli>summary{padding:0}
+    #cats label.opt{min-height:44px}
+  }
 </style>
 <script>
   /* ── Configuration de déploiement ──────────────────────────────
@@ -690,12 +707,11 @@
                   <label class="ia-ligne" for="nerToggle">
                     <span class="ia-texte">
                       <span class="ia-titre">Détection par IA</span>
-                      <span class="ia-desc">Trouve aussi les noms, adresses et organisations sans titre ni format.</span>
+                      <span class="ia-desc">Trouve aussi les noms, adresses et organisations sans titre ni format. Elle tourne dans votre navigateur.</span>
                     </span>
                     <input type="checkbox" id="nerToggle" role="switch">
                   </label>
                   <div class="status" id="nerStatus" role="status" aria-live="polite"></div>
-                  <p class="hint ia-note">Le modèle (environ 135&nbsp;Mo) est téléchargé une fois, puis gardé en cache. Votre document, lui, ne sort jamais.</p>
                 </div>
                 <span class="reglage-titre" id="titreMode">Remplacer les données par</span>
                 <div class="seg" id="mode" role="group" aria-labelledby="titreMode">
@@ -1012,7 +1028,7 @@ const MoteurPdf = {
       // Le dire franchement vaut mieux qu'un ✅ qui ne prouve rien.
       return { classe:'alerte', html:
         '<b>'+(pdfIndex.image?'Image':'Document scanné')+'</b> — les zones repérées ont été effacées de l\'image, '+
-        'et '+ver.nVerifiees+' valeur(s) ont été recherchées dans le fichier produit sans rien trouver. '+
+        'et '+pl(ver.nVerifiees,'valeur a été recherchée','valeurs ont été recherchées')+' dans le fichier produit sans rien trouver. '+
         '<b>Mais ce contrôle ne prouve pas grand-chose ici</b> : la page étant une image, il n\'y a pas '+
         'de texte à extraire. <span class="count">'+poids+'</span>'+
         '<div class="pertes">Le vrai risque est ailleurs&nbsp;: <b>un mot mal reconnu par l\'OCR '+
@@ -1020,13 +1036,12 @@ const MoteurPdf = {
         'ce document, et ajoutez à la main ce qui manque.</div>' };
     }
     return { classe:'ok', html:
-      '<b>Vérifié</b> : aucune des '+ver.nVerifiees+
-      ' valeur(s) anonymisée(s) n\'est récupérable dans le fichier produit '+
+      '<b>Vérifié</b> : '+aucuneDes(ver.nVerifiees)+' dans le fichier produit '+
       '<span class="count">(texte extrait et octets bruts du document décompressé)</span>. '+
       '<span class="count">'+poids+'</span>'+
       '<div class="pertes">Mise en page préservée. En revanche, le ré-encodage retire '+
       'liens, formulaires, signets et signatures'+
-      (r.liensRetires?' ('+r.liensRetires+' lien(s) exposant une donnée ont été neutralisés)':'')+
+      (r.liensRetires?' ('+pl(r.liensRetires,'lien exposant une donnée a été neutralisé','liens exposant une donnée ont été neutralisés')+')':'')+
       ', ainsi que les métadonnées du fichier. <b>Relisez toujours le résultat.</b></div>' };
   },
 };
@@ -1062,7 +1077,7 @@ function creerMoteurDocx(doc, octetsOrigine){
         let e=cadre.querySelector('.etiquette');
         if(!e){ e=document.createElement('span'); e.className='etiquette'; e.textContent='anonymisé'; cadre.appendChild(e); }
         e.textContent += ' · '+differe;
-        e.title='Le résultat compte '+vueRes.nPages+' page(s) contre '+doc.vue.nPages+' à l\'origine : les jetons changent la longueur des lignes.';
+        e.title='Le résultat compte '+pl(vueRes.nPages,'page','pages')+' contre '+doc.vue.nPages+' à l\'origine : les jetons changent la longueur des lignes.';
       }
       return true;
     },
@@ -1101,12 +1116,11 @@ function creerMoteurDocx(doc, octetsOrigine){
     bandeauOk(ver, r){
       const poids=(r.tailleOrigine/1024).toFixed(0)+' Ko → '+(r.taille/1024).toFixed(0)+' Ko';
       return { classe:'ok', html:
-        '<b>Vérifié</b> : aucune des '+ver.nVerifiees+
-        ' valeur(s) anonymisée(s) n\'est récupérable dans le fichier Word produit '+
+        '<b>Vérifié</b> : '+aucuneDes(ver.nVerifiees)+' dans le fichier Word produit '+
         '<span class="count">(corps, en-têtes, pieds, notes, commentaires, révisions, champs, liens et métadonnées)</span>. '+
-        '<span class="count">'+poids+' · '+r.nRemplacements+' remplacement(s)</span>'+
+        '<span class="count">'+poids+' · '+pl(r.nRemplacements,'remplacement','remplacements')+'</span>'+
         '<div class="pertes">Mise en page conservée : seul le texte est remplacé. Les métadonnées'+
-        (r.liensNeutralises?', '+r.liensNeutralises+' lien(s) exposant une donnée':'')+
+        (r.liensNeutralises?', '+pl(r.liensNeutralises,'lien exposant une donnée','liens exposant une donnée'):'')+
         ' et les noms d\'auteurs sont neutralisés. Les commentaires et le texte supprimé en suivi des '+
         'modifications ne figurent pas dans l\'aperçu : les mêmes règles leur sont appliquées, mais vous ne '+
         'pouvez pas y désigner un nom d\'un clic — ajoutez-le comme terme. <b>Relisez toujours le résultat.</b></div>' };
@@ -1560,11 +1574,11 @@ function majBoutonPdf(){
   const base=moteur ? moteur.libelle : 'Télécharger le PDF anonymisé';
   if(!indexValide || !f.length){ b.textContent=base; b.disabled=false; b.title=''; return; }
   if(restantes.length){
-    b.textContent='Téléchargement bloqué — '+restantes.length+' mention(s) à accepter';
+    b.textContent='Téléchargement bloqué — '+pl(restantes.length,'mention','mentions')+' à accepter';
     b.disabled=true;
     b.title='Cochez chaque mention restante dans le bandeau de vérification pour débloquer.';
   }else{
-    b.textContent='Télécharger malgré '+f.length+' mention(s) restante(s)';
+    b.textContent='Télécharger malgré '+pl(f.length,'mention restante','mentions restantes');
     b.disabled=false;
     b.title='Vous avez accepté que ces mentions restent dans le fichier.';
   }
@@ -1976,7 +1990,7 @@ document.getElementById('mode').addEventListener('click',e=>{
 function escapeRe(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 
 /* Jetons de SESSION : une fois attribué, [PERSONNE_1] désigne la même valeur
-   jusqu'au changement de document ou au bouton « Vider » (oublierIndex). Les
+   jusqu'au changement de document ou au bouton « Tout effacer » (oublierIndex). Les
    numéros peuvent sauter après une exclusion ; ils ne sont jamais réattribués. */
 let tableJetons=Regles.creerTable();
 
@@ -2077,7 +2091,7 @@ function setNerStatus(msg,type){const el=document.getElementById('nerStatus');el
 
 async function scheduleNER(text){
   if(!window.__nerRun){ setNerStatus('Module IA non disponible.','err'); return; }
-  setNerStatus('Analyse par IA en cours… Au premier usage, le modèle est d\'abord téléchargé puis gardé en cache.','work');
+  setNerStatus('Analyse par IA en cours… Au premier usage, le modèle (environ 135 Mo) est d\'abord téléchargé, puis gardé en cache.','work');
   try{
     const ents=await window.__nerRun(text);
     nerText=text; nerHits=ents;
@@ -2121,6 +2135,12 @@ function renderTable(hits){
     <tbody>${rows}</tbody></table>`;
 }
 
+// Accord en nombre : « 1 mention », « 3 mentions » — jamais « mention(s) ».
+function pl(n, un, plusieurs){ return n+' '+(n>1 ? plusieurs : un); }
+function aucuneDes(n){
+  return n>1 ? 'aucune des '+n+' valeurs anonymisées n\'est récupérable'
+             : 'la valeur anonymisée n\'est pas récupérable';
+}
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 /* ---------- noms propres repérés sur leur forme ----------
@@ -2528,7 +2548,7 @@ async function telechargerFidele(){   // PDF ou Word : le moteur dit quoi livrer
     derniereVerif=ver; majBoutonPdf();
     const restantes=ver.fuites.filter(x=>!fuitesAcceptees.has(x));
     if(restantes.length){
-      alert('Téléchargement bloqué.\n\n'+restantes.length+' mention(s) sont encore présentes '+
+      alert('Téléchargement bloqué.\n\n'+pl(restantes.length,'mention est encore présente','mentions sont encore présentes')+' '+
             'dans le fichier produit :\n\n'+restantes.join('\n')+
             '\n\nCochez-les une à une dans le bandeau de vérification si vous acceptez '+
             'qu\'elles restent, ou masquez-les à la main en les désignant sur le document.');
