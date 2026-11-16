@@ -357,6 +357,100 @@ le décompte des paragraphes attrapent les erreurs d'édition avant eux. Un
 
 ---
 
+### Word : l'aperçu dans l'atelier
+
+L'aperçu (`js/apercu-docx.js`) rend le .docx par docx-preview, hors écran, et
+en tire un index de la forme de `pdfIndex`. Il faut un navigateur :
+`node apercu-docx.cjs http://127.0.0.1:4599` (Playwright, déjà présent sur la
+machine ; rien n'est installé dans le dépôt) fabrique un document de 5 pages
+sans saut de page et en contrôle pagination et index. Constats mesurés :
+
+### W14. docx-preview ne pagine que sur les sauts explicites
+
+Un contrat de 14 articles sans saut de page devient UNE section de 8 079 px de
+haut (7,2 pages A4 de 1 122,5 px) ; la version enregistrée par LibreOffice, une
+section de 7 612 px. En vue « ajustée » (page entière visible) c'est illisible.
+Les pages sont donc virtuelles : on coupe chaque section plus haute que
+1,15 page (en dessous, c'est une page un peu haute : une police de
+remplacement suffit à déborder de quelques lignes) en tranches, ENTRE deux
+lignes. Chaque tranche reprend une marge haute (celle de la section) et laisse
+la marge basse libre ; l'index est refait par tranche, en coordonnées
+relatives à la fenêtre affichée. Mesuré : sur 9 pages virtuelles puis 20 pages
+(64 000 caractères), aucun caractère n'est coupé par un bord de page. Les
+en-têtes et pieds de page ne sont affichés qu'aux extrémités d'une section
+découpée (le premier en haut de la première tranche, le second en bas de la
+dernière).
+
+### W15. Deux rangées de tableau voisines se touchent : aucun creux pour couper
+
+Les creux entre lignes se déduisent des rectangles du texte, et une rangée
+entière est un intervalle interdit. Sans rognage, deux rangées contiguës
+fusionnent en un seul intervalle : la coupe cherchait un creux, n'en trouvait
+pas, et tombait **au milieu de la rangée 10** (`paysage.docx`, 5 px de la rangée
+visibles en bas d'une page, le reste en haut de la suivante). Rogner chaque
+rangée de 1 px ouvre un creux de 2 px sur la frontière : la coupe y tombe. Les
+rectangles de texte sont eux aussi rognés de 15 % : deux lignes à interligne
+serré (< 0,7 em) ne fusionnent pas.
+
+### W16. docx-preview rend un trait d'union insécable par un `<wbr>`
+
+`<w:noBreakHyphen/>` donne `<span><wbr></span>` : le trait disparaît de
+l'aperçu **et du texte lu** (« Monsieur JeanPierre Lambert »). La valeur
+détectée ne se retrouvait plus dans le XML (« Jean-Pierre »), le jeton n'était
+pas écrit, et la valeur restait lisible dans le résultat. C'est la vérification
+du résultat (texte de l'aperçu du résultat + `AnonDocx.verifier`) qui l'a
+attrapé, en bloquant le téléchargement. Corrigé à la source : chaque `<wbr>` est
+remplacé par un `-` avant l'indexation. Même contrôle sur `fiche-word.docx` et
+`contrat-synthetique.docx` : les seules lignes qui diffèrent entre le texte du
+rendu et celui du XML sont les appels de note, le numéro de page, le texte
+supprimé en suivi des modifications, les commentaires et le contenu d'un champ
+simple (`w:fldSimple`) que docx-preview n'affiche pas.
+
+### W17. Sans Shadow DOM, les styles du site déforment le document
+
+Le même document, rendu sous les styles du site (`body` en Poppins avec un
+interligne de 1,55, règles sur `p`, `hr`…), mesure 12 671 px au lieu de
+8 079 px, dans une autre police. Isolé dans un Shadow DOM (conteneur de rendu
+**et** pages affichées dans la scène, avec `:host{all:initial}`), le rendu
+dans la page se superpose à celui d'une page vierge : sur `fiche-word.docx`, 1,1 %
+des pixels diffèrent, tous sur les contours des glyphes (rééchantillonnage de la
+capture à 622 px de large contre 794 px). Le CSS de la bibliothèque est
+partagé entre toutes les pages par une feuille de style construite
+(`adoptedStyleSheets`), et l'enveloppe grise, l'ombre et les marges
+`.docx-wrapper` sont neutralisées : seule la feuille nous intéresse.
+
+### W18. `nextPage` n'ouvre pas de section, et les orientations se mélangent
+
+Dans `paysage.docx` (une section paysage suivie d'une section portrait),
+docx-preview produit UNE seule `section.docx` de 3 378 px de haut, en paysage,
+qui contient les deux contenus ; l'orientation suivante n'est pas honorée. Le
+découpage en pages virtuelles s'y applique tel quel : 4 pages paysage puis la
+page du saut explicite. Le fichier produit, lui, garde ses deux sections.
+
+### W19. Temps mesurés
+
+Document de 64 114 caractères (20 pages virtuelles) : rendu 51 ms, pagination
+12 ms, index 336 ms ; le fil principal ne gèle jamais plus de 101 ms, parce que
+le relevé d'un rectangle par caractère rend la main toutes les 25 ms (statut
+« Lecture du texte et des positions… » affiché). Un document de 1 000
+caractères : 4 ms.
+
+### W20. Le résultat n'a pas toujours le même nombre de pages
+
+Avec un terme très fréquent remplacé par `[TERME_1]` (« les »), un document de
+9 pages en compte 10 une fois anonymisé. La page affichée en vue « Anonymisé »
+est celle de même section et de même rang de tranche, bornée au dernier rang ;
+quand les totaux diffèrent, l'étiquette indique « anonymisé · p. 9 / 10 ». Pas
+de décalage silencieux, pas d'erreur.
+
+### W21. Ce que l'aperçu ne montre pas, la détection ne le voit pas
+
+La détection lit le texte du rendu : ni commentaires, ni texte supprimé en
+suivi des modifications, ni contenu d'un `w:fldSimple`. Une valeur détectée
+ailleurs y est remplacée quand même (le remplacement est global : vérifié sur
+un commentaire de `fiche-word.docx`), mais un nom qui n'y figure que là reste.
+Le bandeau de vérification le dit.
+
 ## Règles : les pièges
 
 Mesurés sur le corpus de `regles.mjs` (47 valeurs sur 103 masquées en entier

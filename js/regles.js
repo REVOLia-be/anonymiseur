@@ -223,7 +223,14 @@
       // rue néerlandaise : suffixe, et le numéro est exigé
       aussi: [new RegExp(`${G}(?:(?:Lange|Korte|Grote|Kleine|Nieuwe|Oude|Groot|Klein|Sint|Onze-Lieve-Vrouw|Burgemeester|Koning|Koningin|Prins|Prinses|Kardinaal|Generaal|Pastoor|Dokter)[ ])?(?:${L}[\\p{L}'’\\-]{0,25}?(?:${SUFFIXES_NL})|Markt|Plein|Kaai|Lei|Dreef|Steenweg|Vest)[ ]+${NUM_RUE}`, "gu")] },
     { key: "PERSONNE", label: "Nom", color: "#ff7eb6",
-      re: new RegExp(`${G}${TITRE}${SP}+(?:${PARTICULE}${SP}?)?${NOM_MOT}(?:${SP}+(?:${PARTICULE}${SP}?)?${NOM_MOT}){0,3}`, "gu") },
+      /* Le titre SERT à reconnaître le nom mais n'en fait pas partie : la valeur
+         masquée est « Sophie Vandenberghe », pas « Madame Sophie Vandenberghe ».
+         Sinon le même nom écrit SANS titre ailleurs (note de bas de page,
+         signature, commentaire) restait en clair — constaté sur un contrat Word :
+         « Madame Sophie Vandenberghe » masqué dans le corps, « Voir la fiche de
+         Sophie Vandenberghe » intact dans la note. Le titre seul n'identifie
+         personne, et « Madame [PERSONNE_1] » reste plus lisible pour une IA. */
+      re: new RegExp(`(?<=${G}${TITRE}${SP}+)(?:${PARTICULE}${SP}?)?${NOM_MOT}(?:${SP}+(?:${PARTICULE}${SP}?)?${NOM_MOT}){0,3}`, "gu") },
     // Catégories alimentées par le modèle IA local (pas de regex) :
     { key: "LIEU", label: "Lieu / Adresse", color: "#2693ce", re: null, ner: true },
     { key: "ORG", label: "Organisation", color: "#c4b5fd", re: null, ner: true },

@@ -92,6 +92,11 @@
       racine.appendChild(conteneur);
       await lib.renderAsync(octets, conteneur, null, OPTIONS_RENDU);
       if (actif && !actif()) throw annule();
+      /* docx-preview rend un trait d'union insécable (<w:noBreakHyphen/>) par un
+         <wbr> : le trait disparaît à l'écran ET du texte lu, alors que le fichier
+         dit « Jean-Pierre ». La valeur détectée (« JeanPierre ») ne se retrouvait
+         plus dans le XML. On remet le trait (voir tests/README, W16). */
+      for (const w of conteneur.querySelectorAll("wbr")) w.replaceWith(document.createTextNode("-"));
       const sections = [...conteneur.querySelectorAll("section.docx")];
       if (!sections.length) throw new Error("le document ne contient aucune page affichable");
       // images et polices : la hauteur des lignes en dépend

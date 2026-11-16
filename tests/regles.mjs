@@ -39,6 +39,8 @@ function analyse(text, o) { return R.analyser(text, Object.assign({ table: R.cre
 /* =========================================================================
    1. Corpus
    ========================================================================= */
+const TITRE_EN_TETE = /^(?:(?:M\.|Mme|Mlle|Mr|Monsieur|Madame|Mademoiselle|Dr|Me|Pr|Prof|Dhr|Mevr|Mw)\.?|[Dd]e heer|[Mm]evrouw|[Mm]eneer)[ \u00a0]+/;
+const sansTitre = (v) => v.replace(TITRE_EN_TETE, "");
 console.log("== 1. Couverture sur le corpus synthétique ==\n");
 const parTag = {}, parLangue = { FR: { n: 0, ok: 0 }, NL: { n: 0, ok: 0 } };
 let total = 0, entieres = 0, partielles = 0, horsListe = 0, montantsDates = 0;
@@ -52,7 +54,10 @@ for (const [nom, src] of Object.entries(CORPUS)) {
   for (const sp of spans) {
     total++;
     let c = 0, n = 0;
-    for (let k = sp.start; k < sp.end; k++) { if (/\s/.test(text[k])) continue; n++; if (couvert[k]) c++; }
+    // Le titre (« Mme », « De heer ») ne fait pas partie de la valeur sensible :
+    // l'outil masque le nom et laisse le titre (voir la règle PERSONNE).
+    const debut = sp.tag === "NOM" ? sp.start + (TITRE_EN_TETE.exec(sp.v) || [""])[0].length : sp.start;
+    for (let k = debut; k < sp.end; k++) { if (/\s/.test(text[k])) continue; n++; if (couvert[k]) c++; }
     const t = parTag[sp.tag] || (parTag[sp.tag] = { n: 0, ok: 0 });
     t.n++; parLangue[langue].n++;
     if (c === n) { entieres++; t.ok++; parLangue[langue].ok++; }
@@ -137,10 +142,19 @@ function rien(titre, cat, textes) {
 }
 
 // --- B3 : prénoms composés, particules, titres néerlandais
-entiers("B3 nom entier", "PERSONNE", ["M. Jean-Luc Dehaene", "Mme Van den Broeck", "Monsieur DUPONT", "Madame VAN DEN BERGHE",
+for (const v of ["M. Jean-Luc Dehaene", "Mme Van den Broeck", "Monsieur DUPONT", "Madame VAN DEN BERGHE",
   "De heer Pieter De Smet", "mevrouw Lotte Willems", "Mevrouw Annelies Van den Bossche", "Dr Pieter Janssens",
-  "Mme Aïcha Benali", "Me De Clercq", "Dr. Wim Van Damme", "Madame Sophie Vandenberghe", "Monsieur Karim El Amrani"],
-  (v) => `Bonjour ${v}, merci de votre retour.`);
+  "Mme Aïcha Benali", "Me De Clercq", "Dr. Wim Van Damme", "Madame Sophie Vandenberghe", "Monsieur Karim El Amrani"]) {
+  // le nom est masqué EN ENTIER, le titre reste (il n'identifie personne)
+  const hits = analyse(`Bonjour ${v}, merci de votre retour.`);
+  verifier(`B3 nom entier, sans son titre — « ${v} »`, hits.some(h => h.cat === "PERSONNE" && h.value === sansTitre(v)), `obtenu : ${fmt(hits)}`);
+}
+{
+  // le même nom écrit SANS titre ailleurs est masqué aussi (constaté sur un contrat Word)
+  const t = "Entre Madame Sophie Vandenberghe et la société. Note : voir la fiche de Sophie Vandenberghe.";
+  const r = R.analyser(t, { table: R.creerTable(), completer: true }).actifs.filter(h => h.cat === "PERSONNE");
+  verifier("B3 le nom sans titre est masqué partout", r.length === 2 && r.every(h => h.value === "Sophie Vandenberghe" && h.token === r[0].token), fmt(r));
+}
 rien("B3 pas un nom", "PERSONNE", ["Madame la Présidente a parlé.", "Monsieur le Directeur a répondu.", "Merci, Madame, Monsieur."]);
 
 // --- B4 : communes composées, faux codes postaux
@@ -232,20 +246,20 @@ entiers("E-mail écrit « (at) »", "EMAIL", ["thomas.mathieu (at) exemple.org",
   const table = R.creerTable();
   const a = R.analyser(texte, { table });
   const jeton = (res, v) => (res.actifs.find(h => h.value === v) || {}).token;
-  verifier("D jetons attribués dans l'ordre", jeton(a, "Madame Sophie Vandenberghe") === "[PERSONNE_1]" && jeton(a, "Monsieur Karim El Amrani") === "[PERSONNE_2]" && jeton(a, "Monsieur Luc Janssens") === "[PERSONNE_3]", fmt(a.actifs));
-  const sophie = new Set([R.cle({ cat: "PERSONNE", value: "Madame Sophie Vandenberghe" })]);
+  verifier("D jetons attribués dans l'ordre", jeton(a, "Sophie Vandenberghe") === "[PERSONNE_1]" && jeton(a, "Karim El Amrani") === "[PERSONNE_2]" && jeton(a, "Luc Janssens") === "[PERSONNE_3]", fmt(a.actifs));
+  const sophie = new Set([R.cle({ cat: "PERSONNE", value: "Sophie Vandenberghe" })]);
   const b = R.analyser(texte, { table, exclusions: sophie });
   verifier("D écarter une détection ne renumérote pas les autres",
-    jeton(b, "Monsieur Karim El Amrani") === "[PERSONNE_2]" && jeton(b, "Monsieur Luc Janssens") === "[PERSONNE_3]" && !jeton(b, "Madame Sophie Vandenberghe"));
+    jeton(b, "Karim El Amrani") === "[PERSONNE_2]" && jeton(b, "Luc Janssens") === "[PERSONNE_3]" && !jeton(b, "Sophie Vandenberghe"));
   const c = R.analyser(texte, { table });
-  verifier("D la remettre lui rend son ancien jeton", jeton(c, "Madame Sophie Vandenberghe") === "[PERSONNE_1]");
+  verifier("D la remettre lui rend son ancien jeton", jeton(c, "Sophie Vandenberghe") === "[PERSONNE_1]");
   const corr = table.correspondances();
-  verifier("D la table garde le jeton écarté (une réponse d'IA déjà obtenue doit rester lisible)", corr["[PERSONNE_1]"] === "Madame Sophie Vandenberghe", JSON.stringify(corr));
+  verifier("D la table garde le jeton écarté (une réponse d'IA déjà obtenue doit rester lisible)", corr["[PERSONNE_1]"] === "Sophie Vandenberghe", JSON.stringify(corr));
   // un nouveau venu ne reprend pas un numéro libéré : les compteurs n'avancent que
   const t2 = R.creerTable();
   R.analyser("Madame Anne Dupont et Monsieur Paul Martin.", { table: t2 });
-  R.analyser("Madame Anne Dupont et Monsieur Paul Martin et Monsieur Eric Lambert.", { table: t2, exclusions: new Set([R.cle({ cat: "PERSONNE", value: "Madame Anne Dupont" })]) });
-  verifier("D un nouveau venu reçoit un numéro neuf", t2.correspondances()["[PERSONNE_3]"] === "Monsieur Eric Lambert", JSON.stringify(t2.correspondances()));
+  R.analyser("Madame Anne Dupont et Monsieur Paul Martin et Monsieur Eric Lambert.", { table: t2, exclusions: new Set([R.cle({ cat: "PERSONNE", value: "Anne Dupont" })]) });
+  verifier("D un nouveau venu reçoit un numéro neuf", t2.correspondances()["[PERSONNE_3]"] === "Eric Lambert", JSON.stringify(t2.correspondances()));
   // casse et espaces ne créent pas deux jetons
   const t3 = R.creerTable();
   const r3 = R.analyser("Monsieur DUPONT, puis Monsieur  Dupont.", { table: t3 });

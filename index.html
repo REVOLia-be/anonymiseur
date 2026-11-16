@@ -602,8 +602,15 @@ let pdfIndex=null, indexValide=false;
    bas. `chargement` change à chaque abandon ou nouveau document : un rendu
    asynchrone qui se termine après coup compare sa valeur et se retire. */
 let moteur=null, chargement=0;
+/* Un Word contient du texte que l'aperçu ne montre pas : commentaires, texte
+   supprimé en suivi des modifications, champs. Il part pourtant avec le fichier.
+   On le lit donc aussi, et on y applique les mêmes règles : constaté sur un
+   contrat, « Monsieur Jean-Pierre Lambert », supprimé en révision, restait
+   intact dans le fichier produit parce que rien à l'écran ne le montrait. */
+let texteHorsApercu='', hitsHorsApercu=[];
 function oublierIndex(){
   chargement++;
+  texteHorsApercu=''; hitsHorsApercu=[];
   if(moteur){ moteur.fermer(); moteur=null; }       // libère URL d'objet et conteneurs hors écran
   pdfIndex=null; indexValide=false; nomDocument=''; derniereVerif=null; Visu.fermer();
   tableJetons.vider();                               // nouveau document : nouveaux jetons
@@ -777,16 +784,19 @@ function creerMoteurDocx(doc, octetsOrigine){
         '<span class="count">'+poids+' · '+r.nRemplacements+' remplacement(s)</span>'+
         '<div class="pertes">Mise en page conservée : seul le texte est remplacé. Les métadonnées'+
         (r.liensNeutralises?', '+r.liensNeutralises+' lien(s) exposant une donnée':'')+
-        ' et les noms d\'auteurs sont neutralisés. Les commentaires, le texte supprimé en suivi des '+
-        'modifications et les métadonnées ne figurent pas dans l\'aperçu : ils sont nettoyés des valeurs '+
-        'ci-dessus, mais un nom qui n\'apparaît que là n\'est pas détecté. <b>Relisez toujours le résultat.</b></div>' };
+        ' et les noms d\'auteurs sont neutralisés. Les commentaires et le texte supprimé en suivi des '+
+        'modifications ne figurent pas dans l\'aperçu : les mêmes règles leur sont appliquées, mais vous ne '+
+        'pouvez pas y désigner un nom d\'un clic — ajoutez-le comme terme. <b>Relisez toujours le résultat.</b></div>' };
     },
     notes(r){
       const l=(r.avertissements||[]).slice();
       if(r.apercuKo) l.push('l\'aperçu du résultat n\'a pas pu être affiché, mais le fichier a bien été produit et vérifié');
-      return l.length
-        ? '<div class="pertes">⚠️ À vérifier à la main : '+l.map(escapeHtml).join(' ; ')+'.</div>'
-        : '';
+      let h='';
+      if(hitsHorsApercu.length)
+        h+='<div class="pertes">Aussi remplacé, <b>hors de l\'aperçu</b> (commentaires, texte supprimé en suivi des modifications, notes, champs) : '+
+           hitsHorsApercu.map(x=>'« '+escapeHtml(String(x.value).replace(/\s+/g,' '))+' » → '+escapeHtml(x.token||'')).join(' ; ')+'.</div>';
+      if(l.length) h+='<div class="pertes">⚠️ À vérifier à la main : '+l.map(escapeHtml).join(' ; ')+'.</div>';
+      return h;
     },
   };
 }
@@ -1064,8 +1074,9 @@ const Visu = (function(){
     const m = moteur;                // le document peut être remplacé en cours de route
     const v=el('verif');
     try{
-      const valeurs=lastHits.map(h=>h.value);
-      const r=await m.produire(lastHits, activeMode, valeurs, encore);
+      const aTraiter=lastHits.concat(hitsHorsApercu);   // Word : + ce que l'aperçu ne montre pas
+      const valeurs=aTraiter.map(h=>h.value);
+      const r=await m.produire(aTraiter, activeMode, valeurs, encore);
       if(!encore() || m!==moteur) return;
       if(r.vide){
         resultatPret=false;
@@ -1433,6 +1444,10 @@ async function readWord(file){
     return;
   }
   const { vue, index } = ouvert;
+  let cache='';
+  try{ cache=(await AnonDocx.extraireTexte(octets)).texte; }catch(_){ cache=''; }
+  if(!actif()){ vue.fermer(); return; }
+  texteHorsApercu=cache;
   moteur=creerMoteurDocx({ vue, index }, octets);
   pdfIndex=index; indexValide=true;
   exclusionsValeurs.clear(); fuitesAcceptees.clear(); termesManuels.clear(); majTermes();
@@ -1553,11 +1568,25 @@ function run(text){
     // Valeurs écartées à la main (clic sur une zone) : on les GARDE dans la
     // liste, marquées, pour qu'elles restent visibles et re-cliquables.
     exclusions:exclusionsValeurs,
-    completer:indexValide,                                   // toutes les occurrences d'une valeur retenue
+    completer:true,                                          // toutes les occurrences d'une valeur retenue
     table:tableJetons });
   lastHitsTous=r.tous;
   const hits=r.actifs;
   lastHits=hits;
+  // Word : mêmes règles sur le texte que l'aperçu ne montre pas. On ne garde
+  // que les valeurs absentes de la page — celles-là n'ont pas de zone à l'écran.
+  hitsHorsApercu=[];
+  if(indexValide && moteur && moteur.nom==='docx' && texteHorsApercu){
+    const norm=(v)=>String(v).replace(/\s+/g,' ').trim();
+    const vues=new Set(r.tous.map(h=>norm(h.value)));
+    const rc=Regles.analyser(texteHorsApercu,{ actives:enabled, termes:termesManuels,
+      exclusions:exclusionsValeurs, completer:true, table:tableJetons });
+    for(const h of rc.actifs){
+      const k=norm(h.value);
+      if(vues.has(k)) continue;
+      vues.add(k); hitsHorsApercu.push(h);
+    }
+  }
   // table de correspondances de la SESSION : jeton -> vraie valeur, y compris les
   // jetons de valeurs écartées depuis (une réponse d'IA déjà obtenue les contient)
   lastMapping=tableJetons.correspondances();
