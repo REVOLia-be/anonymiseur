@@ -509,10 +509,10 @@ Autoriser « espace + particule » après la commune donne `1000 Bruxelles le`
 (`Louvain-la-Neuve`, `Braine-l'Alleud`), plus quelques préfixes avec espace
 (`Sint Niklaas`, `Mont Saint-Guibert`).
 
-Sans la liste des codes postaux (décision séparée), les évidences sont
-écartées à la main : `1382 Code`, `2023 Rapport`, `2025 Wallonie`, un mois,
-et `2024 Bruxelles` (Bruxelles n'est pas au-delà de 1299). Ne pas rejeter
-d'après le seul nombre : 1900 à 2099 sont aussi des codes d'Anvers.
+Les évidences restent écartées à la main (`1382 Code`, `2023 Rapport`,
+`2025 Wallonie`, un mois). Le reste se décide sur la liste officielle des codes
+postaux (voir R21) : ne pas rejeter d'après le seul nombre, 1900 à 2099 sont
+aussi des codes d'Anvers, de Zaventem, d'Overijse…
 
 ### R7. Un numéro de maison de quatre chiffres avale le code postal
 
@@ -595,13 +595,97 @@ espace avant ou après (une carte à 16 chiffres, un IBAN, un montant groupé
 (15 chiffres, Luhn juste) reste une carte, et après « réf. », « commande »,
 « facture », « EAN »… c'est une référence — sauf si « puce » précède aussi.
 
+### R16. L'expression des e-mails était quadratique
+
+`[A-Za-z0-9._%+\-]+@…` : sur une suite de caractères admis dans une adresse
+mais sans « @ » (un bloc base64 collé, une longue référence), le moteur
+repart de **chaque** position et relit toute la suite. Mesuré : 186 ms pour
+12 000 lettres, 1 212 ms pour 48 000 (×4 quand la longueur double) ; la forme
+« x (at) exemple.org » avait le même défaut. Or toutes les positions d'une
+même suite donnent le même résultat (la partie locale finit forcément au
+premier caractère hors classe) : `rechercheParSuites` essaie chaque suite une
+fois et confie la fin à une expression ancrée (`y`). Même interface qu'une
+RegExp (`lastIndex`, `exec`), mêmes correspondances : le test compare à
+l'expression d'origine sur 8 000 chaînes aléatoires et quelques cas tordus
+(`x@y.com.z@w.org`, où la seconde adresse commence au milieu d'une suite).
+Après : 48 000 caractères, toutes règles comprises, en 8 à 60 ms.
+
+### R17. Deux autres boucles quadratiques, trouvées en chronométrant
+
+- La **complétion des occurrences** testait chaque occurrence contre chaque
+  détection : 244 ms pour un terme présent 12 000 fois dans 48 000 caractères
+  (un terme fréquent, cf. W20). Sommes cumulées des caractères couverts :
+  test en temps constant.
+- Les **suggestions de noms** : un mot de 48 000 caractères à tirets
+  (« Abc-Abc-… ») coûtait 427 ms, chaque morceau relisant la suite. Un nom n'a
+  jamais plus de quatre tirets ou apostrophes : la répétition est bornée.
+
+Le test P de `regles.mjs` passe 14 entrées pathologiques de 48 000 caractères
+(chiffres, majuscules, tirets, base64, mots capitalisés, « (at) » répété…)
+dans toute la chaîne — détection, complétion, suggestions, ré-identification —
+et échoue au-delà de 250 ms par entrée.
+
+### R18. La clé interne d'une catégorie n'est pas un bon nom de jeton
+
+`[CP_VILLE_1]`, `[TVA_BE_1]` : l'IA et le lecteur comprenaient mal. Chaque
+catégorie a désormais un **nom de jeton** distinct de sa clé (`LOCALITE`,
+`N_ENTREPRISE`, `N_NATIONAL`, `ADRESSE`, `TELEPHONE`…), et la table de
+session compte **par nom de jeton** : un terme typé Personne et une personne
+détectée tirent leurs numéros du même compteur. Compter par catégorie aurait
+donné `[PERSONNE_1]` à « Nadia Collard » (catégorie TERME) alors que
+« Sophie Vandenberghe » (catégorie PERSONNE) l'avait déjà. Les anciennes
+tables restent lisibles : la ré-identification ne dépend que du texte du
+jeton, et les anciens noms comptent parmi les catégories connues (un
+`[CP_VILLE_2]` absent de la table est signalé).
+
+### R19. Une partie de nom est souvent celle d'un AUTRE nom
+
+« Aïcha Benali » masquée, le courrier du corpus dit « Son mari, Youssef
+Benali ». Proposer « Benali » comme partie d'Aïcha, avec son jeton, aurait
+donné « Youssef [PERSONNE_2] », ré-identifié en « Youssef Aïcha Benali ». Même
+chose pour « Kris Janssens » face à « Dr Pieter Janssens ». Une partie collée à
+un autre mot capitalisé ou à une particule n'est donc pas une partie (sauf
+formule d'appel, titre, enseigne : « Beste Pieter », « Cabinet Janssens ») ;
+et le jeton de la personne n'est repris que si le terme accepté — qui se
+masque partout, sans tenir compte de la casse — ne touche rien d'autre que les
+occurrences comptées. Sinon : jeton propre. Un jeton reste lié à UNE valeur :
+la table garde `[PERSONNE_1] → Nathalie Mertens`, « N. Mertens » n'y est qu'un
+alias. Mesuré sur le corpus : 4 des 23 valeurs ratées deviennent des
+suggestions de parties (« N. Mertens », « Janssens », « Thomas », « Pieter »),
+aucune proposition parasite ; avec les noms complets, 19 sur 23 sont proposées.
+
+Second piège, constaté au premier essai : la même personne a deux adresses
+dans l'e-mail RH du corpus (`thomas.mathieu@…` et `thomas.mathieu (at) …`).
+« Thomas » était compté deux fois (« Thomas ×2 » pour une seule occurrence).
+On compte par position.
+
+### R20. Le format néerlandais avalait le code et laissait la ville
+
+`1012 AB Amsterdam` : le motif prenait « AB » pour la commune (un mot en
+capitales) et laissait « Amsterdam » en clair. Le motif connaît maintenant la
+forme `1234 AB Plaats`, qui ne passe pas par la liste belge.
+
+### R21. Valider sur la liste, oui ; exiger le bon couple, non
+
+Liste : BeST Address (SPF BOSA), CC BY 4.0, 1 143 codes et 4 047 noms après
+fusion des casses. La liste bpost, elle, ne porte aucune licence de
+réutilisation (« Copyright © bpost ») : pas embarquée. Exiger que la localité
+corresponde au code aurait fait échouer un test existant, `9000 Sint
+Niklaas` (Sint-Niklaas est 9100) : une adresse fausse reste une adresse. La
+liste sert donc à REFUSER un code inexistant suivi d'une localité belge
+(`2024 Bruxelles`, `2019 Liège`) ou qui ressemble à une année. Les exonymes
+y sont (« Gand », « Anvers », « Luik ») grâce aux colonnes `city_fr`/`city_de`
+des fichiers flamands et wallons. Les codes « spéciaux » de bpost (grandes
+organisations, sans rue) n'y sont pas : `1031 Bruxelles` serait refusé.
+
 ### Ce que les règles ne font pas encore
 
-Noms **sans titre** (« Marc Wauters », « Julie », « Pieter ») et raisons
-sociales (« Boulangerie Dewolf ») : 23 des 103 valeurs, presque toutes. Ce sont
-des suggestions à valider d'un clic, jamais un masquage d'office : « Haute
-École » ou « Cher Confrère » en font partie. Villes seules (« Gand »,
-« Brugge ») et n° de mutuelle hors mot-clé échappent aussi.
+Noms **sans titre** (« Marc Wauters », « Julie ») et raisons sociales
+(« Boulangerie Dewolf ») : 23 des 103 valeurs, presque toutes. Ce sont des
+suggestions à valider d'un clic, jamais un masquage d'office : « Haute École »
+ou « Cher Confrère » en font partie. « Julie » seule, sans nom masqué dont elle
+serait la partie, n'est pas proposée. Villes seules (« Gand », « Brugge ») et
+n° de mutuelle hors mot-clé échappent aussi.
 
 ---
 
