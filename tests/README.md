@@ -19,6 +19,31 @@ en cas de fuite — utilisable tel quel dans un script.
 > La détection du harnais est volontairement minimale : il éprouve la
 > **plomberie PDF**, pas la qualité des règles ni l'IA locale du site.
 
+**Word (`.docx`)**
+
+Même principe pour `js/anon-docx.js` : on édite le XML du Word, on ne le
+convertit pas. Le module est un script classique (`globalThis.AnonDocx`) ; JSZip
+(`vendor/jszip.min.js`) est la seule dépendance, **aucun `npm install`**.
+
+```bash
+cd tests
+node fabrique-docx.mjs                         # régénère fiche-word.docx (synthétique, tous les cas)
+node fabrique-docx-lib.cjs                     # régénère contrat-synthetique.docx (produit par la lib docx)
+node chaine-docx.mjs fiche-word.docx pseudo    # + ~50 assertions dures sur cette fiche
+node chaine-docx.mjs fiche-word.docx redact
+node chaine-docx.mjs contrat-synthetique.docx pseudo
+node chaine-docx.mjs /chemin/vers/un.docx pseudo   # un de vos documents
+```
+
+Le compte rendu donne parties lues, détections, remplacements par partie,
+liens, métadonnées, auteurs, vignette, avertissements, puis les contrôles :
+XML bien formé (équilibrage des balises), nombre de paragraphes inchangé, noms
+d'entrées du zip inchangés, relecture par `extraireTexte` et par mammoth, et —
+si `soffice` est installé — conversion en PDF par LibreOffice **puis
+vérification du PDF** avec `anon-pdf.js` (`SANS_LIBREOFFICE=1` pour l'ignorer).
+La sortie est écrite à côté du fichier d'entrée, ou dans le dossier temporaire
+si celui-ci est dans le dépôt. Code de sortie 1 en cas de fuite ou d'échec.
+
 `fiche.html` sert à régénérer `fiche-reelle.pdf` (impression via un navigateur) :
 une fiche de paie réaliste, avec polices embarquées, accents, tableau bordé,
 aplats et logo.
@@ -182,6 +207,131 @@ PNG de 4172 × 5901             "" → 73 860 447 o     "compress" → 456 306 o
 Les bornes d'une page-image dépendent aussi de la densité (dpi) déclarée :
 la taille en pixels se lit sur `mupdf.Image`, pas sur le pixmap d'une page
 rendue à l'échelle 1.
+
+---
+
+## Word : les pièges
+
+Mesurés sur `fiche-word.docx` (synthétique, construite pour les réunir) et sur
+`contrat-synthetique.docx` (produit par la bibliothèque `docx`). La leçon est
+la même que pour le PDF, avec d'autres couches : *dans un .docx, la même donnée
+vit à plusieurs endroits, et remplacer le texte n'en atteint qu'un.*
+
+### W1. Word coupe le texte en « runs » : la recherche par `w:t` rate presque tout
+
+Correcteur orthographique (`w:proofErr`), changement de style, signets : « Sophie
+Vandenberghe » s'écrit `Madame Sophie Vanden` · `ber` (gras) · `ghe` avec un
+`proofErr` et un `bookmarkStart` entre les runs. Sur `fiche-word.docx`,
+`document.xml` contient 6 occurrences lisibles de « Sophie Vandenberghe » ;
+**une seule** tient dans un seul `w:t`. Il faut raisonner par PARAGRAPHE :
+concaténer les `w:t`, chercher, puis écrire le jeton dans le premier `w:t`
+touché et retirer la partie couverte des suivants. Le run central reste, vide,
+avec sa mise en forme : la mise en page est conservée.
+
+### W2. Les blancs de la valeur ne sont pas ceux du document
+
+La valeur « Sophie Vandenberghe » se présente dans le même fichier avec une
+espace insécable (U+00A0), une tabulation (`<w:tab/>` : un élément, pas un
+caractère) ou deux `w:t` voisins ; « Jean-Pierre » avec un `<w:noBreakHyphen/>`
+au lieu du `-` ; un IBAN avec des insécables. Chaque suite de blancs de la
+valeur doit valoir une suite de blancs quelconque, et les éléments vides
+(`w:tab`, `w:br`, `w:noBreakHyphen`) doivent figurer dans le texte cherché — et
+être supprimés s'ils sont couverts. Dans `w:pPr`, `<w:tab w:pos=…/>` est un
+**taquet**, pas du texte : ne pas l'y compter.
+
+### W3. Les paragraphes s'imbriquent : une zone de texte contient des paragraphes
+
+`w:txbxContent` vit dans un `w:r` d'un paragraphe, et Word l'écrit **deux fois**
+(`mc:Choice` pour les Word récents, `mc:Fallback` en VML pour les anciens). Un
+`w:t` appartient au paragraphe ouvert le plus INTÉRIEUR ; sans pile de
+paragraphes, le texte de la zone se mélange à celui du paragraphe porteur. Les
+deux copies sont à traiter : en oublier une laisse la valeur lisible dans le
+fichier.
+
+### W4. Le texte supprimé en suivi des modifications reste dans le fichier
+
+`<w:delText>` : invisible une fois les révisions acceptées, intact dans le
+XML. « Hélène Marchal » n'existe, dans la fiche, que là : `visible: false`,
+`dansOctets: true`. Le même texte ne doit pas être mélangé au texte visible
+(on ne cherche pas une valeur à cheval sur les deux), mais `extraireTexte` le
+rend, pour que le détecteur le voie.
+
+### W5. Les codes de champ et leurs attributs
+
+`HYPERLINK "mailto:sophie.vanden` + `berghe@exemple.be"` : le code de champ
+(`w:instrText`) est lui aussi réparti sur plusieurs runs. Le champ simple
+(`w:fldSimple w:instr="…"`) porte le même code dans un **attribut**, guillemets
+encodés en `&quot;`. Les deux sont traités ; le résultat reste
+`HYPERLINK "mailto:[EMAIL_1]"`.
+
+### W6. Les liens vivent dans `word/_rels/*.rels`
+
+Le texte du lien est propre, la relation `Target="mailto:sophie…"` garde
+l'adresse. Cible neutralisée en `about:blank`. Seules les cibles **externes**
+(`TargetMode="External"`) : une cible interne (image, en-tête) est un chemin
+dans l'archive. Le test garde un lien externe neutre pour le prouver.
+
+### W7. Auteurs, texte alternatif, infobulles : des attributs, pas du texte
+
+`w:author` et `w:initials` (révisions, commentaires), `w15:author` et
+`w15:userId` (`people.xml`, où l'identifiant de compte peut être une adresse
+e-mail), `descr`/`title`/`name` d'une image (le nom peut être celui du
+fichier), `w:tooltip`. Les auteurs sont remplacés par « Auteur » **qu'une valeur
+soit détectée ou non** (comme `nettoyerMetadonnees` pour le PDF) : « Claire
+Hanssen » n'est que là. Les autres attributs ne sont touchés que s'ils sont
+dans une liste connue : une valeur courte ne doit pas aller écraser un `w:val`,
+un id ou un style.
+
+### W8. Les métadonnées et la vignette
+
+`docProps/core.xml` (auteur, dernier auteur, titre, sujet, mots-clés,
+description, catégorie), `app.xml` (société, responsable), `custom.xml` :
+vidés systématiquement. La vignette `docProps/thumbnail.*` est un aperçu de la
+première page, en clair : supprimer l'entrée **et** sa relation dans
+`_rels/.rels`, sinon la relation pointe dans le vide. Dans la fiche, un
+commentaire JPEG y porte un nom ; `verifier` le trouve avant, plus après.
+
+### W9. Une valeur dans deux paragraphes
+
+« Rue de la Loi 16 » / « 1000 Bruxelles » : deux paragraphes, donc deux flux.
+À défaut de trouver la valeur d'un bloc, on remplace chacune de ses lignes
+d'au moins 3 caractères (le même jeton dans les deux). `verifier` fait le même
+découpage : il signale aussi une ligne restée seule.
+
+### W10. `&` et `<` : on décode pour chercher, on ré-encode pour écrire
+
+« Dupont &amp; Fils SRL » se lit « Dupont & Fils SRL ». Chercher la valeur dans
+le XML brut la rate ; ne ré-encoder que les segments modifiés laisse le reste
+du fichier **octet pour octet** identique (testé sur les paragraphes neutres,
+`styles.xml`, `settings.xml`, les images). `verifier` cherche les deux formes.
+
+### W11. JSZip ajoute et modifie des choses si on ne l'en empêche pas
+
+Mesuré : `zip.file("word/document.xml", …)` sur un .docx sans entrées de
+dossier **ajoute une entrée `word/`** (`createFolders` vaut `true` par défaut) ;
+et la date de l'entrée est remplacée par l'heure courante si on ne repasse pas
+`date`. D'où `{ createFolders: false, date: ancienneDate }` à chaque écriture.
+À l'inverse, les .docx produits par la bibliothèque `docx` **contiennent** des
+entrées de dossier (`docProps/`, `_rels/`, `word/media/`) : on les conserve.
+Les entrées gardent leur ordre, `[Content_Types].xml` reste en tête.
+
+### W12. Ce qu'on ne sait pas faire, et qu'on doit dire
+
+Texte DANS une image, objets OLE ou feuilles Excel incorporées
+(`word/embeddings/`) : non analysés. `verifier` scanne les octets décompressés
+de chaque entrée en UTF-8 **et en UTF-16LE** (les objets Office stockent leur
+texte en UTF-16) et nomme l'objet (« image », « objet incorporé ») ;
+`anonymiser` renvoie un avertissement (« 2 images : leur contenu n'est pas
+analysé »). Un objet qui contient une valeur n'est pas modifié : la fuite est
+signalée, pas corrigée.
+
+### W13. Preuves de validité du fichier produit
+
+Aucun contrôle ne remplace Word, mais trois lecteurs indépendants rouvrent le
+résultat : `extraireTexte`, mammoth, et LibreOffice (conversion en PDF, dont le
+texte est ensuite vérifié sans fuite). Le contrôle d'équilibrage des balises et
+le décompte des paragraphes attrapent les erreurs d'édition avant eux. Un
+`<w:r></w:r>` vide reste là où un `<w:tab/>` a été supprimé : valide.
 
 ---
 
