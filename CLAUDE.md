@@ -75,13 +75,13 @@ node apercu-docx.cjs http://127.0.0.1:4599        # aperçu Word, avec Playwrigh
 - Word : le texte est coupé en runs. Raisonne par paragraphe, pas par `w:t`. Pense aux révisions supprimées, champs, zones de texte (écrites deux fois), commentaires, métadonnées, vignette.
 - JSZip : écris avec `{ createFolders: false, date: ancienneDate }`, sinon l'archive change.
 - docx-preview ne coupe les pages que sur les sauts explicites : les pages de l'aperçu sont virtuelles. Garde le Shadow DOM.
-- Ce que l'aperçu Word ne montre pas (commentaires, texte supprimé) n'est pas détecté, seulement nettoyé des valeurs trouvées ailleurs. Les images d'un Word ne sont pas analysées.
+- Ce que l'aperçu Word ne montre pas (commentaires, texte supprimé, champs) passe par les règles (`texteHorsApercu`), mais pas par l'IA locale. Les images d'un Word ne sont pas analysées.
 - Scans et images : un mot mal lu par l'OCR n'est pas masqué, et la vérification ne peut rien prouver sur une image. L'interface doit le dire.
 - Règles : `\b` ne voit que l'ASCII (« Liège »), `\s` franchit les sauts de ligne (utilise `[ \t]`), et chaque expression doit rester linéaire (chronométrage dans `regles.mjs`).
 
 ## Conventions
 
-- Français, tutoiement, phrases courtes, dans le code, les commentaires et l'interface.
+- Français partout, phrases courtes. Code et commentaires : tutoiement. Interface du site : vouvoiement (« votre document »).
 - Aucune donnée réelle, jamais : noms fictifs, numéros d'exemple, domaines « exemple ». N'ajoute pas au dépôt un document qui vient d'un vrai dossier.
 - Un défaut trouvé devient un cas de test et, s'il est subtil, un piège documenté dans `tests/README.md`.
 - Branche, pull request, puis fusion squash dans `main`. `main` est publié automatiquement par Cloudflare Pages. Fais passer les tests avant d'ouvrir la pull request.
