@@ -37,9 +37,9 @@ Un outil web gratuit qui repère les informations identifiantes d'un document (c
 - **Ré-identification** : réinjectez les vraies données dans la réponse de l'IA, en local. L'outil tolère les variantes courantes des jetons de la table (`PERSONNE_1` sans crochets, `[ personne_1 ]`) et rend des comptes : jetons remplacés, jetons `[XXX_n]` inconnus de la table, jetons de la table absents de la réponse.
 - **100 % hors-ligne** : aucune ressource tierce chargée au runtime.
 
-> Pour un Word, le texte détecté est celui que **l'aperçu affiche** : un texte que l'aperçu ne montre pas
-> (commentaires, révisions supprimées, certains champs) est nettoyé des valeurs détectées ailleurs, mais n'est
-> pas détecté en lui-même.
+> Pour un Word, un texte que l'aperçu ne montre pas (commentaires, révisions supprimées, certains champs)
+> passe aussi par les règles de détection, mais pas par l'IA locale. Il n'apparaît pas dans l'aperçu :
+> ses valeurs sont listées à part.
 >
 > Le ré-encodage d'un PDF retire **liens, formulaires, signets et signatures** en tant qu'éléments interactifs,
 > ainsi que les métadonnées. C'est annoncé dans l'outil avant le téléchargement.
